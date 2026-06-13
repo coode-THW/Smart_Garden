@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎥 实时视频识别 — 花卉识别</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="/" class="navbar-brand">
+                    <span class="logo-icon">🌺</span> 花卉识别
+                </a>
+                <ul class="navbar-links">
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/photo">拍照识别</a></li>
+                    <li><a href="/video" class="active">实时视频</a></li>
+                </ul>
+                <a href="/" class="btn-back">← 返回首页</a>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="container video-page">
+            <!-- 警告：模型未加载 -->
+            <div class="alert alert-warning hidden" id="alertModel">
+                <span class="alert-icon">⚠️</span>
+                <span>模型尚未训练，无法进行识别。请先在终端运行: <code>python train_flower.py</code></span>
+            </div>
+
+            <div class="video-layout">
+                <!-- 左侧：视频画面 -->
+                <div class="video-main fade-in">
+                    <div class="video-wrapper">
+                        <video id="videoElement" autoplay playsinline muted></video>
+                        <canvas id="overlayCanvas" class="video-overlay"></canvas>
+
+                        <!-- 覆盖层：识别结果横幅 -->
+                        <div class="overlay-banner" id="overlayBanner">
+                            <span class="overlay-status unknown" id="overlayStatus"></span>
+                            <div class="overlay-info">
+                                <div class="overlay-name" id="overlayName">❓ 未识别到花卉</div>
+                                <div class="overlay-conf" id="overlayConf">请点击「开启摄像头」</div>
+                            </div>
+                        </div>
+
+                        <!-- FPS -->
+                        <div class="overlay-fps" id="overlayFps">FPS: 0</div>
+                    </div>
+
+                    <!-- 控制按钮 -->
+                    <div class="video-controls">
+                        <button class="btn btn-primary" id="btnStart">
+                            🎥 开启摄像头
+                        </button>
+                        <button class="btn btn-outline hidden" id="btnStop">
+                            ⏹ 停止
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右侧：信息栏 -->
+                <div class="video-sidebar">
+                    <!-- 状态面板 -->
+                    <div class="info-panel">
+                        <h3>📡 识别状态</h3>
+                        <div class="status-indicator unknown" id="statusIndicator">
+                            <span class="status-dot red"></span> 未启动
+                        </div>
+                        <p style="margin-top:12px; font-size:0.85rem; color:var(--text-secondary);">
+                            当前识别: <strong id="currentFlower">—</strong>
+                        </p>
+                        <p style="font-size:0.82rem; color:var(--text-light);">
+                            置信度: <span id="sidebarConfidence">—</span>
+                        </p>
+                        <p style="font-size:0.78rem; color:var(--text-light);">
+                            边距: <span id="sidebarMargin">—</span> &nbsp;|&nbsp; 熵: <span id="sidebarEntropy">—</span>
+                        </p>
+                    </div>
+
+                    <!-- 可识别花卉 -->
+                    <div class="info-panel">
+                        <h3>🌸 可识别花卉</h3>
+                        <div class="class-tags">
+                            <span class="class-tag">🌼 雏菊</span>
+                            <span class="class-tag">🌾 蒲公英</span>
+                            <span class="class-tag">🌹 玫瑰</span>
+                            <span class="class-tag">🌻 向日葵</span>
+                            <span class="class-tag">🌷 郁金香</span>
+                        </div>
+                        <p style="margin-top:12px; font-size:0.75rem; color:var(--text-light);">
+                            置信度 ≥ {{ (0.55 * 100) | int }}% 视为已识别<br>
+                            置信度 ≥ {{ (0.35 * 100) | int }}% 视为不确定
+                        </p>
+                    </div>
+
+                    <!-- 识别历史 -->
+                    <div class="info-panel">
+                        <h3>📋 近期记录</h3>
+                        <ul class="history-list" id="predictionHistory">
+                            <li class="history-item" style="color:var(--text-light);">
+                                等待启动...
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            Powered by YOLOv11 &middot; Ultralytics
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/video.js') }}"></script>
+    <script>
+    // ============================================================
+    //  页面初始化
+    // ============================================================
+    (async function init() {
+        // 检查模型状态
+        try {
+            const res = await fetch('/api/model/status');
+            const data = await res.json();
+            if (!data.model_exists) {
+                document.getElementById('alertModel').classList.remove('hidden');
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnStart').textContent = '⛔ 模型未训练';
+            }
+        } catch (e) {
+            document.getElementById('alertModel').classList.remove('hidden');
+        }
+
+        // 初始化 video.js
+        initVideo({
+            videoEl: document.getElementById('videoElement'),
+            canvasEl: document.getElementById('overlayCanvas'),
+            overlayNameEl: document.getElementById('overlayName'),
+            overlayConfEl: document.getElementById('overlayConf'),
+            overlayStatusEl: document.getElementById('overlayStatus'),
+            overlayFpsEl: document.getElementById('overlayFps'),
+            statusIndicatorEl: document.getElementById('statusIndicator'),
+            statusTextEl: document.getElementById('statusText'),
+            currentFlowerEl: document.getElementById('currentFlower'),
+            btnStart: document.getElementById('btnStart'),
+            btnStop: document.getElementById('btnStop'),
+            predictionHistoryEl: document.getElementById('predictionHistory'),
+        });
+
+        // 按钮事件绑定
+        document.getElementById('btnStart').addEventListener('click', startWebcam);
+        document.getElementById('btnStop').addEventListener('click', stopWebcam);
+
+        // 点击导航栏退出时自动停止摄像头
+        window.addEventListener('beforeunload', stopWebcam);
+    })();
+    </script>
+</body>
+</html>

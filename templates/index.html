@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌺 花卉识别 — YOLOv11</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="/" class="navbar-brand">
+                    <span class="logo-icon">🌺</span> 花卉识别
+                </a>
+                <ul class="navbar-links">
+                    <li><a href="/" class="active">首页</a></li>
+                    <li><a href="/photo">拍照识别</a></li>
+                    <li><a href="/video">实时视频</a></li>
+                </ul>
+                <div id="model-badge" class="model-badge">
+                    <span class="status-dot"></span>
+                    <span id="badge-text">检测中...</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="container">
+            <!-- Hero -->
+            <section class="hero-section">
+                <span class="hero-emoji">🌻</span>
+                <h1 class="hero-title">智能<span class="accent">花卉</span>识别</h1>
+                <p class="hero-subtitle">基于 YOLOv11 深度学习模型，精准识别 5 种常见花卉</p>
+            </section>
+
+            <!-- 模式选择卡片 -->
+            <section class="mode-cards">
+                <!-- 拍照识别 -->
+                <a href="/photo" class="mode-card photo-card">
+                    <span class="card-icon">📸</span>
+                    <h2>拍照识别</h2>
+                    <p>上传一张花卉照片，<br>即刻获得 Top-5 识别结果与置信度分析</p>
+                    <span class="card-btn photo-btn">开始识别 →</span>
+                </a>
+
+                <!-- 实时视频 -->
+                <a href="/video" class="mode-card video-card">
+                    <span class="card-icon">🎥</span>
+                    <h2>实时视频</h2>
+                    <p>开启摄像头，<br>实时捕捉画面中的花卉并即时显示识别结果</p>
+                    <span class="card-btn video-btn">开始识别 →</span>
+                </a>
+            </section>
+
+            <!-- 可识别花卉展示 -->
+            <section style="text-align:center; padding-bottom:50px;">
+                <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:14px;">
+                    目前支持识别以下 <strong>5 种</strong> 常见花卉
+                </p>
+                <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+                    <span class="class-tag" style="font-size:0.9rem; padding:10px 20px;">🌼 雏菊</span>
+                    <span class="class-tag" style="font-size:0.9rem; padding:10px 20px;">🌾 蒲公英</span>
+                    <span class="class-tag" style="font-size:0.9rem; padding:10px 20px;">🌹 玫瑰</span>
+                    <span class="class-tag" style="font-size:0.9rem; padding:10px 20px;">🌻 向日葵</span>
+                    <span class="class-tag" style="font-size:0.9rem; padding:10px 20px;">🌷 郁金香</span>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            Powered by YOLOv11 &middot; Ultralytics
+        </footer>
+    </div>
+
+    <script>
+    // 检查模型状态
+    async function checkModelStatus() {
+        const badge = document.getElementById('model-badge');
+        const badgeText = document.getElementById('badge-text');
+        try {
+            const res = await fetch('/api/model/status');
+            const data = await res.json();
+            if (data.model_exists) {
+                badge.className = 'model-badge ready';
+                badge.querySelector('.status-dot').className = 'status-dot green';
+                badgeText.textContent = `模型就绪 · ${data.class_count} 类`;
+            } else {
+                badge.className = 'model-badge not-ready';
+                badge.querySelector('.status-dot').className = 'status-dot red';
+                badgeText.textContent = '模型未加载';
+            }
+        } catch (e) {
+            badge.className = 'model-badge not-ready';
+            badge.querySelector('.status-dot').className = 'status-dot red';
+            badgeText.textContent = '连接失败';
+        }
+    }
+    checkModelStatus();
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# Claude
+.claude/
+
+# 模型文件（太大，不上传）
+*.pt
+*.pth
+runs/
+
+# 数据集（太大）
+datasets/
+
+# 测试图片
+imgs/
+
+# 上传临时文件
+uploads/*
+!uploads/.gitkeep
+
+# 环境变量
+.env
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 日志文件
+*.log
+
+# 压缩包（数据集归档不提交）
+*.zip
+*.tar.gz
+*.rar

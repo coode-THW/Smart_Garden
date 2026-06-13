@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 拍照识别 — 花卉识别</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="/" class="navbar-brand">
+                    <span class="logo-icon">🌺</span> 花卉识别
+                </a>
+                <ul class="navbar-links">
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/photo" class="active">拍照识别</a></li>
+                    <li><a href="/video">实时视频</a></li>
+                </ul>
+                <a href="/" class="btn-back">← 返回首页</a>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="container photo-page">
+            <div class="photo-layout">
+                <!-- 左栏：上传区 -->
+                <div class="upload-section fade-in">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <div class="upload-icon">📷</div>
+                            <p class="upload-text">拖拽图片到此处，或点击选择</p>
+                            <p class="upload-hint">支持 JPG / PNG / WEBP，最大 16MB</p>
+                        </div>
+                        <img class="upload-preview" id="previewImg" alt="预览图片">
+                        <input type="file" id="fileInput" accept="image/*">
+                    </div>
+
+                    <div class="upload-actions">
+                        <button class="btn btn-primary" id="btnPredict" disabled>
+                            🔍 开始识别
+                        </button>
+                        <button class="btn btn-outline" id="btnClear" disabled>
+                            ✕ 清除图片
+                        </button>
+                    </div>
+
+                    <!-- 加载动画 -->
+                    <div class="spinner" id="spinner"></div>
+
+                    <!-- 错误提示 -->
+                    <div class="alert alert-error hidden" id="alertError">
+                        <span class="alert-icon">⚠️</span>
+                        <span id="alertMsg"></span>
+                    </div>
+                </div>
+
+                <!-- 右栏：结果 -->
+                <div class="result-section fade-in" id="resultSection">
+                    <h3>📊 识别结果</h3>
+                    <div class="result-placeholder" id="resultPlaceholder">
+                        <span class="icon">🔎</span>
+                        <p>上传花卉图片后点击「开始识别」</p>
+                    </div>
+                    <div class="hidden" id="resultContent"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            Powered by YOLOv11 &middot; Ultralytics
+        </footer>
+    </div>
+
+    <script>
+    // ============================================================
+    //  元素引用
+    // ============================================================
+    const uploadZone = document.getElementById('uploadZone');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+    const fileInput = document.getElementById('fileInput');
+    const previewImg = document.getElementById('previewImg');
+    const btnPredict = document.getElementById('btnPredict');
+    const btnClear = document.getElementById('btnClear');
+    const spinner = document.getElementById('spinner');
+    const alertError = document.getElementById('alertError');
+    const alertMsg = document.getElementById('alertMsg');
+    const resultPlaceholder = document.getElementById('resultPlaceholder');
+    const resultContent = document.getElementById('resultContent');
+
+    let currentFile = null;
+
+    // ============================================================
+    //  拖拽上传
+    // ============================================================
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
+    });
+
+    // ============================================================
+    //  文件处理
+    // ============================================================
+    function handleFile(file) {
+        // 验证类型
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp'];
+        if (!validTypes.includes(file.type)) {
+            showError('不支持的文件格式，请选择 JPG / PNG / WEBP 图片');
+            return;
+        }
+
+        if (file.size > 16 * 1024 * 1024) {
+            showError('文件过大，请选择小于 16MB 的图片');
+            return;
+        }
+
+        currentFile = file;
+
+        // 预览
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            uploadZone.classList.add('has-image');
+            btnPredict.disabled = false;
+            btnClear.disabled = false;
+        };
+        reader.readAsDataURL(file);
+
+        hideError();
+        resetResults();
+    }
+
+    btnClear.addEventListener('click', () => {
+        currentFile = null;
+        fileInput.value = '';
+        previewImg.src = '';
+        uploadZone.classList.remove('has-image');
+        btnPredict.disabled = true;
+        btnClear.disabled = true;
+        resetResults();
+    });
+
+    // ============================================================
+    //  预测请求
+    // ============================================================
+    btnPredict.addEventListener('click', async () => {
+        if (!currentFile) return;
+
+        // 显示加载状态
+        spinner.classList.add('active');
+        btnPredict.disabled = true;
+        hideError();
+
+        try {
+            const formData = new FormData();
+            formData.append('image', currentFile);
+
+            const res = await fetch('/api/predict', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                if (data.error === 'model_not_loaded') {
+                    showError('模型尚未训练。请先在终端运行: python train_flower.py');
+                } else {
+                    showError(data.message || '识别失败');
+                }
+                return;
+            }
+
+            renderResults(data);
+
+        } catch (err) {
+            showError('网络错误，请确认服务已启动（python smart_garden_web/app.py）');
+        } finally {
+            spinner.classList.remove('active');
+            btnPredict.disabled = false;
+        }
+    });
+
+    // ============================================================
+    //  结果渲染
+    // ============================================================
+    function renderResults(data) {
+        resultPlaceholder.classList.add('hidden');
+        resultContent.classList.remove('hidden');
+        resultContent.classList.add('fade-in');
+
+        const preds = data.predictions;
+        const top1 = preds[0];
+
+        // 花卉 emoji 映射
+        const emojiMap = {
+            '雏菊': '🌼', '蒲公英': '🌾', '玫瑰': '🌹',
+            '向日葵': '🌻', '郁金香': '🌷'
+        };
+        const top1Emoji = emojiMap[top1.name_zh] || '🌸';
+
+        let html = `
+            <!-- Top-1 高亮卡片 -->
+            <div class="top1-card">
+                <span class="top1-icon">${top1Emoji}</span>
+                <div class="top1-info">
+                    <div class="top1-name">${top1.name_zh}</div>
+                    <div class="top1-conf">置信度 ${(top1.confidence * 100).toFixed(1)}%</div>
+                </div>
+                <span class="top1-badge">TOP 1</span>
+            </div>
+
+            <!-- Top-5 条形图 -->
+            <ul class="confidence-list">
+        `;
+
+        const rankClasses = ['r1','r2','r3','r4','r5'];
+        const barClasses = ['c1','c2','c3','c4','c5'];
+
+        preds.forEach((p, i) => {
+            const emoji = emojiMap[p.name_zh] || '🌸';
+            const pct = (p.confidence * 100).toFixed(1);
+            html += `
+                <li class="confidence-item">
+                    <span class="confidence-rank ${rankClasses[i]}">${i + 1}</span>
+                    <span class="confidence-label">${emoji} ${p.name_zh}</span>
+                    <div class="confidence-bar-wrap">
+                        <div class="confidence-bar ${barClasses[i]}" style="width:${pct}%"></div>
+                    </div>
+                    <span class="confidence-value">${pct}%</span>
+                </li>
+            `;
+        });
+
+        html += `</ul>
+            <p style="margin-top:16px; font-size:0.8rem; color:var(--text-light); text-align:center;">
+                ⚡ 处理耗时: ${data.processing_time_ms} ms
+            </p>
+        `;
+
+        resultContent.innerHTML = html;
+    }
+
+    function resetResults() {
+        resultPlaceholder.classList.remove('hidden');
+        resultContent.classList.add('hidden');
+        resultContent.innerHTML = '';
+    }
+
+    // ============================================================
+    //  错误提示
+    // ============================================================
+    function showError(msg) {
+        alertMsg.textContent = msg;
+        alertError.classList.remove('hidden');
+    }
+
+    function hideError() {
+        alertError.classList.add('hidden');
+    }
+
+    // 初始检查模型状态
+    (async function init() {
+        try {
+            const res = await fetch('/api/model/status');
+            const data = await res.json();
+            if (!data.model_exists) {
+                showError('模型尚未训练。请先在终端运行: python train_flower.py');
+                btnPredict.disabled = true;
+            }
+        } catch (e) {
+            showError('无法连接到后端服务');
+        }
+    })();
+    </script>
+</body>
+</html>

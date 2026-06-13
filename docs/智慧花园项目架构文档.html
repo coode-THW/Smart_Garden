@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智慧花园项目架构文档 v2.1</title>
+<style>
+  :root {
+    --green-900: #14532d; --green-800: #166534; --green-700: #15803d;
+    --green-600: #16a34a; --green-500: #22c55e; --green-400: #4ade80;
+    --green-300: #86efac; --green-200: #bbf7d0; --green-100: #dcfce7;
+    --green-50: #f0fdf4;
+    --amber-600: #d97706; --amber-100: #fef3c7; --amber-50: #fffbeb;
+    --purple-600: #7c3aed; --purple-100: #ede9fe; --purple-50: #f5f3ff;
+    --red-600: #dc2626; --red-100: #fee2e2; --red-50: #fef2f2;
+    --blue-600: #2563eb; --blue-100: #dbeafe; --blue-50: #eff6ff;
+    --slate-900: #0f172a; --slate-800: #1e293b; --slate-700: #334155;
+    --slate-600: #475569; --slate-500: #64748b; --slate-400: #94a3b8;
+    --slate-300: #cbd5e1; --slate-200: #e2e8f0; --slate-100: #f1f5f9;
+    --slate-50: #f8fafc; --white: #ffffff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: var(--slate-800); background: var(--slate-50); line-height: 1.75; display: flex;
+  }
+  /* ---- SIDEBAR ---- */
+  nav {
+    width: 280px; min-width: 280px; height: 100vh; position: sticky; top: 0;
+    background: linear-gradient(180deg, var(--green-900) 0%, var(--green-800) 100%);
+    color: var(--white); overflow-y: auto; padding: 24px 0;
+    box-shadow: 2px 0 16px rgba(0,0,0,.12);
+  }
+  nav .logo {
+    padding: 0 24px 20px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 8px;
+  }
+  nav .logo h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: .5px; }
+  nav .logo .ver { font-size: .78rem; opacity: .7; margin-top: 2px; }
+  nav a { display: block; padding: 6px 24px; color: rgba(255,255,255,.78); text-decoration: none; font-size: .85rem; transition: all .15s; border-left: 3px solid transparent; }
+  nav a:hover { color: #fff; background: rgba(255,255,255,.08); border-left-color: var(--green-400); }
+  nav a.chap { font-weight: 700; color: #fff; margin-top: 12px; font-size: .9rem; padding-top: 8px; }
+  nav a.sub { padding-left: 40px; font-size: .8rem; }
+  nav a.sub2 { padding-left: 56px; font-size: .78rem; }
+  /* ---- MAIN ---- */
+  main { flex: 1; max-width: 1000px; padding: 40px 48px 80px; }
+  h1 { font-size: 2rem; color: var(--green-900); margin-bottom: 4px; font-weight: 800; }
+  h2 { font-size: 1.45rem; color: var(--green-800); margin-top: 48px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--green-200); font-weight: 700; }
+  h3 { font-size: 1.15rem; color: var(--slate-800); margin-top: 32px; margin-bottom: 10px; font-weight: 700; }
+  h4 { font-size: 1rem; color: var(--slate-700); margin-top: 24px; margin-bottom: 8px; font-weight: 700; }
+  p { margin-bottom: 12px; }
+  .meta-table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--white); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .meta-table td, .meta-table th { padding: 10px 16px; border-bottom: 1px solid var(--slate-100); }
+  .meta-table tr:last-child td { border-bottom: none; }
+  .meta-table td:first-child { font-weight: 600; color: var(--slate-600); width: 140px; background: var(--slate-50); }
+  /* ---- TABLES ---- */
+  .table-wrap { overflow-x: auto; margin: 16px 0; }
+  table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06); font-size: .88rem; }
+  thead th { background: var(--green-700); color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; white-space: nowrap; }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child { border-radius: 0 8px 0 0; }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--slate-100); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--green-50); }
+  tbody td:first-child { font-weight: 600; color: var(--slate-700); white-space: nowrap; }
+  /* ---- CODE / PRE ---- */
+  pre { background: var(--slate-800); color: #e2e8f0; padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: .82rem; line-height: 1.55; font-family: "SF Mono", "Fira Code", "Consolas", monospace; }
+  pre.ascii { background: var(--slate-900); color: var(--green-300); font-size: .72rem; line-height: 1.3; }
+  code { font-family: "SF Mono", "Fira Code", "Consolas", monospace; background: var(--slate-100); padding: 2px 6px; border-radius: 4px; font-size: .85rem; color: var(--green-800); font-weight: 500; }
+  pre code { background: none; padding: 0; color: inherit; font-weight: normal; }
+  /* ---- CALLOUTS ---- */
+  .callout { padding: 12px 18px; margin: 16px 0; border-radius: 8px; font-size: .9rem; border-left: 4px solid; }
+  .callout.info { background: var(--blue-50); border-color: var(--blue-600); color: var(--slate-700); }
+  .callout.warn { background: var(--amber-50); border-color: var(--amber-600); color: var(--slate-700); }
+  .callout.tip { background: var(--green-50); border-color: var(--green-600); color: var(--slate-700); }
+  .callout.danger { background: var(--red-50); border-color: var(--red-600); color: var(--slate-700); }
+  .callout.purple { background: var(--purple-50); border-color: var(--purple-600); }
+  /* ---- BADGES ---- */
+  .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.78rem; font-weight:600; }
+  .badge.p1 { background:var(--green-100); color:var(--green-800); }
+  .badge.p2 { background:var(--amber-100); color:var(--amber-600); }
+  .badge.p3 { background:var(--purple-100); color:var(--purple-600); }
+  .badge.future { background:var(--slate-200); color:var(--slate-600); }
+  /* ---- ARCH DIAGRAM BOX ---- */
+  .arch-box { background:var(--slate-800); border-radius:10px; padding:6px 0; margin:16px 0; }
+  /* ---- LIST ---- */
+  ul, ol { margin: 8px 0 12px 24px; }
+  li { margin-bottom: 4px; }
+  blockquote { border-left: 4px solid var(--green-300); background:var(--green-50); padding:12px 18px; margin:16px 0; border-radius:0 8px 8px 0; color:var(--slate-700); font-size:.9rem; }
+  hr { border:none; border-top:1px solid var(--slate-200); margin:32px 0; }
+  a { color: var(--green-700); }
+  /* ---- RESPONSIVE ---- */
+  @media(max-width:860px) { nav { display:none; } main { padding:24px 20px; } }
+  @media print { nav { display:none; } main { max-width:100%; padding:0; } pre.ascii { font-size:.65rem; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <h1>🌿 智慧花园</h1>
+    <div class="ver">架构文档 v2.1 · 2026-06-12</div>
+  </div>
+  <a href="#s1" class="chap">1. 文档概述</a>
+  <a href="#s1-1" class="sub">1.1 文档信息</a>
+  <a href="#s1-2" class="sub">1.2 项目背景</a>
+  <a href="#s1-3" class="sub">1.3 核心目标</a>
+  <a href="#s2" class="chap">2. 系统架构设计</a>
+  <a href="#s2-1" class="sub">2.1 架构总览</a>
+  <a href="#s2-2" class="sub">2.2 分层架构</a>
+  <a href="#s2-3" class="sub">2.3 核心模块划分</a>
+  <a href="#s3" class="chap">3. 技术选型</a>
+  <a href="#s3-1" class="sub">3.1 APP技术栈</a>
+  <a href="#s3-2" class="sub">3.2 AI技术栈</a>
+  <a href="#s3-3" class="sub">3.3 与原云端架构对比</a>
+  <a href="#s4" class="chap">4. 核心模块详细设计</a>
+  <a href="#s4-1" class="sub">4.1 花卉识别模块</a>
+  <a href="#s4-2" class="sub">4.2 养护知识数据策略</a>
+  <a href="#s5" class="chap">5. 模块间数据协议</a>
+  <a href="#s5-1" class="sub">5.1 通用数据规范</a>
+  <a href="#s5-2" class="sub">5.2 花卉识别协议</a>
+  <a href="#s5-3" class="sub">5.3 养护指南查询</a>
+  <a href="#s5-4" class="sub">5.4 用户数据管理</a>
+  <a href="#s5-5" class="sub">5.5 提醒服务协议</a>
+  <a href="#s6" class="chap">6. 大模型云端增强</a>
+  <a href="#s6-1" class="sub">6.1 设计背景</a>
+  <a href="#s6-2" class="sub">6.2 识别编排器</a>
+  <a href="#s6-3" class="sub">6.3 技术路线</a>
+  <a href="#s6-4" class="sub">6.4 大模型选择</a>
+  <a href="#s6-5" class="sub">6.5 调用方式</a>
+  <a href="#s6-6" class="sub">6.6 数据交互协议</a>
+  <a href="#s7" class="chap">7. 部署与发布</a>
+  <a href="#s7-1" class="sub">7.1 APP打包分发</a>
+  <a href="#s7-2" class="sub">7.2 APP包结构</a>
+  <a href="#s7-3" class="sub">7.3 运维对比</a>
+  <a href="#s7-4" class="sub">7.4 体积与设备要求</a>
+  <a href="#s8" class="chap">8. 安全性考虑</a>
+  <a href="#s9" class="chap">9. 监控与诊断</a>
+  <a href="#s10" class="chap">10. Phase 3 演进计划</a>
+  <a href="#s10-1" class="sub">10.1 设计原则</a>
+  <a href="#s10-2" class="sub">10.2 服务端架构</a>
+  <a href="#s10-3" class="sub">10.3 远程推送</a>
+  <a href="#s10-4" class="sub">10.4 纠错数据收集</a>
+  <a href="#s10-5" class="sub">10.5 技术选型</a>
+  <a href="#s10-6" class="sub">10.6 服务器依赖总览</a>
+  <a href="#s10-7" class="sub">10.7 Phase 3 机器资源</a>
+  <a href="#s-appendix" class="chap">附录</a>
+</nav>
+
+<main>
+
+<h1>🌿 智慧花园项目架构文档</h1>
+<p style="color:var(--slate-500);font-size:.92rem;">移动端本地推理 + 大模型云端增强 &nbsp;·&nbsp; v2.1 &nbsp;·&nbsp; 2026-06-12</p>
+
+<!-- ================ 1 ================ -->
+<h2 id="s1">1. 文档概述</h2>
+
+<h3 id="s1-1">1.1 文档信息</h3>
+<table class="meta-table">
+  <tr><td>文档版本</td><td><span style="font-weight:700;color:var(--green-700)">v2.1</span></td></tr>
+  <tr><td>创建日期</td><td>2026-06-10</td></tr>
+  <tr><td>修订日期</td><td>2026-06-12</td></tr>
+  <tr><td>产品定位</td><td>家庭花卉养护智能识别与指导软件</td></tr>
+  <tr><td>技术架构</td><td><strong>移动端本地推理 + 大模型云端增强</strong></td></tr>
+  <tr><td>作者</td><td>技术团队</td></tr>
+</table>
+
+<h3 id="s1-2">1.2 项目背景</h3>
+<p>智慧花园是一款基于计算机视觉技术 <strong>YOLOv11</strong> 的智能花卉养护助手，通过拍照识别花卉品种，提供科学、精准的养护建议。受服务器性能限制，系统采用<strong>手机端本地推理</strong>架构，将YOLO模型部署在移动设备上运行，无需后端服务器即可完成核心识别功能。</p>
+
+<h3 id="s1-3">1.3 核心目标</h3>
+<ul>
+  <li>构建纯移动端的离线花卉识别能力，无需依赖后端服务器</li>
+  <li>实现基于 YOLOv11 + ONNX Runtime 的本地推理方案</li>
+  <li>设计非常见花卉的云端大模型识别增强方案</li>
+  <li>本地化数据存储，保障用户隐私与离线可用性</li>
+  <li><strong>免注册即用</strong>：无需注册登录，打开APP即可拍照识别，降低首次使用门槛</li>
+  <li><strong>识别纠错闭环</strong>：用户可反馈识别错误，积累训练数据，驱动模型持续迭代</li>
+</ul>
+
+<!-- ================ 2 ================ -->
+<h2 id="s2">2. 系统架构设计</h2>
+
+<h3 id="s2-1">2.1 架构总览</h3>
+<div class="arch-box">
+<pre class="ascii">┌─────────────────────────────────────────────────────────────────────────────┐
+│                        智慧花园系统架构（手机端）                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                       APP 客户端 (UniApp)                            │   │
+│  │  ┌──────────┐    ┌──────────────────┐    ┌─────────────────────┐   │   │
+│  │  │  UI 层   │───→│   识别编排器      │───→│   YOLOv11 本地推理   │   │   │
+│  │  │ 拍摄/相册 │←───│  (Orchestrator)  │←───│  (ONNX Runtime)     │   │   │
+│  │  └──────────┘    └────────┬─────────┘    └─────────────────────┘   │   │
+│  │                           │                                        │   │
+│  │              ┌────────────┼────────────┐                           │   │
+│  │              ↓            ↓            ↓                           │   │
+│  │        conf&lt;30%    30%≤conf&lt;85%    conf≥85%                        │   │
+│  │        (非花卉)     (疑似花卉)      (确认花卉)                       │   │
+│  │           │            │              │                            │   │
+│  │           ↓            ↓              ↓                            │   │
+│  │      提示重拍     ┌──────────┐   直接返回                            │   │
+│  │                  │ LLM增强  │   本地结果                            │   │
+│  │                  │ HTTPS直连│                                      │   │
+│  │                  └──────────┘                                      │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
+│  │  │                     本地数据层                                │  │   │
+│  │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │  │   │
+│  │  │  │  花卉知识库   │  │  养护指南库   │  │   用户数据       │   │  │   │
+│  │  │  │ (JSON资源)   │  │ (JSON资源)   │  │  (SQLite)       │   │  │   │
+│  │  │  │ +在线增量更新 │  │              │  │  匿名用户/可选注册│   │  │   │
+│  │  │  └──────────────┘  └──────────────┘  └──────────────────┘   │  │   │
+│  │  └──────────────────────────────────────────────────────────────┘  │   │
+│  │  识别结果页：[一键设置提醒]  [识别有误？纠错]                        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                    ┌─────────────────┐          ┌──────────────┐            │
+│                    │  云端大模型 API  │          │ Nginx静态文件  │           │
+│                    │ 阿里云百炼/智谱AI │          │ 知识库增量更新  │           │
+│                    └─────────────────┘          └──────────────┘            │
+│                    仅低置信度时调用              启动时静默检查               │
+└─────────────────────────────────────────────────────────────────────────────┘</pre>
+</div>
+
+<h3 id="s2-2">2.2 分层架构</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>层级</th><th>名称</th><th>职责</th><th>技术栈</th></tr></thead>
+  <tbody>
+    <tr><td><strong>L1</strong></td><td>UI层</td><td>用户界面展示、交互逻辑</td><td>UniApp / uView</td></tr>
+    <tr><td><strong>L2</strong></td><td>业务逻辑层</td><td>识别编排、模块调度、数据管理</td><td>JavaScript / TypeScript</td></tr>
+    <tr><td><strong>L3</strong></td><td>AI推理层</td><td>YOLO本地推理、图像预处理</td><td>ONNX Runtime (移动端)</td></tr>
+    <tr><td><strong>L4</strong></td><td>数据层</td><td>知识数据、用户数据本地存储</td><td>SQLite / JSON资源文件</td></tr>
+    <tr><td><strong>L5</strong></td><td>云端扩展层</td><td>大模型识别增强（仅低置信度时触发）</td><td>阿里云百炼 / 智谱AI (HTTPS直连)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s2-3">2.3 核心模块划分</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>模块</th><th>功能描述</th><th>运行位置</th><th>开发阶段</th></tr></thead>
+  <tbody>
+    <tr><td><strong>识别模块</strong></td><td>花卉图像识别、非花卉过滤、置信度计算、结果纠错反馈</td><td>APP本地 (ONNX Runtime)</td><td><span class="badge p1">Phase 1</span></td></tr>
+    <tr><td><strong>知识模块</strong></td><td>养护指南管理、病虫害知识库、知识库在线增量更新</td><td>APP本地 (JSON资源) + Nginx静态文件</td><td><span class="badge p1">Phase 1</span></td></tr>
+    <tr><td><strong>用户模块</strong></td><td>匿名用户自动创建、花园管理（注册为可选，用于多设备同步）</td><td>APP本地 (SQLite)</td><td><span class="badge p1">Phase 1</span></td></tr>
+    <tr><td><strong>大模型模块</strong></td><td>非常见花卉识别、养护建议动态生成、联网状态透明提示</td><td>APP直连云端API</td><td><span class="badge p1">Phase 1</span></td></tr>
+    <tr><td><strong>提醒模块</strong></td><td>识别后一键设置提醒、养护提醒、本地通知</td><td>APP本地 + 系统通知</td><td><span class="badge p2">Phase 2</span></td></tr>
+    <tr><td><strong>远程推送模块</strong></td><td>服务端定时触发养护推送（APP被杀死时仍可送达）</td><td>轻量服务器 + 个推/极光</td><td><span class="badge p3">Phase 3</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ================ 3 ================ -->
+<h2 id="s3">3. 技术选型</h2>
+
+<h3 id="s3-1">3.1 APP技术栈</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>分类</th><th>技术</th><th>版本</th><th>选型理由</th></tr></thead>
+  <tbody>
+    <tr><td><strong>框架</strong></td><td>UniApp</td><td>3.0+</td><td>跨平台开发，支持iOS/Android/小程序</td></tr>
+    <tr><td><strong>UI组件</strong></td><td>uView</td><td>2.0+</td><td>丰富的移动端组件库</td></tr>
+    <tr><td><strong>状态管理</strong></td><td>Pinia</td><td>2.0+</td><td>轻量级状态管理</td></tr>
+    <tr><td><strong>图片处理</strong></td><td>canvas API</td><td>—</td><td>图像压缩、裁剪</td></tr>
+    <tr><td><strong>本地数据库</strong></td><td>SQLite</td><td>—</td><td>轻量级嵌入式数据库，存储用户数据</td></tr>
+    <tr><td><strong>本地缓存</strong></td><td>SharedPreferences / NSUserDefaults</td><td>—</td><td>键值对缓存，存储配置与临时数据</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s3-2">3.2 AI技术栈</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>分类</th><th>技术</th><th>版本</th><th>选型理由</th></tr></thead>
+  <tbody>
+    <tr><td><strong>主识别模型</strong></td><td>YOLOv11n</td><td>2024</td><td>YOLO nano版本，模型小（~5MB），适合移动端</td></tr>
+    <tr><td><strong>模型框架</strong></td><td>PyTorch → ONNX</td><td>2.2+</td><td>训练用PyTorch，导出ONNX供移动端推理</td></tr>
+    <tr><td><strong>移动端推理</strong></td><td>ONNX Runtime Mobile</td><td>1.18+</td><td>跨平台移动推理引擎，支持CPU/NPU加速</td></tr>
+    <tr><td><strong>模型量化</strong></td><td>FP16 / INT8</td><td>—</td><td>压缩模型体积，提升推理速度</td></tr>
+    <tr><td><strong>大模型接口</strong></td><td>阿里云百炼 / 智谱AI</td><td>—</td><td>国内直连，图像理解能力强，成本低</td></tr>
+    <tr><td><strong>大模型调用</strong></td><td>HTTPS 直连 (uni.request)</td><td>—</td><td>APP直接调用云端大模型API，无需中转服务器</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s3-3">3.3 与原云端架构的对比</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>维度</th><th style="background:var(--slate-600)">原方案（云端部署）</th><th style="background:var(--green-600)">当前方案（手机端本地）</th></tr></thead>
+  <tbody>
+    <tr><td><strong>YOLO推理</strong></td><td>GPU服务器</td><td>✅ 手机CPU/NPU (ONNX Runtime)</td></tr>
+    <tr><td><strong>业务逻辑</strong></td><td>Spring Boot后端</td><td>✅ APP内JavaScript模块</td></tr>
+    <tr><td><strong>数据存储</strong></td><td>MySQL + Redis</td><td>✅ SQLite + 本地JSON</td></tr>
+    <tr><td><strong>接口调用</strong></td><td>HTTP RESTful API</td><td>✅ APP内部函数调用</td></tr>
+    <tr><td><strong>LLM调用</strong></td><td>后端中转</td><td>✅ APP直连云端API</td></tr>
+    <tr><td><strong>网络依赖</strong></td><td>每次识别需联网</td><td>✅ 低置信度时联网 + 知识库后台静默更新（可降级离线）</td></tr>
+    <tr><td><strong>运维成本</strong></td><td>需维护服务器集群</td><td>✅ Phase 1/2 零服务器；Phase 3 可选轻量服务器（已有，复用）</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ================ 4 ================ -->
+<h2 id="s4">4. 核心模块详细设计</h2>
+
+<h3 id="s4-1">4.1 花卉识别模块</h3>
+
+<h4>4.1.1 识别流程设计</h4>
+<div class="arch-box">
+<pre class="ascii">┌──────────────────────────────────────────────────────────────────┐
+│              花卉识别模块（全部在APP本地执行）                      │
+├──────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐  │
+│  │ 图像预处理   │ ──→ │ YOLOv11推理  │ ──→ │  结果判断    │  │
+│  │ (压缩/归一化)│      │ (ONNX本地)   │      │ (三级阈值)   │  │
+│  └──────────────┘      └──────────────┘      └──────┬───────┘  │
+│                    ┌────────────────────────────────┘          │
+│                    ↓                                           │
+│              ┌───────────────┐                                │
+│              │  置信度判断    │                                │
+│              └───────┬───────┘                                │
+│         ┌────────────┼────────────┐                           │
+│         ↓            ↓            ↓                           │
+│   置信度 &lt; 30%  30% ≤ conf &lt; 85%  置信度 ≥ 85%                │
+│   (非花卉/模糊)  (疑似花卉)       (确认花卉)                    │
+│         │            │            │                           │
+│         ↓            ↓            ↓                           │
+│  提示"未检测到   显示"联网识别   直接返回结果                    │
+│  花卉，请对准   中..."→调LLM     (本地)                        │
+│  花朵拍摄"       │ 离线时提示                                │
+│                 │ "网络不可用，                               │
+│                 │  结果仅供参考"                              │
+│                 └──→ 用户可选择"重新拍照"                     │
+└──────────────────────────────────────────────────────────────────┘
+识别结果页底部：
+  ┌──────────────────────────────────────────────┐
+  │  [根据养护指南一键设置提醒]  [识别有误？纠错]   │
+  └──────────────────────────────────────────────┘</pre>
+</div>
+
+<div class="callout info"><strong>三级阈值说明</strong></div>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>置信度区间</th><th>判定</th><th>行为</th></tr></thead>
+  <tbody>
+    <tr><td><strong>conf &lt; 30%</strong></td><td>非花卉或图片质量过差</td><td>拒绝识别，引导用户对准花朵重新拍摄，不调用 LLM</td></tr>
+    <tr><td><strong>30% ≤ conf &lt; 85%</strong></td><td>可能是花卉但不确定</td><td>显示"正在联网识别..."，调 LLM 增强；无网络时返回低置信度结果 + 提示</td></tr>
+    <tr><td><strong>conf ≥ 85%</strong></td><td>确认花卉</td><td>本地直接返回结果</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout tip"><strong>非花卉过滤的设计理由</strong>：用户可能误拍桌子、墙壁等非目标物体，模型强行匹配会输出荒谬结果。低于 30% 置信度时，LLM 也无法有效识别，调用 LLM 是浪费流量。明确拒绝 + 引导重拍，用户体验优于得到一个乱猜的名字。</div>
+
+<h4>4.1.2 启动预加载策略</h4>
+<p>为避免用户点击拍照按钮后才开始加载模型（白屏等待 2 秒），采用启动时异步预加载：</p>
+<div class="arch-box">
+<pre class="ascii">APP 启动
+    ├──→ 显示欢迎页 / 主界面
+    └──→ 异步加载 ONNX 模型（后台线程）
+              ├── 加载中：拍照按钮显示"准备中..."（灰色，不可点击）
+              │           或显示进度提示"识别引擎准备中..."
+              └── 加载完成：拍照按钮激活（&lt;2s，通常用户还没点）
+                            如超过 2s 未完成，用户点击时继续等待并显示进度</pre>
+</div>
+<p><strong>预加载时机</strong>：APP 冷启动时，不与用户操作争抢资源。模型加载完成后常驻内存，后续识别无需重新加载。</p>
+
+<h4>4.1.3 识别纠错反馈</h4>
+<p>用户可纠正错误的识别结果，形成训练数据闭环：</p>
+<div class="arch-box">
+<pre class="ascii">识别结果页 ──→ 点击"识别有误？"
+    │
+    ↓
+弹出输入框：输入正确花名（选填）或选择"不是花卉"
+    │
+    ↓
+记录到本地日志：{ imageHash, yoloResult, confidence, userCorrection, timestamp }
+    │
+    ├── Phase 1：存储在本地 SQLite，可导出
+    └── Phase 3（有服务器后）：上传至服务器
+         → 人工审核 → 加入训练数据集 → 模型迭代</pre>
+</div>
+<div class="callout tip"><strong>设计要点</strong>：纠错入口低调（底部文字链接），不打断用户流程。短期价值在积累数据，长期价值在模型迭代。</div>
+
+<h4>4.1.4 模型部署方案</h4>
+<p>YOLOv11模型通过ONNX Runtime直接在手机上运行推理。训练好的PyTorch模型导出为ONNX格式，经量化压缩后随APP打包分发。</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>部署方式</th><th>适用场景</th><th>优点</th><th>缺点</th><th>阶段</th></tr></thead>
+  <tbody>
+    <tr><td><strong>移动端本地推理</strong></td><td>当前方案</td><td>无需网络，隐私保护，零服务器成本</td><td>模型需压缩，推理速度受手机性能影响</td><td><span class="badge p1">✅ 当前</span></td></tr>
+    <tr><td><strong>NPU加速推理</strong></td><td>高端机型</td><td>推理速度更快，功耗更低</td><td>需适配各平台NPU（CoreML/NNAPI），开发量较大</td><td><span class="badge future">🔮 未来</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>4.1.5 YOLOv11模型配置</h4>
+<pre><code>model:
+  name: "yolov11n.onnx"
+  input_size: 640
+  confidence_threshold: 0.3       # 降低内部阈值以便捕获低置信度输出
+  iou_threshold: 0.45
+  max_det: 100
+
+recognition:
+  high_confidence: 0.85            # ≥85%：确认花卉，本地直接返回
+  uncertain_range: [0.3, 0.85)     # 30%~85%：疑似花卉，调LLM增强
+  reject_below: 0.3                # &lt;30%或无检测结果：非花卉，拒绝并提示重拍
+
+training:
+  dataset: "custom_flower_dataset"
+  epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+
+export:
+  format: "onnx";  opset: 17;  simplify: true
+
+quantization:
+  precision: "fp16"              # 半精度浮点，体积减半，精度损失极小
+  alternative: "int8"            # 8位量化备选，体积更小但需校准数据集
+
+deployment:
+  platform: "mobile"
+  runtime: "ONNX Runtime Mobile"
+  providers:
+    - "CPUExecutionProvider"     # 通用CPU推理（所有机型）
+    - "CoreMLExecutionProvider"  # iOS NPU加速（iPhone 11+）
+    - "NNAPIExecutionProvider"   # Android NPU加速（Android 10+）</code></pre>
+
+<h3 id="s4-2">4.2 养护知识数据策略</h3>
+<p>知识模块采用<strong>动静分离</strong>的混合数据策略：YOLO已训练花卉使用APP内置静态数据，大模型识别的非常见花卉由LLM动态生成。</p>
+
+<div class="arch-box">
+<pre class="ascii">识别结果 source 字段
+        │
+   ┌────┴────┐
+   ↓         ↓
+ yolov11    llm
+   │         │
+   ↓         ↓
+flowerId 已知   flowerId 未知（不在训练集内）
+   │         │
+   ↓         ↓
+查询本地静态养护库   识别时LLM已一并生成
+(APP内置JSON)      careGuide 文本
+   │         │
+   ↓         ↓
+返回完整结构化   返回LLM生成的养护建议
+养护指南       （文本形式，结构略有差异）</pre>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>数据来源</th><th>覆盖范围</th><th>存储方式</th><th>内容特点</th></tr></thead>
+  <tbody>
+    <tr><td><strong>静态预置</strong></td><td>YOLOv11训练覆盖的常见花卉（~50+种）</td><td>APP内置JSON资源文件，随应用打包</td><td>结构化字段，人工校对，内容精准</td></tr>
+    <tr><td><strong>LLM动态生成</strong></td><td>非常见花卉、稀有品种</td><td>不存储，随识别结果一并返回</td><td>文本形式养护建议</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>静态数据管理方式</strong>：花卉养护知识以JSON文件形式存放在APP资源目录中（如 <code>static/care/月季.json</code>），随APP打包分发作为基础数据。同时，APP 启动时自动检查远程知识库版本（Nginx 静态文件），有更新时增量下载，<strong>不依赖 APP 发版即可更新养护数据</strong>。</p>
+
+<blockquote><strong>设计要点</strong>：服务器端只需 Nginx 目录下放 JSON 文件，<strong>零服务端逻辑、零额外进程</strong>。version.json 仅几十字节，增量下载通常 &lt;50KB。服务器不可用时使用本地内置版本，不影响核心功能。</blockquote>
+
+<!-- ================ 5 ================ -->
+<h2 id="s5">5. 模块间数据协议</h2>
+<blockquote><strong>架构说明</strong>：由于没有后端服务器，原RESTful API接口改为APP内部模块间的调用协议。以下定义保留接口的数据结构规范，供模块间调用时参考。各模块通过JavaScript函数调用直接交互，图片传递使用本地文件路径（无需Base64编码）。</blockquote>
+
+<h3 id="s5-1">5.1 通用数据规范</h3>
+<h4>5.1.1 调用方式</h4>
+<ul>
+  <li><strong>模块间调用</strong>：直接函数调用，同步或Promise异步</li>
+  <li><strong>大模型调用</strong>：<code>uni.request</code> HTTPS POST 直连云端API</li>
+  <li><strong>数据存储</strong>：SQLite（结构化用户数据）、本地JSON文件（知识库）、内存缓存（识别结果）</li>
+</ul>
+
+<h4>5.1.2 通用响应结构</h4>
+<pre><code>{
+    "code": 0,
+    "message": "success",
+    "data": { /* 业务数据 */ }
+}</code></pre>
+
+<h4>5.1.3 错误码定义</h4>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>错误码</th><th>含义</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><strong>0</strong></td><td>成功</td><td>—</td></tr>
+    <tr><td><strong>1001</strong></td><td>参数错误</td><td>输入参数不合法</td></tr>
+    <tr><td><strong>1002</strong></td><td>图片格式不支持</td><td>仅支持JPG/PNG</td></tr>
+    <tr><td><strong>1003</strong></td><td>图片尺寸超限</td><td>最大2048×2048</td></tr>
+    <tr><td><strong>2001</strong></td><td>识别失败</td><td>模型推理异常</td></tr>
+    <tr><td><strong>2002</strong></td><td>模型未加载</td><td>ONNX模型加载失败</td></tr>
+    <tr><td><strong style="color:var(--red-600)">2003</strong></td><td>未检测到花卉</td><td>置信度&lt;30%，非花卉或图片质量过差，引导重拍</td></tr>
+    <tr><td><strong>3001</strong></td><td>大模型调用失败</td><td>网络异常或API错误</td></tr>
+    <tr><td><strong>3002</strong></td><td>大模型超时</td><td>请求超时（10秒）</td></tr>
+    <tr><td><strong>4001</strong></td><td>数据查询失败</td><td>本地数据库或文件读取异常</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s5-2">5.2 花卉识别协议</h3>
+
+<h4>5.2.1 拍照识别花卉</h4>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>属性</th><th>值</th></tr></thead>
+  <tbody>
+    <tr><td><strong>功能名称</strong></td><td>拍照识别花卉</td></tr>
+    <tr><td><strong>调用方式</strong></td><td>APP内部函数调用</td></tr>
+    <tr><td><strong>所属模块</strong></td><td>识别模块</td></tr>
+    <tr><td><strong>优先级</strong></td><td><span class="badge p1">P0</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>输入参数</strong></p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>imagePath</td><td>String</td><td>是</td><td>图片本地文件路径</td></tr>
+    <tr><td>imageFormat</td><td>String</td><td>是</td><td>图片格式（jpg/png）</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>输出参数</strong></p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>参数名</th><th>类型</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>flowerName</td><td>String</td><td>花卉名称</td></tr>
+    <tr><td>confidence</td><td>Float</td><td>识别置信度（0-1）</td></tr>
+    <tr><td>scientificName</td><td>String</td><td>学名</td></tr>
+    <tr><td>family</td><td>String</td><td>科属</td></tr>
+    <tr><td>origin</td><td>String</td><td>原产地</td></tr>
+    <tr><td>bloomPeriod</td><td>String</td><td>花期</td></tr>
+    <tr><td>similarFlowers</td><td>Array</td><td>相似品种列表</td></tr>
+    <tr><td>source</td><td>String</td><td>识别来源（yolov11 / llm）</td></tr>
+    <tr><td>flowerId</td><td>Long</td><td>花卉ID，仅 source=yolov11 时返回</td></tr>
+    <tr><td>careGuide</td><td>String</td><td>养护建议文本，仅 source=llm 时返回</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout tip">
+<strong>成功响应示例（YOLO识别）</strong>
+<pre><code>{
+  "code": 0, "message": "success",
+  "data": {
+    "flowerName": "月季", "confidence": 0.95,
+    "scientificName": "Rosa chinensis",
+    "family": "蔷薇科蔷薇属", "origin": "中国",
+    "bloomPeriod": "4-9月",
+    "similarFlowers": ["玫瑰", "蔷薇", "木香花"],
+    "source": "yolov11", "flowerId": 1
+  }
+}</code></pre>
+</div>
+
+<div class="callout purple">
+<strong>成功响应示例（LLM识别，附带动态养护建议）</strong>
+<pre><code>{
+  "code": 0, "message": "success",
+  "data": {
+    "flowerName": "铁线莲", "confidence": 0.88,
+    "scientificName": "Clematis florida",
+    "family": "毛茛科铁线莲属",
+    "origin": "中国、日本", "bloomPeriod": "5-9月",
+    "similarFlowers": [], "source": "llm",
+    "careGuide": "铁线莲喜阳光充足、排水良好的环境。浇水要见干见湿..."
+  }
+}</code></pre>
+</div>
+
+<h3 id="s5-3">5.3 养护指南查询协议</h3>
+<blockquote><strong>数据来源说明</strong>：此协议服务于 YOLOv11 已训练的花卉（<code>source=yolov11</code>），查询APP内置的结构化静态养护数据。对于大模型识别的非常见花卉（<code>source=llm</code>），养护建议已在识别响应中随 <code>careGuide</code> 字段一并返回。</blockquote>
+
+<p><strong>输入</strong>：flowerId (Long) &nbsp;|&nbsp; <strong>输出</strong>：watering, fertilizing, lighting, environment, pests, operations</p>
+
+<div class="callout tip">
+<strong>月季养护指南响应示例</strong>
+<pre><code>{
+  "flowerId": 1, "flowerName": "月季",
+  "watering": { "frequency": "每周2-3次", "amount": "浇透水直至盆底有水流出" },
+  "fertilizing": { "period": "生长期每月1次", "recommended": ["NPK 15-15-15复合肥", "磷酸二氢钾"] },
+  "lighting": { "requirement": "每天至少4小时阳光", "bestLocation": "阳台或南向窗台" },
+  "environment": { "temperature": "15-25°C", "humidity": "50-70%" },
+  "pests": [
+    { "name": "黑斑病", "treatment": "剪除病叶，喷洒多菌灵1000倍液" },
+    { "name": "蚜虫", "treatment": "清水冲洗，喷洒吡虫啉" }
+  ],
+  "operations": [
+    { "name": "换盆", "frequency": "每年春季", "steps": ["准备新盆", "脱盆", "修剪根系", "重新栽种"] }
+  ]
+}</code></pre>
+</div>
+
+<h3 id="s5-4">5.4 用户数据管理协议</h3>
+
+<h4>5.4.1 用户身份管理（免注册设计）</h4>
+<div class="callout info"><strong>设计原则</strong>：注册不是使用 APP 的前置条件。用户首次打开 APP 即可拍照识别，所有数据关联自动生成的匿名用户 ID。注册为可选操作，仅在需要多设备同步时触发。</div>
+
+<div class="arch-box">
+<pre class="ascii">APP 首次启动
+    │
+    ↓
+自动生成匿名 userId（UUID）
+    ├──→ 创建本地 SQLite 用户记录（userId, 创建时间）
+    └──→ 所有花园数据关联此 userId
+           ↓
+      用户正常使用，无需注册
+           ↓
+      后续用户主动选择"绑定账号"时：
+        ├── 输入手机号 + 密码
+        ├── 本地记录绑定状态（userId → phone）
+        └── Phase 3 有服务器后：上传 userId + phone 实现跨设备恢复</pre>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>参数名</th><th>类型</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>userId</td><td>String (UUID)</td><td>首次启动自动生成，全局唯一</td></tr>
+    <tr><td>phone</td><td>String</td><td>绑定的手机号，null = 匿名用户</td></tr>
+    <tr><td>passwordHash</td><td>String</td><td>密码哈希，null = 未设置</td></tr>
+    <tr><td>nickname</td><td>String</td><td>可选昵称，默认"花友"</td></tr>
+  </tbody>
+</table>
+</div>
+<blockquote>匿名用户使用全部功能不受任何限制。手机号绑定是可选的，仅服务于后续多设备同步场景。</blockquote>
+
+<h4>5.4.2 添加花卉到花园（含去重）</h4>
+<p><strong>输入</strong>：flowerId, customName, location, addedDate</p>
+<p><strong>输出</strong>：gardenId, isNew, existingName</p>
+
+<div class="arch-box">
+<pre class="ascii">添加花卉调用
+    ↓
+SELECT * FROM garden WHERE userId = ? AND flowerId = ?
+    ├── 未找到 → 新增记录，返回 isNew = true
+    └── 已存在 → 弹出提示：
+                  "你的花园已有「月季」
+                   [更新照片/备注] [仍要新增] [取消]"
+                   选择"更新照片/备注" → 打开编辑页
+                   选择"仍要新增"   → 允许添加（同一花卉不同盆）
+                   选择"取消"       → 不做操作</pre>
+</div>
+
+<h3 id="s5-5">5.5 提醒服务协议</h3>
+<div class="callout warn"><strong>⚠️ 开发阶段说明</strong>：提醒模块属于 Phase 2 开发内容，在 Phase 1 开发完成并稳定运行后启动。</div>
+
+<h4>5.5.1 识别后一键设置提醒</h4>
+<p><strong>入口</strong>：识别结果页底部按钮「根据养护指南一键设置提醒」</p>
+
+<div class="arch-box">
+<pre class="ascii">用户点击"一键设置提醒"
+    ↓
+读取识别结果中的 flowerId → 查询本地养护指南
+    ↓
+解析 watering.frequency → "每周2-3次" → 自动填为每周二、四、六
+解析 fertilizing.period → "生长期每月1次" → 自动填为每月1号
+    ↓
+弹出提醒预览页（用户可调整）：
+┌──────────────────────────────┐
+│  🌱 月季养护提醒              │
+│  💧 浇水  每周 二/四/六  08:00│  ← 预填，可改
+│  🌿 施肥  每月 1日      09:00│  ← 预填，可改
+│  🔍 检查  每周 日       10:00│  ← 可选
+│  [添加更多]  [确认设置]       │
+└──────────────────────────────┘
+    ↓
+确认 → 批量创建 reminder 记录 → 注册系统本地通知</pre>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>养护指南字段</th><th>提取规则</th><th>转换为提醒</th></tr></thead>
+  <tbody>
+    <tr><td><code>watering.frequency</code></td><td>"每周N次"→间隔N天；"每天"→daily</td><td>type=water, frequency自动计算</td></tr>
+    <tr><td><code>fertilizing.period</code></td><td>"每月N次"→每月N号</td><td>type=fertilize, frequency自动计算</td></tr>
+    <tr><td><code>pests[].check</code></td><td>无明确周期时，建议每月检查</td><td>type=check, 默认每月</td></tr>
+    <tr><td>时间</td><td>无明确指定时，默认 08:00</td><td>time 默认值</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>5.5.2 手动设置养护提醒</h4>
+<p><strong>输入</strong>：gardenId, type (water/fertilize/pest/check), frequency (daily/weekly/monthly), days, date, time</p>
+<p><strong>输出</strong>：reminderId, nextRemindTime</p>
+
+<!-- ================ 6 ================ -->
+<h2 id="s6">6. 非常见花卉识别方案（大模型云端增强）</h2>
+
+<h3 id="s6-1">6.1 设计背景</h3>
+<p>YOLOv11模型主要覆盖50+种常见家庭花卉，但对于稀有花卉、新品种或形态不典型的花卉，识别准确率可能不足。为此采用<strong>三级阈值策略</strong>：置信度 &lt;30% 时判定为非花卉，直接拒绝并引导重拍；30% ≤ conf &lt; 85% 时判定为疑似花卉，APP 通过 HTTPS 直连云端大模型进行二次识别；conf ≥ 85% 时确认花卉，本地直接返回。</p>
+
+<h3 id="s6-2">6.2 识别编排器设计</h3>
+<p>识别编排器（Recognition Orchestrator）作为APP内的一个核心JS模块，负责统一调度花卉识别的完整流程。</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>职责</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><strong>输入校验</strong></td><td>图片格式、尺寸、大小检查（本地路径直接读取）</td></tr>
+    <tr><td><strong>本地缓存查询</strong></td><td>以图片哈希为key查询内存缓存，命中则直接返回</td></tr>
+    <tr><td><strong>YOLO本地推理</strong></td><td>调用ONNX Runtime进行本地初步识别</td></tr>
+    <tr><td><strong>置信度决策</strong></td><td>三级阈值：&lt;30%拒绝+引导重拍；30%~85%触发LLM增强；≥85%本地返回</td></tr>
+    <tr><td><strong>大模型API调用</strong></td><td>构造识别prompt，通过HTTPS直连云端大模型API</td></tr>
+    <tr><td><strong>结果归一化</strong></td><td>无论来自YOLO还是大模型，统一封装为协议规范定义的格式</td></tr>
+    <tr><td><strong>结果缓存</strong></td><td>回写内存缓存（图片哈希→识别结果），APP生命周期内有效</td></tr>
+    <tr><td><strong>降级兜底</strong></td><td>大模型调用失败时，返回YOLO的低置信度结果+"仅供参考"提示</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout info">
+<strong>代码模块结构</strong>
+<pre><code>src/
+├── pages/recognize/index.vue               # 识别页面（UI层）
+├── orchestrator/RecognitionOrchestrator.js  # 编排层（核心调度逻辑）
+├── services/
+│   ├── YoloService.js              # ONNX Runtime 本地推理封装
+│   ├── LlmService.js               # 云端大模型API调用封装
+│   └── KnowledgeService.js         # 本地知识库查询
+├── database/db.js                  # SQLite数据库初始化与操作
+└── static/care/                    # 内置养护知识JSON文件
+    ├── 月季.json  ├── 玫瑰.json  └── ...</code></pre>
+</div>
+
+<h3 id="s6-3">6.3 技术路线</h3>
+
+<div class="arch-box">
+<pre class="ascii">┌─────────────────────────────────────────────────────────────────┐
+│              非常见花卉识别流程（APP内，含UI状态提示）             │
+├─────────────────────────────────────────────────────────────────┤
+│  用户拍照 / 选择图片 → YOLOv11 本地推理                           │
+│         ↓                                                      │
+│  ┌──────────────────┐                                         │
+│  │  三级置信度判断    │                                        │
+│  └──────┬───┬───────┘                                         │
+│   conf&lt;30%  30%≤conf&lt;85%    conf≥85%                          │
+│   (无花卉)  (疑似花卉)       (确认花卉)                         │
+│      │         │                │                              │
+│      ↓         ↓                ↓                              │
+│  UI提示：   UI显示：         直接返回结果                       │
+│  "未检测到  "正在联网         (本地)                            │
+│  花卉，请对  识别..."                                          │
+│  准花朵拍摄" │ 检查网络状态                                     │
+│      │      ├── 有网络 → HTTPS直连云端LLM                      │
+│      │      └── 无网络 → "当前无网络，结果仅供参考"+"重新拍照"    │
+│      │               ↓                                          │
+│      │          大模型图像分析 → 返回识别结果 + 养护建议          │
+│      └────────────────→ 识别结果页                             │
+│                 ├── 结果信息                                   │
+│                 ├── [根据养护指南一键设置提醒]                   │
+│                 └── [识别有误？纠错]                            │
+└─────────────────────────────────────────────────────────────────┘</pre>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>阶段</th><th>UI 显示</th><th>目的</th></tr></thead>
+  <tbody>
+    <tr><td>YOLO 推理中</td><td>拍照按钮显示进度动画</td><td>告知正在进行中（通常很快）</td></tr>
+    <tr><td>切换 LLM</td><td>"正在联网识别，获取更准确结果..."</td><td>让用户知道为什么需要等待</td></tr>
+    <tr><td>LLM 超时/失败</td><td>"联网识别失败，已返回本地结果" + 置信度</td><td>诚实告知，不静默降级</td></tr>
+    <tr><td>离线 + 低置信度</td><td>"当前无网络，结果仅供参考" + "重新拍照"入口</td><td>给用户选择权</td></tr>
+    <tr><td>LLM 成功</td><td>标记 <code>source: llm</code> + 置信度</td><td>让用户知道结果来源</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s6-4">6.4 大模型选择与评估</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>模型</th><th>提供商</th><th>国内直连</th><th>图像理解</th><th>单张成本</th><th>推荐度</th></tr></thead>
+  <tbody>
+    <tr style="background:var(--green-50)"><td><strong>Qwen-VL-Max</strong></td><td>阿里云（百炼）</td><td>✅</td><td>优秀</td><td>约¥0.005</td><td>⭐⭐⭐⭐⭐</td></tr>
+    <tr style="background:var(--green-50)"><td><strong>GLM-4V</strong></td><td>智谱AI</td><td>✅</td><td>优秀</td><td>约¥0.005</td><td>⭐⭐⭐⭐⭐</td></tr>
+    <tr><td>DeepSeek-VL2</td><td>DeepSeek</td><td>✅</td><td>良好</td><td>约¥0.002</td><td>⭐⭐⭐⭐</td></tr>
+    <tr><td>GPT-4V</td><td>OpenAI</td><td>❌ 需翻墙</td><td>优秀</td><td>$0.03</td><td>—</td></tr>
+    <tr><td>Claude 3</td><td>Anthropic</td><td>❌ 需翻墙</td><td>良好</td><td>$0.015</td><td>—</td></tr>
+  </tbody>
+</table>
+</div>
+
+<blockquote><strong>推荐方案</strong>：采用 <strong>Qwen-VL-Max（阿里云百炼）</strong> 作为主模型，<strong>GLM-4V（智谱AI）</strong> 作为备用，实现故障切换。国内直连、成本极低、OpenAI兼容接口、注册方便。</blockquote>
+
+<h3 id="s6-5">6.5 大模型调用方式</h3>
+<p>大模型调用通过 <code>LlmService.js</code> 模块在APP内以HTTPS直连方式完成，<strong>不经过任何中间服务器</strong>。</p>
+
+<div class="arch-box">
+<pre class="ascii">┌─────────────────────────────────────────────────────┐
+│                  APP 客户端                          │
+│  RecognitionOrchestrator.js                         │
+│       │  30% ≤ confidence &lt; 85%                    │
+│       ↓                                             │
+│  LlmService.js.recognize(imagePath, prompt)         │
+│       │  HTTPS POST (TLS 1.3)  uni.request()       │
+│       ↓                                             │
+│  ┌─────────────────────────┐                        │
+│  │  阿里云百炼 / 智谱 API   │  ← 云端服务           │
+│  └─────────────────────────┘                        │
+│       ↓                                             │
+│  解析响应 → 提取结构化数据 → 返回编排器              │
+└─────────────────────────────────────────────────────┘</pre>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>职责</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><strong>图片编码</strong></td><td>将本地图片读取为Base64（大模型API要求）</td></tr>
+    <tr><td><strong>Prompt 构造</strong></td><td>将图片和识别指令拼装为LLM可理解的请求体</td></tr>
+    <tr><td><strong>模型路由</strong></td><td>主模型失败时自动切换备用模型</td></tr>
+    <tr><td><strong>响应解析</strong></td><td>从LLM返回的自由文本中提取结构化字段</td></tr>
+    <tr><td><strong>结果校验</strong></td><td>检查LLM返回的字段完整性，异常时重试或降级</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s6-6">6.6 数据交互协议</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>场景</th><th>重试次数</th><th>间隔时间</th></tr></thead>
+  <tbody>
+    <tr><td>网络超时</td><td>3次</td><td>1s, 2s, 4s</td></tr>
+    <tr><td>服务繁忙</td><td>2次</td><td>5s, 10s</td></tr>
+    <tr><td>模型切换</td><td>1次</td><td>立即</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>缓存类型</th><th>有效期</th><th>缓存内容</th><th>存储位置</th></tr></thead>
+  <tbody>
+    <tr><td>识别结果</td><td>APP生命周期</td><td>图片哈希 → 识别结果</td><td>内存</td></tr>
+    <tr><td>花卉知识</td><td>内置JSON + 在线增量更新</td><td>flowerId → 养护指南</td><td>APP内置JSON（可在线覆盖）</td></tr>
+    <tr><td>用户花园</td><td>持久存储</td><td>userId → 花园列表</td><td>SQLite</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ================ 7 ================ -->
+<h2 id="s7">7. 部署与发布</h2>
+
+<h3 id="s7-1">7.1 APP打包分发架构</h3>
+<div class="arch-box">
+<pre class="ascii">┌──────────────────────────────────────────────────────────────┐
+│                     APP 构建与发布流程                        │
+├──────────────────────────────────────────────────────────────┤
+│  ┌ 开发阶段 ────────────────────────────────────────────┐    │
+│  │  PyTorch 模型训练 → ONNX 导出 → 量化压缩             │    │
+│  │  花卉数据集 → yolov11n.onnx → FP16/INT8 (~5MB/~2.5MB)│    │
+│  └───────────────────────────────────────────────────────┘    │
+│                           ↓                                  │
+│  ┌ 构建阶段 ────────────────────────────────────────────┐    │
+│  │  UniApp源码 + ONNX模型 + JSON知识库 + 原生插件        │    │
+│  │    HBuilderX→Android(APK/AAB) / iOS(IPA) / 微信小程序 │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                           ↓                                  │
+│  ┌ 发布阶段 ────────────────────────────────────────────┐    │
+│  │  应用宝 / 华为应用市场 / App Store / 微信小程序后台   │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                              │
+│  📌 Phase 1/2 无需任何后端服务器。                            │
+│  📌 Phase 3 可选部署轻量服务器，提供远程推送和纠错数据收集。    │
+└──────────────────────────────────────────────────────────────┘</pre>
+</div>
+
+<h3 id="s7-2">7.2 APP包结构</h3>
+<pre><code>smart-garden-app/
+├── manifest.json, pages.json, App.vue, main.js
+├── static/
+│   ├── models/yolov11n-fp16.onnx    # YOLO量化模型（~5MB）
+│   └── care/                         # 养护知识JSON（50+品种）
+├── src/
+│   ├── orchestrator/RecognitionOrchestrator.js
+│   ├── services/ { YoloService, LlmService, KnowledgeService }.js
+│   ├── database/db.js
+│   └── store/garden.js
+├── nativeplugins/onnx-runtime-mobile/
+└── package.json</code></pre>
+
+<h3 id="s7-3">7.3 与云端架构的运维对比</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>维度</th><th style="background:var(--slate-600)">原方案（云端）</th><th style="background:var(--green-600)">当前方案（手机端）</th></tr></thead>
+  <tbody>
+    <tr><td><strong>服务器</strong></td><td>Nginx + Spring Boot×3 + MySQL + Redis + GPU节点</td><td>✅ 无</td></tr>
+    <tr><td><strong>容器编排</strong></td><td>Docker Compose 多服务</td><td>✅ 无</td></tr>
+    <tr><td><strong>运维工具</strong></td><td>监控告警、日志收集、CI/CD流水线</td><td>✅ 无</td></tr>
+    <tr><td><strong>发布方式</strong></td><td>服务部署 + APP发布</td><td>✅ APP发布（应用商店审核）</td></tr>
+    <tr><td><strong>模型更新</strong></td><td>服务端替换，用户无感知</td><td>随APP新版本发布</td></tr>
+    <tr><td><strong>知识库更新</strong></td><td>服务端编辑JSON文件，重启生效</td><td>✅ APP启动时增量下载（Nginx静态文件，零服务端）</td></tr>
+    <tr><td><strong>月运维成本</strong></td><td>服务器+GPU+带宽≈¥500-2000/月</td><td>✅ 大模型API按量付费+可选轻量服务器</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s7-4">7.4 APP体积与设备要求</h3>
+
+<h4>7.4.1 APP安装包体积估算</h4>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>组件</th><th>Android (APK)</th><th>iOS (IPA)</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><strong>UniApp基础框架</strong></td><td>~8-12MB</td><td>~10-15MB</td><td>Vue引擎 + 跨平台桥接层</td></tr>
+    <tr><td><strong>ONNX Runtime Mobile</strong></td><td>~4-6MB</td><td>~5-8MB</td><td>含armeabi-v7a+arm64-v8a双架构</td></tr>
+    <tr><td><strong>YOLOv11n ONNX模型</strong></td><td>~5.5MB</td><td>~5.5MB</td><td>FP16量化，精度损失&lt;1%</td></tr>
+    <tr><td><strong>花卉养护知识JSON</strong></td><td>~1MB</td><td>~1MB</td><td>50+品种纯文本</td></tr>
+    <tr><td><strong>uView UI组件库</strong></td><td>~2-3MB</td><td>~2-3MB</td><td>按需引入可减少</td></tr>
+    <tr><td><strong>应用代码+UI资源</strong></td><td>~4-7MB</td><td>~4-7MB</td><td>JS/Vue+图标+字体</td></tr>
+    <tr style="font-weight:700;background:var(--green-50)"><td><strong>合计</strong></td><td><strong>~25-35MB</strong></td><td><strong>~28-40MB</strong></td><td>极限瘦身后~18-24MB</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>7.4.2 设备配置要求</h4>
+<div class="table-wrap">
+<table>
+  <thead><tr><th></th><th>最低配置（可用，体验一般）</th><th>推荐配置（流畅体验）</th></tr></thead>
+  <tbody>
+    <tr><td><strong>操作系统</strong></td><td>Android 8.0+ / iOS 14+</td><td>Android 10+ / iOS 15+（NPU加速）</td></tr>
+    <tr><td><strong>处理器</strong></td><td>ARM64（A9+）</td><td>骁龙6系 / 天玑700+ / A12+</td></tr>
+    <tr><td><strong>内存</strong></td><td>3GB RAM</td><td>4GB+ RAM</td></tr>
+    <tr><td><strong>可用存储</strong></td><td>100MB</td><td>200MB</td></tr>
+    <tr><td><strong>摄像头</strong></td><td>800万像素</td><td>1200万像素</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>各档位机型推理耗时参考</h4>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>机型档位</th><th>代表芯片</th><th>推理耗时</th><th>体验</th></tr></thead>
+  <tbody>
+    <tr><td><strong>旗舰</strong></td><td>骁龙 8 Gen 3 / A17 Pro</td><td>~30-80ms</td><td>🟢 几乎无感</td></tr>
+    <tr><td><strong>高端</strong></td><td>骁龙 8+ Gen 1 / A15</td><td>~50-150ms</td><td>🟢 体感流畅</td></tr>
+    <tr><td><strong>中端</strong></td><td>骁龙 778G / 天玑 1080 / A13</td><td>~150-400ms</td><td>🟡 可接受</td></tr>
+    <tr><td><strong>入门</strong></td><td>骁龙 680 / 天玑 700 / A11</td><td>~400-800ms</td><td>🟠 明显等待</td></tr>
+    <tr><td><strong>老旧</strong></td><td>骁龙 625 / A9</td><td>~800-1500ms</td><td>🔴 体验较差</td></tr>
+  </tbody>
+</table>
+</div>
+<blockquote>骁龙 695 / 天玑 800 及以上机型即可获得良好体验，覆盖当前市面约 <strong>80%+</strong> 的活跃 Android 设备。iOS 端 A12（iPhone XS）及以上均流畅运行。</blockquote>
+
+<!-- ================ 8 ================ -->
+<h2 id="s8">8. 安全性考虑</h2>
+
+<h3>8.1 应用安全</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>安全措施</th><th>实现方式</th><th>覆盖范围</th></tr></thead>
+  <tbody>
+    <tr><td><strong>代码混淆</strong></td><td>JS代码混淆 + 原生插件加固</td><td>APP整体</td></tr>
+    <tr><td><strong>HTTPS</strong></td><td>TLS 1.3（大模型API调用）</td><td>大模型通信</td></tr>
+    <tr><td><strong>API Key保护</strong></td><td>构建时注入环境变量 + 代码混淆</td><td>大模型API Key</td></tr>
+    <tr><td><strong>本地数据隔离</strong></td><td>SQLite存储在APP私有目录</td><td>用户数据</td></tr>
+    <tr><td><strong>输入校验</strong></td><td>图片格式/大小/内容检查</td><td>识别入口</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>8.2 数据安全</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>数据类型</th><th>加密方式</th><th>存储位置</th></tr></thead>
+  <tbody>
+    <tr><td>用户密码</td><td>SHA-256 哈希</td><td>SQLite</td></tr>
+    <tr><td>用户数据</td><td>明文（APP私有目录隔离）</td><td>SQLite</td></tr>
+    <tr><td>图片文件</td><td>明文（APP私有目录隔离）</td><td>本地文件系统</td></tr>
+    <tr><td>大模型API Key</td><td>代码混淆 + 构建注入</td><td>源码（编译后）</td></tr>
+    <tr><td>养护知识库</td><td>明文（非敏感数据）</td><td>APP内置JSON资源</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>8.3 模型安全</h3>
+<ul>
+  <li><strong>模型打包加密</strong>：可选的AES加密，运行时解密加载</li>
+  <li><strong>完整性校验</strong>：启动时校验模型文件哈希防止篡改</li>
+  <li><strong>运行时保护</strong>：模型仅加载到内存，不暴露文件系统可写路径</li>
+  <li><strong>日志脱敏</strong>：识别记录不包含原始图片</li>
+</ul>
+
+<!-- ================ 9 ================ -->
+<h2 id="s9">9. 监控与诊断</h2>
+
+<h3>9.1 性能指标</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>指标类型</th><th>监控项</th><th>参考值</th></tr></thead>
+  <tbody>
+    <tr><td><strong>推理性能</strong></td><td>YOLO识别耗时</td><td>&lt;500ms（中端机型）</td></tr>
+    <tr><td><strong>推理性能</strong></td><td>模型加载耗时</td><td>&lt;2s（首次启动）</td></tr>
+    <tr><td><strong>内存</strong></td><td>APP内存占用峰值</td><td>&lt;200MB</td></tr>
+    <tr><td><strong>存储</strong></td><td>APP占用磁盘空间</td><td>&lt;100MB（含模型和知识库）</td></tr>
+    <tr><td><strong>网络</strong></td><td>大模型调用流量</td><td>&lt;500KB/次</td></tr>
+    <tr><td><strong>稳定性</strong></td><td>崩溃率</td><td>&lt;0.5%</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>9.2 日志规范</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>日志级别</th><th>使用场景</th><th>示例</th></tr></thead>
+  <tbody>
+    <tr><td><strong>DEBUG</strong></td><td>开发调试</td><td>模型推理中间结果、置信度数值</td></tr>
+    <tr><td><strong>INFO</strong></td><td>正常业务流程</td><td>识别成功、大模型调用成功</td></tr>
+    <tr><td><strong>WARN</strong></td><td>异常但可恢复</td><td>大模型超时→已切换备用模型</td></tr>
+    <tr><td><strong>ERROR</strong></td><td>错误且影响功能</td><td>ONNX模型加载失败、大模型调用全部失败</td></tr>
+  </tbody>
+</table>
+</div>
+<blockquote><strong>日志存储</strong>：APP本地日志文件（滚动存储，保留最近7天）。后续可选接入 Bugly / Sentry 进行崩溃和错误上报。</blockquote>
+
+<!-- ================ 10 ================ -->
+<h2 id="s10">10. Phase 3 演进计划：轻量服务器补充</h2>
+
+<div class="callout purple">
+<p><strong>📅 计划阶段</strong>：Phase 3（Phase 1 + Phase 2 稳定运行后启动）</p>
+<p>此章节为<strong>远期规划</strong>，用最小服务器成本补齐远程推送和模型迭代数据收集两个能力缺口。</p>
+<p><strong>⚠️ 知识库在线更新已提前至 Phase 1</strong>：只需 Nginx 静态文件托管，无需服务端进程。</p>
+</div>
+
+<h3 id="s10-1">10.1 设计原则</h3>
+<ul>
+  <li><strong>最小化</strong>：不在服务器上跑任何重计算（YOLO推理、大模型调用仍在手机端和第三方API）</li>
+  <li><strong>轻量级</strong>：不用Spring Boot/MySQL/Redis，选Node.js+SQLite或Go嵌入式方案</li>
+  <li><strong>单机即可</strong>：2核4G足够撑几万用户</li>
+  <li><strong>可降级</strong>：服务器挂了不影响APP核心功能</li>
+</ul>
+
+<h3 id="s10-2">10.2 服务端架构</h3>
+<div class="arch-box">
+<pre class="ascii">┌──────────────────────────────────────────────────────────┐
+│              2核4G 轻量云服务器                            │
+│  ┌ Nginx (HTTPS + 静态文件) ──────────────────────────┐  │
+│  │  ├── /knowledge/*  知识库JSON（Phase 1 已启用）     │  │
+│  │  └── → 反向代理到 Node.js                          │  │
+│  └───────────────────┬─────────────────────────────────┘  │
+│  ┌ Node.js / Go 轻量服务 (~50-80MB) ──────────────────┐  │
+│  │  ┌ /api/push ──────────┐  ┌ /api/feedback ───────┐ │  │
+│  │  │ · register  设备注册  │  │ · upload  上传纠错    │ │  │
+│  │  │ · trigger   触发推送  │  └──────────────────────┘ │  │
+│  │  └──────────┬───────────┘                             │  │
+│  │  ┌ SQLite ─────────────────────────────────────────┐ │  │
+│  │  │ · device_tokens  · reminders  · feedback        │ │  │
+│  │  └─────────────────────────────────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  总内存占用: ~200-250MB | CPU: 几乎空闲                   │
+└──────────────────────────────────────────────────────────┘</pre>
+</div>
+
+<h3 id="s10-3">10.3 远程推送</h3>
+<p><strong>解决的问题</strong>：Phase 2 的养护提醒依赖APP本地通知，进程被系统杀死后通知失效。</p>
+
+<div class="arch-box">
+<pre class="ascii">┌──────┐         ┌──────────┐         ┌──────────┐
+│ APP  │         │ 轻量服务器 │         │ 推送平台  │
+└──┬───┘         └────┬─────┘         └────┬─────┘
+   │ ① 注册设备Token   │                    │
+   │──────────────────→│ 存储 device_tokens  │
+   │         ═════════ 时间流逝 ═════════   │
+   │                   │ ② 定时检查提醒任务   │
+   │                   │ ③ 调用推送平台API   │
+   │                   │───────────────────→│
+   │ ④ "该给月季浇水了" │ ← ← ← ← ← ← ← ← │
+   │← ← ← ← ← ← ← ← ←│                    │</pre>
+</div>
+
+<div class="callout tip"><strong>推荐</strong>：直接接<strong>个推</strong>或<strong>极光推送</strong>。服务端只需调一次 HTTP API，由推送平台负责送达。</div>
+
+<h3 id="s10-4">10.4 识别纠错数据收集</h3>
+<p>Phase 1/2中用户纠错数据存储在本地SQLite。Phase 3通过WiFi下静默上传至服务器，经人工审核后加入训练数据集。</p>
+<blockquote><strong>隐私保护</strong>：照片本身不上传，仅上传图片哈希+识别结果+用户纠正。上传为可选+WiFi下执行。</blockquote>
+
+<h3 id="s10-5">10.5 技术选型建议</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>选项</th><th>内存占用</th><th>开发语言</th><th>适合场景</th></tr></thead>
+  <tbody>
+    <tr style="background:var(--green-50)"><td><strong>Node.js + Express + better-sqlite3</strong></td><td>~80MB</td><td>JavaScript（与APP同语言）</td><td>✅ 推荐</td></tr>
+    <tr><td><strong>Go + Gin + SQLite</strong></td><td>~15MB</td><td>Go</td><td>追求极致低内存</td></tr>
+    <tr><td><strong>crontab + shell 脚本</strong></td><td>0MB常驻</td><td>bash</td><td>仅推送（不适用纠错API）</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s10-6">10.6 各阶段服务器依赖总览</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>阶段</th><th>YOLO</th><th>知识查询</th><th>知识更新</th><th>用户数据</th><th>大模型</th><th>提醒</th><th>远程推送</th><th>纠错收集</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Phase 1</strong></td><td>本地</td><td>本地JSON</td><td>Nginx静态文件</td><td>本地SQLite</td><td>直连API</td><td>—</td><td>—</td><td>本地记录</td></tr>
+    <tr><td><strong>Phase 2</strong></td><td>本地</td><td>本地JSON</td><td>Nginx静态文件</td><td>本地SQLite</td><td>直连API</td><td>本地通知</td><td>—</td><td>本地记录</td></tr>
+    <tr><td><strong>Phase 3 🔮</strong></td><td>本地</td><td>本地JSON</td><td>Nginx静态文件</td><td>本地SQLite+可选绑定</td><td>直连API</td><td>本地+远程推送</td><td>Node.js/Go</td><td>上传至服务器</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="s10-7">10.7 Phase 3 机器资源</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>项目</th><th>值</th></tr></thead>
+  <tbody>
+    <tr><td><strong>配置</strong></td><td>2核4G（已有，复用）</td></tr>
+    <tr><td><strong>新增内存占用</strong></td><td>~80MB（Node.js）或 ~15MB（Go）</td></tr>
+    <tr><td><strong>预计可支撑用户</strong></td><td>数万 DAU</td></tr>
+    <tr><td><strong>月成本增量</strong></td><td>¥0（复用现有服务器）</td></tr>
+    <tr><td><strong>服务端总代码量</strong></td><td>~150 行（推送 + 纠错API）</td></tr>
+    <tr><td><strong>第三方费用</strong></td><td>个推/极光 免费额度内的推送量</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ================ APPENDIX ================ -->
+<h2 id="s-appendix">附录：模块与功能汇总表</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>模块</th><th>功能名称</th><th>调用方式</th><th>阶段</th></tr></thead>
+  <tbody>
+    <tr><td>识别模块</td><td>拍照识别</td><td>APP内函数调用 (YOLO本地推理)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>识别模块</td><td>相册识别</td><td>APP内函数调用 (YOLO本地推理)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>识别模块</td><td>大模型增强识别（含UI透明提示）</td><td>APP直连云端API (HTTPS)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>识别模块</td><td>非花卉过滤拒绝</td><td>APP内函数调用（&lt;30%拦截）</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>识别模块</td><td>识别纠错反馈</td><td>APP内函数调用 (本地SQLite)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>知识模块</td><td>获取养护指南</td><td>APP内函数调用 (本地JSON)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>知识模块</td><td>获取病虫害列表</td><td>APP内函数调用 (本地JSON)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>知识模块</td><td>知识库在线增量更新</td><td>HTTPS → Nginx静态文件</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>用户模块</td><td>匿名用户自动创建（免注册）</td><td>APP内函数调用 (SQLite UUID)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>用户模块</td><td>可选绑定手机号</td><td>APP内函数调用 (SQLite)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>用户模块</td><td>添加花卉到花园（含去重）</td><td>APP内函数调用 (SQLite)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>用户模块</td><td>获取我的花园</td><td>APP内函数调用 (SQLite)</td><td><span class="badge p1">P1</span></td></tr>
+    <tr><td>提醒模块</td><td>识别后一键设置提醒</td><td>APP内函数调用（解析养护→预填）</td><td><span class="badge p2">P2</span></td></tr>
+    <tr><td>提醒模块</td><td>手动设置养护提醒</td><td>APP内函数调用 (SQLite+系统通知)</td><td><span class="badge p2">P2</span></td></tr>
+    <tr><td>提醒模块</td><td>获取提醒列表</td><td>APP内函数调用 (SQLite)</td><td><span class="badge p2">P2</span></td></tr>
+    <tr><td>远程推送模块</td><td>注册推送设备</td><td>HTTPS → 轻量服务器 → 个推/极光</td><td><span class="badge p3">P3</span></td></tr>
+    <tr><td>远程推送模块</td><td>服务端定时推送</td><td>服务器定时任务 → 个推/极光 → APP</td><td><span class="badge p3">P3</span></td></tr>
+    <tr><td>纠错收集模块</td><td>上传纠错反馈数据</td><td>HTTPS → 轻量服务器 (WiFi静默)</td><td><span class="badge p3">P3</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<blockquote><strong>网络需求总结</strong>：Phase 1 大模型增强识别和知识库在线更新需要网络，其余功能完全离线。Phase 3 新增远程推送注册和纠错上传，均为后台静默执行、可降级。网络不可用时 APP 核心功能不受影响。</blockquote>
+
+<hr>
+<footer style="color:var(--slate-400);font-size:.85rem;text-align:center;padding:24px 0;">
+  <p><strong>智慧花园项目架构文档</strong> &nbsp;·&nbsp; v2.1 &nbsp;·&nbsp; 创建于 2026-06-10 &nbsp;·&nbsp; 修订于 2026-06-12</p>
+  <p>修订说明：v2.0 由云端部署架构改为手机端本地推理架构；v2.1 新增免注册设计、三级置信度过滤、LLM状态透明化、一键提醒、识别纠错、启动预加载、知识在线更新提前至Phase 1</p>
+  <p style="margin-top:8px;">技术团队</p>
+</footer>
+
+</main>
+</body>
+</html>

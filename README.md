@@ -48,38 +48,44 @@
 
 ## 项目结构
 
+> ⭐ = main 分支 &nbsp;|&nbsp; 🏠 = 个人/训练分支（不合并 main）&nbsp;|&nbsp; 🚫 = Git 不跟踪
+
 ```
 YOLO_smart-garden/
-├── train.py                  # YOLOv11n 训练脚本
-├── export_onnx.py            # PyTorch → ONNX 导出
-├── model_utils.py            # 共享推理模块（模型单例、预测接口）
-├── app.py                    # Flask 验证服务器
-├── requirements.txt          # Python 依赖
-├── models/
-│   └── yolov11n-flower.onnx  # 最终 ONNX 部署模型 (5.9MB)
-├── datasets/                 # 训练数据集（gitignore）
-├── docs/                     # 项目文档
-│   ├── 智慧花园项目需求文档.md
-│   ├── 智慧花园项目架构文档.md   # ← 权威参考
-│   ├── 智慧花园开发线路图.md
-│   └── 模块名称结构图.md
+├── CLAUDE.md                 ⭐  AI 编码导航（Claude Code 自动加载）
+├── README.md                 ⭐  项目说明
 │
-└── SmartGarden/              # React Native 移动端 APP
-    ├── App.tsx               # 根组件
+├── models/
+│   └── yolov11n-flower.onnx  ⭐  ONNX 部署模型 (5.9MB, 5 类)
+│
+├── docs/                     ⭐  项目文档
+│   ├── 智慧花园项目需求文档.md
+│   ├── 智慧花园项目架构文档.md   # ← 权威参考 (v2.2)
+│   ├── 智慧花园开发线路图.md
+│   └── 模块名称结构图.md        # ← 文件分支归属速查
+│
+├── scripts/
+│   ├── start-android.bat     ⭐  一键启动脚本 (Windows 双击)
+│   └── start-android.ps1     ⭐  一键启动脚本 (PowerShell)
+│
+└── SmartGarden/              ⭐  React Native 移动端 APP
+    ├── App.tsx               ⭐  根组件（底部标签导航）
+    ├── __tests__/            ⭐  Jest 单元测试
     ├── assets/
-    │   ├── yolov11n-flower.onnx
-    │   └── care/             # 养护知识库 JSON (50+ 品种)
-    ├── android/              # Android 原生工程
-    ├── ios/                  # iOS 原生工程
-    └── src/                  # 源码（计划中）
-        ├── screens/          # 页面组件
-        ├── orchestrator/     # 识别编排器
-        ├── services/         # YoloService / LlmService / KnowledgeService
-        ├── store/            # Zustand 状态管理
-        └── database/         # SQLite 持久化
+    │   └── yolov11n-flower.onnx  ⭐  随 APP 打包的模型
+    ├── android/              ⭐  Android 原生工程
+    ├── ios/                  ⭐  iOS 原生工程
+    └── src/                  ⭐  业务源码
+        ├── constants.ts          模型配置、类别名、阈值
+        ├── navigation/           导航（Root + 底部 Tab）
+        ├── screens/              首页 / 识别 / 花园
+        ├── components/           相机取景器
+        ├── services/             YoloService / ImagePreprocessor
+        ├── store/                Zustand 状态管理
+        └── types/                类型声明
 ```
 
-> 详见 [模块名称结构图](docs/模块名称结构图.md)（含文件状态、分支归属标注）
+> Python 训练脚本 (`train.py`, `export_onnx.py` 等) 已从 `main` 删除，保留在 git 历史中可恢复。
 
 ---
 
@@ -101,7 +107,11 @@ git clone <repo-url>
 cd YOLO_smart-garden
 ```
 
-### 2. Python 环境（模型训练/导出/验证）
+> ✅ ONNX 模型 (`models/yolov11n-flower.onnx`, 5.9MB) 已包含在仓库中，无需额外下载或训练。
+
+### 2. Python 环境（仅模型训练/导出时需要）
+
+> ⚠️ Python 脚本已从 `main` 分支移除。如需训练或导出模型，请从 git 历史恢复或切换到训练分支。
 
 ```bash
 # 创建虚拟环境
@@ -112,15 +122,25 @@ conda activate yolo_env
 pip install -r requirements.txt
 ```
 
-### 3. 导出 ONNX 模型（如果尚未导出）
+### 3. 导出 ONNX 模型（如需重新训练）
 
 ```bash
-# 确保 best.pt 存在于 runs/classify/.../weights/ 下
+# 从 git 历史恢复训练脚本
+git show 34da349:export_onnx.py > export_onnx.py
+
+# 确保 best.pt 存在后运行
 python export_onnx.py
 # 输出: models/yolov11n-flower.onnx (~5.9MB)
 ```
 
 ### 4. 运行 Flask 验证服务（可选）
+
+```bash
+# 恢复 Flask 脚本
+git show 34da349:app.py > app.py
+git show 34da349:model_utils.py > model_utils.py
+python app.py
+```
 
 ```bash
 python app.py
@@ -155,7 +175,7 @@ npx react-native run-ios
 | **Phase 2** | 第 41-60 天 | 一键设置养护提醒、本地通知、知识库在线更新 |
 | **Phase 3** | 第 61-80 天 | 远程推送、纠错数据收集、发布上线 |
 
-当前进度：**Phase 1** — ONNX 模型导出 ✅ | RN 项目初始化 ✅ | 模型加载验证 ✅ | 业务代码开发 📋
+当前进度：**Phase 1** — ONNX 模型导出 ✅ | RN 项目初始化 ✅ | 端到端识别 ✅ | 养护知识库 📋
 
 > 详见 [开发线路图](docs/智慧花园开发线路图.md)
 
@@ -180,6 +200,7 @@ npx react-native run-ios
 
 | 文档 | 说明 |
 |------|------|
+| **CLAUDE.md** | 🤖 AI 编码导航——模块地图、关键约定、入口速查 |
 | [项目需求文档](docs/智慧花园项目需求文档.md) | 产品定位、功能需求、验收标准 |
 | [项目架构文档](docs/智慧花园项目架构文档.md) | 技术架构、模块设计、数据协议（**权威参考**） |
 | [开发线路图](docs/智慧花园开发线路图.md) | 80 天 3 人分工、里程碑、风险评估 |

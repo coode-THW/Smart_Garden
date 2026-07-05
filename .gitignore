@@ -45,7 +45,16 @@ Thumbs.db
 # 日志文件
 *.log
 
-# 压缩包（数据集归档不提交）
+# 压缩包
 *.zip
 *.tar.gz
 *.rar
+
+# 临时测试文件
+test.html
+
+# 根目录下的 package-lock（SmartGarden 子目录的保留）
+/package-lock.json
+
+# 本地脚本（不推送至仓库）
+/scripts/

@@ -8,10 +8,11 @@
  *   避免 Metro 不支持动态 require 的问题。
  *
  * 使用方式：
- *   const ks = new KnowledgeService(careGuides);
+ *   const ks = KnowledgeService.getInstance();
  *   const resp = ks.getCareGuide(6);  // 月季
  */
 
+import {careGuides} from '../../assets/care';
 import {ApiResponse, CareGuide, ErrorCode} from '../types';
 
 // ━━━━━ 错误消息映射 ━━━━━
@@ -22,9 +23,11 @@ const ERROR_MESSAGES: Record<number, string> = {
   [ErrorCode.INVALID_PARAM]: '参数错误',
 };
 
-// ━━━━━ KnowledgeService ━━━━━
+// ━━━━━ KnowledgeService (单例) ━━━━━
 
 export class KnowledgeService {
+  private static instance: KnowledgeService;
+
   /** 名称 → 养护指南 缓存 */
   private nameCache: Map<string, CareGuide> = new Map();
 
@@ -33,6 +36,17 @@ export class KnowledgeService {
 
   /** 是否已初始化 */
   private initialized = false;
+
+  /**
+   * 获取单例实例。
+   * 内部自动从 barrel 加载所有养护指南。
+   */
+  static getInstance(): KnowledgeService {
+    if (!KnowledgeService.instance) {
+      KnowledgeService.instance = new KnowledgeService(careGuides);
+    }
+    return KnowledgeService.instance;
+  }
 
   /**
    * @param barrel assets/care/index.ts 导出的 careGuides 对象

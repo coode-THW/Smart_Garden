@@ -293,7 +293,7 @@ describe('GardenRepository', () => {
     test('返回用户的所有花卉（按时间降序）', async () => {
       await repo.add({userId: UUID, flowerId: 6, customName: '小红'});
       // 略微延迟确保排序稳定
-      await new Promise(r => setTimeout(r, 5));
+      await new Promise<void>(r => setTimeout(() => r(), 5));
       await repo.add({userId: UUID, flowerId: 3, customName: '小黄'});
       const list = await repo.findByUserId(UUID);
       expect(list.length).toBe(2);

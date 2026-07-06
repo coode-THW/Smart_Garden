@@ -1,0 +1,56 @@
+{
+  "flowerId": 37,
+  "flowerName": "万年青",
+  "scientificName": "Rohdea japonica",
+  "family": "天门冬科万年青属",
+  "origin": "中国、日本",
+  "bloomPeriod": "5-6月",
+  "watering": {
+    "frequency": "春秋每周2次，夏季每周3次，冬季每周1次",
+    "amount": "浇透水保持盆土湿润，万年青喜湿怕旱也怕积水",
+    "timing": "早晨或傍晚浇水",
+    "method": "沿盆边浇灌，经常向叶面喷水保持清洁"
+  },
+  "fertilizing": {
+    "period": "生长期（4-9月）每月施1次，冬季停肥",
+    "amount": "液肥稀释1000-1500倍浇灌",
+    "recommended": [
+      "观叶植物专用液肥",
+      "NPK 20-20-20均衡水溶肥"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜半阴和散射光，忌强光直射，耐阴性好",
+    "bestLocation": "室内明亮处、客厅、走廊、庭院阴面"
+  },
+  "environment": {
+    "temperature": "15-25°C（喜温暖，低于5°C生长停止；冬季需保持0°C以上）",
+    "humidity": "50-70%",
+    "ventilation": "良好通风即可"
+  },
+  "pests": [
+    {
+      "name": "叶斑病",
+      "symptom": "叶片出现褐色斑点，边缘不规则",
+      "treatment": "剪除病叶；喷洒多菌灵1000倍液；加强通风"
+    },
+    {
+      "name": "介壳虫",
+      "symptom": "叶片上出现白色蜡质小壳",
+      "treatment": "用湿布擦拭清除；喷洒蚧必治1000倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "分株繁殖",
+      "frequency": "春季（3-4月）",
+      "steps": [
+        "将密集的植株从盆中脱出",
+        "用利刀分割根茎，每丛留3-5片叶",
+        "剪口涂多菌灵粉末",
+        "分别栽种，浇透水",
+        "放在半阴处养护1周"
+      ]
+    }
+  ]
+}

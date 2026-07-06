@@ -1,0 +1,60 @@
+{
+  "flowerId": 53,
+  "flowerName": "梅花",
+  "scientificName": "Prunus mume",
+  "family": "蔷薇科李属",
+  "origin": "中国",
+  "bloomPeriod": "1-3月",
+  "watering": {
+    "frequency": "春秋每周1-2次，夏季每周2-3次，冬季每2周1次",
+    "amount": "浇透水，梅花耐旱怕涝，盆土干透再浇",
+    "timing": "上午浇水",
+    "method": "沿盆边浇灌"
+  },
+  "fertilizing": {
+    "period": "花前（10月）追1次，花后（3月）追1次",
+    "amount": "复合肥10-15克/次",
+    "recommended": [
+      "磷钾肥（花前促花）",
+      "腐熟饼肥（花后恢复）"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足阳光，每天至少6小时直射光，光照充足则花多香浓",
+    "bestLocation": "南向阳台、庭院"
+  },
+  "environment": {
+    "temperature": "5-20°C（喜冷凉，需要2-10°C低温春化1-2个月才能开花）",
+    "humidity": "50-65%",
+    "ventilation": "良好通风"
+  },
+  "pests": [
+    {
+      "name": "蚜虫",
+      "symptom": "嫩芽和花蕾上聚集蚜虫",
+      "treatment": "喷洒吡虫啉2000倍液"
+    },
+    {
+      "name": "白粉病",
+      "symptom": "叶片出现白色粉末",
+      "treatment": "剪除病叶；喷洒三唑酮1500倍液"
+    },
+    {
+      "name": "炭疽病",
+      "symptom": "叶片出现黑色病斑",
+      "treatment": "剪除病叶；喷洒咪鲜胺1000倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "花后修剪",
+      "frequency": "花谢后（3-4月）",
+      "steps": [
+        "花谢后及时修剪，梅花当年生枝开花",
+        "剪除枯枝、病枝和过密枝",
+        "保留健壮枝条，剪去上部1/3",
+        "促进新枝萌发，形成来年花枝"
+      ]
+    }
+  ]
+}

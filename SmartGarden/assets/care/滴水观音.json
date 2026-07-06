@@ -1,0 +1,57 @@
+{
+  "flowerId": 38,
+  "flowerName": "滴水观音",
+  "scientificName": "Alocasia macrorrhizos",
+  "family": "天南星科海芋属",
+  "origin": "东南亚",
+  "bloomPeriod": "观叶植物",
+  "watering": {
+    "frequency": "春秋每周2-3次，夏季每天1次，冬季每周1次",
+    "amount": "浇透水保持盆土湿润，喜湿怕旱",
+    "timing": "早晨浇水",
+    "method": "沿盆边浇灌，经常向叶面喷水，注意叶片有毒避免接触伤口"
+  },
+  "fertilizing": {
+    "period": "生长期（4-9月）每月施1次，冬季停肥",
+    "amount": "液肥稀释1000倍浇灌",
+    "recommended": [
+      "观叶植物专用液肥（高氮型）",
+      "NPK 30-10-20水溶肥"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜半阴和散射光，也耐阴，忌强光直射",
+    "bestLocation": "室内明亮处、客厅、走廊"
+  },
+  "environment": {
+    "temperature": "20-30°C（喜温暖，低于15°C生长停止；冬季需保持10°C以上）",
+    "humidity": "60-80%，喜高湿度",
+    "ventilation": "良好通风"
+  },
+  "pests": [
+    {
+      "name": "叶斑病",
+      "symptom": "叶片出现褐色病斑，边缘有黄色晕圈",
+      "treatment": "剪除病叶销毁；喷洒多菌灵1000倍液或百菌清800倍液"
+    },
+    {
+      "name": "红蜘蛛",
+      "symptom": "叶片背面有细小虫体，叶片发黄",
+      "treatment": "增加喷水频率；喷洒阿维菌素2000倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "换盆",
+      "frequency": "每1-2年春季（3-4月）",
+      "steps": [
+        "选择比原盆大3-5厘米的花盆",
+        "配制疏松肥沃的土壤：腐叶土:泥炭土:河沙=5:3:2",
+        "戴手套操作（汁液有毒）",
+        "脱盆后剪除老根烂根",
+        "盆底铺陶粒，植入后填土压实",
+        "浇透水，放在半阴通风处缓苗"
+      ]
+    }
+  ]
+}

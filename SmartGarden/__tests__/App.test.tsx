@@ -1,6 +1,23 @@
 /**
  * @format
+ * 智慧花园 — 根组件测试
+ * =====================
+ * onnxruntime-react-native 是原生模块，在 Jest 中需要 mock。
  */
+
+// Mock onnxruntime-react-native（原生模块）
+jest.mock('onnxruntime-react-native', () => ({
+  InferenceSession: {
+    create: jest.fn().mockResolvedValue({
+      run: jest.fn().mockResolvedValue({
+        output: {data: new Float32Array([0.1, 0.2, 0.3, 0.2, 0.2]), dims: [1, 5]},
+      }),
+    }),
+  },
+  Tensor: jest.fn().mockImplementation(
+    (type: string, data: any, dims?: number[]) => ({type, data, dims}),
+  ),
+}));
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';

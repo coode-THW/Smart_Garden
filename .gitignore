@@ -56,5 +56,8 @@ test.html
 # 运行时数据
 data/
 
+# 临时文档
+/docs/阶段1.md
+
 # 根目录下的 package-lock（SmartGarden 子目录的保留）
 /package-lock.json

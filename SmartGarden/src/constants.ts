@@ -47,5 +47,67 @@ export const GREEN_RATIO_MAX = 0.5;
 /** 中心区域最低饱和度（0-255）：低于此值可能是墙壁/天空等 */
 export const SATURATION_MIN = 20;
 
+// ━━━ 设计主题 — 新拟态 Neumorphism ━━━
+// 卡片与背景同色，层次由双影（亮+暗）区分
+
+export const COLORS = {
+  /** 鼠尾草绿 — 仅用于强调文字/图标，新拟态按钮不用填色 */
+  primary: '#A3B899',
+  primaryDark: '#5A7A5A',
+
+  /** 朱砂红 — 错误/警告 */
+  error: '#CD5C5C',
+  warning: '#E6A817',
+  info: '#3B7DD8',
+  success: '#5A9A6F',
+
+  /** 页面底色 — 新拟态核心：卡片与背景同色 */
+  bg: '#F9F8F4',
+  bgDark: '#1E1E1C',
+
+  /** 文字 */
+  text: '#2D2D2A',
+  textDark: '#E4E0D8',
+  textSecondary: '#5A5A55',
+  textSecondaryDark: '#8A8680',
+
+  /** 新拟态双影 (iOS shadow) */
+  lightShadow: '#FFFFFF',
+  lightShadowDark: '#3A3A36',
+  darkShadow: 'rgba(0,0,0,0.08)',
+  darkShadowDark: 'rgba(0,0,0,0.35)',
+} as const;
+
+/** 圆角 */
+export const RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  pill: 999,
+} as const;
+
+/** 新拟态层次 — 三个深度级别 */
+export const NEU_LEVEL = {
+  /** L1 浅凸：小元素 */
+  l1: {
+    lightOffset: {width: -2, height: -2} as const,
+    darkOffset: {width: 2, height: 2} as const,
+    blur: 4,
+  },
+  /** L2 标准凸：卡片、按钮 */
+  l2: {
+    lightOffset: {width: -4, height: -4} as const,
+    darkOffset: {width: 4, height: 4} as const,
+    blur: 8,
+  },
+  /** L3 深凸：弹窗、CTA */
+  l3: {
+    lightOffset: {width: -6, height: -6} as const,
+    darkOffset: {width: 6, height: 6} as const,
+    blur: 12,
+  },
+} as const;
+
 // ━━━ 模型资源 ━━━
 export const MODEL_ASSET = require('../assets/yolov11n-flower.onnx');

@@ -16,7 +16,12 @@ export const MODEL_INPUT_SHAPE: readonly number[] = [1, 3, 224, 224];
 export const MODEL_INPUT_SIZE = 1 * 3 * 224 * 224; // 150528
 
 // ━━━ 花卉类别 ━━━
-export const CLASS_NAMES = ['雏菊', '蒲公英', '玫瑰', '向日葵', '郁金香'] as const;
+/**
+ * 模型实际类别顺序（与 class_order.json 保持一致）
+ * 索引 0-8 对应 ONNX 输出的概率数组顺序
+ */
+export const CLASS_NAMES_EN = ['daisy', 'dandelion', 'gerbera', 'hydrangea', 'lily', 'lotus', 'roses', 'sunflowers', 'tulips'] as const;
+export const CLASS_NAMES = ['雏菊', '蒲公英', '非洲菊', '绣球花', '百合', '荷花', '玫瑰', '向日葵', '郁金香'] as const;
 export type FlowerClass = (typeof CLASS_NAMES)[number];
 
 // ━━━ 预处理参数 ━━━

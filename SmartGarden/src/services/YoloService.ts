@@ -99,12 +99,18 @@ class YoloService {
 
   // ━━━ 模型加载 ━━━
 
-  async loadModel(): Promise<YoloModelInfo> {
+  async loadModel(
+    onProgress?: (pct: number) => void,
+  ): Promise<YoloModelInfo> {
     if (this.session) {
+      onProgress?.(100);
       return this.modelInfo!;
     }
 
+    onProgress?.(10);
     const modelPathOrData = await this.resolveModel();
+
+    onProgress?.(30);
     const sess =
       typeof modelPathOrData === 'string'
         ? await InferenceSession.create(modelPathOrData, {
@@ -120,6 +126,8 @@ class YoloService {
             ],
           });
 
+    onProgress?.(80);
+
     const inputMeta = sess.inputMetadata[0];
     const outputMeta = sess.outputMetadata[0];
 
@@ -128,6 +136,8 @@ class YoloService {
     }
 
     const ep = Platform.OS === 'ios' ? 'CoreML' : 'XNNPACK';
+
+    onProgress?.(95);
 
     console.log('[YoloService] ✅ 模型加载成功');
     console.log(`  引擎: ${ep}`);
@@ -143,6 +153,7 @@ class YoloService {
       executionProvider: ep,
     };
 
+    onProgress?.(100);
     return this.modelInfo;
   }
 

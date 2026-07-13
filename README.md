@@ -62,25 +62,22 @@ YOLO_smart-garden/
 │   ├── 智慧花园项目需求文档.md
 │   ├── 智慧花园项目架构文档.md   # ← 权威参考 (v2.2)
 │   ├── 智慧花园开发线路图.md
-│   └── 模块名称结构图.md        # ← 文件分支归属速查
-│
-├── scripts/
-│   ├── start-android.bat     ⭐  一键启动脚本 (Windows 双击)
-│   └── start-android.ps1     ⭐  一键启动脚本 (PowerShell)
+│   ├── 模块名称结构图.md        # ← 文件分支归属速查
+│   └── 设计风格总结-植物养护App.md  # ← UI 设计参考
 │
 └── SmartGarden/              ⭐  React Native 移动端 APP
-    ├── App.tsx               ⭐  根组件（底部标签导航）
+    ├── App.tsx               ⭐  根组件（启动预加载 + 新拟态 UI）
     ├── __tests__/            ⭐  Jest 单元测试
     ├── assets/
     │   └── yolov11n-flower.onnx  ⭐  随 APP 打包的模型
     ├── android/              ⭐  Android 原生工程
     ├── ios/                  ⭐  iOS 原生工程
     └── src/                  ⭐  业务源码
-        ├── constants.ts          模型配置、类别名、阈值
+        ├── constants.ts          模型配置、类别名、阈值、设计令牌
         ├── navigation/           导航（Root + 底部 Tab）
         ├── screens/              首页 / 识别 / 花园
-        ├── components/           相机取景器
-        ├── services/             YoloService / ImagePreprocessor
+        ├── components/           相机取景器 / 新拟态容器
+        ├── services/             YoloService / ImagePreprocessor / KnowledgeService
         ├── store/                Zustand 状态管理
         └── types/                类型声明
 ```
@@ -140,10 +137,6 @@ python export_onnx.py
 git show 34da349:app.py > app.py
 git show 34da349:model_utils.py > model_utils.py
 python app.py
-```
-
-```bash
-python app.py
 # 浏览器访问 http://localhost:5000
 ```
 
@@ -175,7 +168,7 @@ npx react-native run-ios
 | **Phase 2** | 第 41-60 天 | 一键设置养护提醒、本地通知、知识库在线更新 |
 | **Phase 3** | 第 61-80 天 | 远程推送、纠错数据收集、发布上线 |
 
-当前进度：**Phase 1** — ONNX 模型导出 ✅ | RN 项目初始化 ✅ | 端到端识别 ✅ | 养护知识库 📋
+当前进度：**Phase 1** — 模型导出 ✅ | 项目初始化 ✅ | 端到端识别 ✅ | 新拟态 UI ✅ | 养护知识库（示例数据已内置）📋
 
 > 详见 [开发线路图](docs/智慧花园开发线路图.md)
 
@@ -205,6 +198,7 @@ npx react-native run-ios
 | [项目架构文档](docs/智慧花园项目架构文档.md) | 技术架构、模块设计、数据协议（**权威参考**） |
 | [开发线路图](docs/智慧花园开发线路图.md) | 80 天 3 人分工、里程碑、风险评估 |
 | [模块名称结构图](docs/模块名称结构图.md) | 文件结构、分支归属、Git 忽略策略 |
+| [设计风格总结](docs/设计风格总结-植物养护App.md) | UI 设计系统参考（色彩/新拟态/组件/动画） |
 
 ---
 

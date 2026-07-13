@@ -1,0 +1,64 @@
+{
+  "flowerId": 45,
+  "flowerName": "紫藤",
+  "scientificName": "Wisteria sinensis",
+  "family": "豆科紫藤属",
+  "origin": "中国",
+  "bloomPeriod": "4-5月",
+  "watering": {
+    "frequency": "春秋每周1-2次，夏季每周2-3次，冬季控水",
+    "amount": "浇透水，耐旱怕涝，盆土干透再浇",
+    "timing": "上午浇水",
+    "method": "沿盆边浇灌"
+  },
+  "fertilizing": {
+    "period": "花后（5月）追1次，秋季（10月）追1次",
+    "amount": "复合肥10-15克/次",
+    "recommended": [
+      "磷钾肥（花前增施促花）",
+      "腐熟有机肥（冬季埋施）"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足阳光，每天至少6小时直射光，光照不足则开花少",
+    "bestLocation": "庭院、南向阳台"
+  },
+  "environment": {
+    "temperature": "15-30°C（耐寒性强，可耐-15°C；耐热性也好）",
+    "humidity": "50-70%",
+    "ventilation": "良好通风"
+  },
+  "pests": [
+    {
+      "name": "蚜虫",
+      "symptom": "嫩芽和花蕾上聚集蚜虫",
+      "treatment": "喷洒吡虫啉2000倍液"
+    },
+    {
+      "name": "紫藤蛀干害虫",
+      "symptom": "枝干上有虫孔和木屑，枝叶枯萎",
+      "treatment": "用注射器向虫孔注射敌敌畏100倍液；剪除严重受害枝"
+    }
+  ],
+  "operations": [
+    {
+      "name": "冬季修剪",
+      "frequency": "冬季休眠期（12-2月）",
+      "steps": [
+        "剪除枯枝、病枝和过密枝",
+        "保留主枝上2-3个芽点短截侧枝",
+        "控制藤蔓生长范围",
+        "修剪后清理落叶和剪枝"
+      ]
+    },
+    {
+      "name": "夏季修剪",
+      "frequency": "花谢后（5-6月）",
+      "steps": [
+        "剪除开过花的枝条",
+        "对过长的新梢进行摘心",
+        "促进花芽分化"
+      ]
+    }
+  ]
+}

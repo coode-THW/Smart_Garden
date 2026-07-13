@@ -1,0 +1,61 @@
+{
+  "flowerId": 51,
+  "flowerName": "芍药",
+  "scientificName": "Paeonia lactiflora",
+  "family": "芍药科芍药属",
+  "origin": "中国、蒙古",
+  "bloomPeriod": "5-6月",
+  "watering": {
+    "frequency": "春秋每周1-2次，夏季每周2-3次，冬季休眠停水",
+    "amount": "浇透水，肉质根怕积水，宁干勿湿",
+    "timing": "上午浇水",
+    "method": "沿盆边缓慢浇灌，避免浇水到根颈部"
+  },
+  "fertilizing": {
+    "period": "全年施3次：萌芽后（3月）花前（4月）花后（7月）",
+    "amount": "复合肥10-15克/次",
+    "recommended": [
+      "NPK 15-15-15复合肥",
+      "磷酸二氢钾稀释1000倍（花前喷施）"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足阳光，每天至少6小时直射光",
+    "bestLocation": "庭院、南向阳台"
+  },
+  "environment": {
+    "temperature": "15-25°C（喜冷凉，耐寒可耐-15°C；夏季需适当遮阴）",
+    "humidity": "50-65%",
+    "ventilation": "良好通风"
+  },
+  "pests": [
+    {
+      "name": "芍药灰霉病",
+      "symptom": "叶片、花蕾出现褐色水渍状斑，表面灰色霉层",
+      "treatment": "剪除病部销毁；喷洒腐霉利1000倍液或异菌脲1500倍液；加强通风"
+    },
+    {
+      "name": "白绢病",
+      "symptom": "根颈部出现白色菌丝，植株萎蔫",
+      "treatment": "拔除病株销毁；土壤消毒；避免连作"
+    },
+    {
+      "name": "蚜虫",
+      "symptom": "嫩芽和花蕾上聚集蚜虫",
+      "treatment": "喷洒吡虫啉2000倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "分株繁殖",
+      "frequency": "秋季（9-10月），每3-5年1次",
+      "steps": [
+        "挖出根茎，阴凉处晾1天使根稍软",
+        "用利刀分割，每丛留3-5个芽",
+        "剪口涂抹多菌灵粉末",
+        "栽种时芽尖与土面平齐",
+        "浇透水后培土越冬"
+      ]
+    }
+  ]
+}

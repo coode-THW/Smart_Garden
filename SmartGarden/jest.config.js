@@ -1,5 +1,8 @@
 module.exports = {
   preset: '@react-native/jest-preset',
+  moduleNameMapper: {
+    '\\.onnx$': '<rootDir>/__mocks__/fileMock.js',
+  },
   transformIgnorePatterns: [
     'node_modules/(?!(' +
       '@react-native|' +
@@ -11,7 +14,9 @@ module.exports = {
       'react-native-paper|' +
       'react-native-safe-area-context|' +
       'react-native-screens|' +
-      'react-native-vector-icons' +
+      'react-native-vector-icons|' +
+      'react-native-quick-sqlite|' +
+      'onnxruntime-react-native' +
       ')/)',
   ],
 };

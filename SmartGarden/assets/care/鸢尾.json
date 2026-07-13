@@ -1,0 +1,55 @@
+{
+  "flowerId": 50,
+  "flowerName": "鸢尾",
+  "scientificName": "Iris tectorum",
+  "family": "鸢尾科鸢尾属",
+  "origin": "中国、日本",
+  "bloomPeriod": "4-6月",
+  "watering": {
+    "frequency": "春秋每周2次，夏季每周2-3次，冬季控水",
+    "amount": "浇透水保持土壤湿润，鸢尾喜湿",
+    "timing": "早晨浇水",
+    "method": "直接浇在根部土壤"
+  },
+  "fertilizing": {
+    "period": "生长期（3-6月）每月施1次",
+    "amount": "液肥稀释1000倍浇灌",
+    "recommended": [
+      "NPK 20-20-20均衡肥",
+      "磷酸二氢钾稀释1000倍（花期前喷施）"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足阳光或半阴，每天至少4小时光照",
+    "bestLocation": "南向或东向阳台、庭院"
+  },
+  "environment": {
+    "temperature": "15-25°C（喜凉爽，耐寒可耐-10°C）",
+    "humidity": "50-70%",
+    "ventilation": "良好通风"
+  },
+  "pests": [
+    {
+      "name": "鸢尾叶斑病",
+      "symptom": "叶片出现褐色长条形病斑",
+      "treatment": "剪除病叶；喷洒多菌灵1000倍液；加强通风"
+    },
+    {
+      "name": "根腐病",
+      "symptom": "根茎变软腐烂，叶片发黄",
+      "treatment": "挖出剪除腐烂部分，用多菌灵浸泡后换新土重种"
+    }
+  ],
+  "operations": [
+    {
+      "name": "分株繁殖",
+      "frequency": "花谢后（6-7月）或秋季（9-10月）",
+      "steps": [
+        "挖出根茎，分割成小丛",
+        "每丛保留2-3个芽和部分根系",
+        "剪去上部叶片1/2减少蒸腾",
+        "栽种后浇透水"
+      ]
+    }
+  ]
+}

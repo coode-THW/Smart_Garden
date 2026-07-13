@@ -1,0 +1,69 @@
+{
+  "flowerId": 49,
+  "flowerName": "美人蕉",
+  "scientificName": "Canna indica",
+  "family": "美人蕉科美人蕉属",
+  "origin": "美洲热带",
+  "bloomPeriod": "6-10月",
+  "watering": {
+    "frequency": "春秋每周2-3次，夏季每天1次",
+    "amount": "浇透水保持土壤湿润，美人蕉喜水",
+    "timing": "早晨或傍晚浇水",
+    "method": "直接浇在根部土壤"
+  },
+  "fertilizing": {
+    "period": "生长期（5-9月）每月施1次",
+    "amount": "复合肥10-15克/次",
+    "recommended": [
+      "NPK 15-15-15复合肥",
+      "磷酸二氢钾稀释1000倍（花期前喷施）"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足阳光，每天至少6小时直射光",
+    "bestLocation": "庭院、南向阳台"
+  },
+  "environment": {
+    "temperature": "20-30°C（喜温暖，低于10°C地上部分枯萎；根茎可越冬）",
+    "humidity": "55-75%",
+    "ventilation": "良好通风"
+  },
+  "pests": [
+    {
+      "name": "叶斑病",
+      "symptom": "叶片出现褐色病斑",
+      "treatment": "剪除病叶；喷洒多菌灵1000倍液"
+    },
+    {
+      "name": "蚜虫",
+      "symptom": "嫩芽和花苞上聚集蚜虫",
+      "treatment": "喷洒吡虫啉2000倍液"
+    },
+    {
+      "name": "卷叶虫",
+      "symptom": "叶片被卷成筒状，内有虫粪",
+      "treatment": "摘除卷叶销毁；喷洒敌敌畏1000倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "分株繁殖",
+      "frequency": "春季（3-4月）",
+      "steps": [
+        "挖出根茎，选取带芽的根茎块",
+        "每块保留2-3个芽点",
+        "直接栽种入土",
+        "浇透水后正常养护"
+      ]
+    },
+    {
+      "name": "花后修剪",
+      "frequency": "花谢后",
+      "steps": [
+        "剪除开过花的花梗",
+        "促进新花枝萌发",
+        "秋季霜冻前剪除地上部分"
+      ]
+    }
+  ]
+}

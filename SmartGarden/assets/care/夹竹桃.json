@@ -1,0 +1,56 @@
+{
+  "flowerId": 54,
+  "flowerName": "夹竹桃",
+  "scientificName": "Nerium oleander",
+  "family": "夹竹桃科夹竹桃属",
+  "origin": "地中海地区",
+  "bloomPeriod": "6-10月",
+  "watering": {
+    "frequency": "春秋每周1-2次，夏季每周2-3次，冬季每2周1次",
+    "amount": "宁干勿湿，浇透水等盆土干透再浇，耐旱怕涝",
+    "timing": "上午浇水",
+    "method": "沿盆边浇灌（注意：全株有毒，操作后需洗手）"
+  },
+  "fertilizing": {
+    "period": "生长期（4-9月）每月施1次",
+    "amount": "复合肥10-15克/次",
+    "recommended": [
+      "NPK 15-15-15复合肥",
+      "磷酸二氢钾稀释1000倍（花期前喷施）"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足阳光，每天至少6小时直射光",
+    "bestLocation": "南向阳台、庭院"
+  },
+  "environment": {
+    "temperature": "20-35°C（喜温暖耐热，不耐寒；冬季需保持5°C以上）",
+    "humidity": "40-60%，耐干燥",
+    "ventilation": "良好通风即可"
+  },
+  "pests": [
+    {
+      "name": "蚜虫",
+      "symptom": "嫩芽和花蕾上聚集蚜虫",
+      "treatment": "喷洒吡虫啉2000倍液"
+    },
+    {
+      "name": "介壳虫",
+      "symptom": "枝干上出现褐色蜡质小壳",
+      "treatment": "用竹片刮除或喷洒蚧必治1000倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "花后修剪",
+      "frequency": "春季（3-4月）",
+      "steps": [
+        "剪除枯枝、病枝和过密枝",
+        "对过长枝条进行短截",
+        "控制株形和高度",
+        "注意戴手套操作（全株有毒）"
+      ]
+    }
+  ],
+  "note": "夹竹桃全株含强心苷，有剧毒，不可食用，养护和修剪时务必戴手套"
+}

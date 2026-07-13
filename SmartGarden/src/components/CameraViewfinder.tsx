@@ -60,7 +60,6 @@ function CameraViewfinder({
     setIsCapturing(true);
     try {
       const photo: PhotoFile = await cameraRef.current.takePhoto({
-        quality: 'high',
         flash: flashMode,
         skipMetadata: true,
       });

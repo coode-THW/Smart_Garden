@@ -1,0 +1,55 @@
+{
+  "flowerId": 43,
+  "flowerName": "太阳花",
+  "scientificName": "Portulaca grandiflora",
+  "family": "马齿苋科马齿苋属",
+  "origin": "南美洲",
+  "bloomPeriod": "6-9月",
+  "watering": {
+    "frequency": "春秋每周2次，夏季每周1-2次（耐旱）",
+    "amount": "宁干勿湿，浇透后等盆土干透再浇",
+    "timing": "上午浇水",
+    "method": "沿盆边浇灌在土面，肉质茎叶怕水涝"
+  },
+  "fertilizing": {
+    "period": "生长期（5-9月）每月施1次",
+    "amount": "液肥稀释1500-2000倍浇灌",
+    "recommended": [
+      "磷酸二氢钾稀释1000倍（促进开花）",
+      "NPK 20-20-20均衡肥"
+    ]
+  },
+  "lighting": {
+    "requirement": "喜充足直射阳光，每天至少6小时，光照不足不开花",
+    "bestLocation": "南向阳台、窗台、庭院"
+  },
+  "environment": {
+    "temperature": "20-35°C（喜高温耐热，低于10°C生长停止）",
+    "humidity": "30-50%，耐干燥",
+    "ventilation": "良好通风即可"
+  },
+  "pests": [
+    {
+      "name": "蚜虫",
+      "symptom": "嫩芽上聚集蚜虫",
+      "treatment": "喷洒吡虫啉2000倍液或清水冲洗"
+    },
+    {
+      "name": "白锈病",
+      "symptom": "叶片出现白色疱状病斑",
+      "treatment": "剪除病叶；喷洒三唑酮1500倍液"
+    }
+  ],
+  "operations": [
+    {
+      "name": "扦插繁殖",
+      "frequency": "春夏季（4-8月）",
+      "steps": [
+        "剪取5-8厘米长枝条",
+        "摘除下部叶片",
+        "插入湿润沙土中",
+        "保持基质微湿，约1周生根"
+      ]
+    }
+  ]
+}

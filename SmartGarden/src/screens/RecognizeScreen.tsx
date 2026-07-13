@@ -6,13 +6,14 @@
 
 import React, {useCallback, useLayoutEffect, useState} from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  ActivityIndicator,
   useColorScheme,
 } from 'react-native';
 import {Button} from 'react-native-paper';
@@ -20,12 +21,17 @@ import {useNavigation} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import YoloService from '../services/YoloService';
 import CameraViewfinder from '../components/CameraViewfinder';
+import NeumorphView from '../components/NeumorphView';
+import {fetchKnowledge} from '../services/KnowledgeService';
 import type {InferenceResult} from '../services/YoloService';
+import type {FlowerKnowledge} from '../services/KnowledgeService';
 import {
+  COLORS,
   DROP_OFF_THRESHOLD,
   BOTTOM_SUM_MAX,
   GREEN_RATIO_MAX,
   SATURATION_MIN,
+  RADIUS,
 } from '../constants';
 
 // ━━━ 状态 ━━━
@@ -33,46 +39,38 @@ import {
 type ScreenState =
   | {phase: 'idle'}
   | {phase: 'camera'}
-  | {phase: 'loading-model'}
-  | {phase: 'preprocessing'}
   | {phase: 'inferring'; imageUri: string}
   | {phase: 'result'; imageUri: string; result: InferenceResult}
   | {phase: 'error'; message: string};
 
 // ━━━ 颜色 ━━━
 
-const GREEN = '#2ecc71';
-const RED = '#e74c3c';
-const BLUE = '#3498db';
+const GREEN = COLORS.primary;
+const RED = COLORS.error;
+const BLUE = COLORS.info;
 
 function RecognizeScreen(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-  const [state, setState] = useState<ScreenState>({phase: 'loading-model'});
+  const [state, setState] = useState<ScreenState>({phase: 'idle'});
   const navigation = useNavigation();
+  const [knowledge, setKnowledge] = useState<FlowerKnowledge | null>(null);
 
-  const bg = isDarkMode ? '#1a1a2e' : '#f0f4f3';
-  const textColor = isDarkMode ? '#e0e0e0' : '#333';
-  const cardBg = isDarkMode ? '#16213e' : '#ffffff';
+  const pageBg = isDarkMode ? COLORS.bgDark : COLORS.bg;
+  const textColor = isDarkMode ? COLORS.textDark : COLORS.text;
+  const secondaryColor = isDarkMode ? COLORS.textSecondaryDark : COLORS.textSecondary;
 
-  // ━━━ 模型加载 ━━━
+  // ━━━ 模型就绪状态（模型在 App.tsx 启动时预加载） ━━━
+  const modelReady = YoloService.getInstance().isLoaded;
+
+  // ━━━ 获取花卉知识 ━━━
 
   React.useEffect(() => {
-    let cancelled = false;
-    async function init() {
-      try {
-        await YoloService.getInstance().loadModel();
-        if (!cancelled) {
-          setState({phase: 'idle'});
-        }
-      } catch (e: any) {
-        if (!cancelled) {
-          setState({phase: 'error', message: `模型加载失败: ${e.message}`});
-        }
-      }
+    if (state.phase === 'result') {
+      fetchKnowledge(state.result.topClass).then(setKnowledge);
+    } else {
+      setKnowledge(null);
     }
-    init();
-    return () => { cancelled = true; };
-  }, []);
+  }, [state.phase === 'result' ? state.result.topClass : null]);
 
   // ━━━ 相机激活时隐藏 Tab bar ━━━
 
@@ -86,18 +84,18 @@ function RecognizeScreen(): React.JSX.Element {
     } else {
       parent.setOptions({
         tabBarStyle: {
-          backgroundColor: isDarkMode ? '#1a1a2e' : '#ffffff',
-          borderTopColor: isDarkMode ? '#333333' : '#e0e0e0',
-          borderTopWidth: 1,
+          backgroundColor: pageBg,
+          borderTopColor: 'transparent',
+          borderTopWidth: 0,
         },
       });
     }
     return () => {
       parent.setOptions({
         tabBarStyle: {
-          backgroundColor: isDarkMode ? '#1a1a2e' : '#ffffff',
-          borderTopColor: isDarkMode ? '#333333' : '#e0e0e0',
-          borderTopWidth: 1,
+          backgroundColor: pageBg,
+          borderTopColor: 'transparent',
+          borderTopWidth: 0,
         },
       });
     };
@@ -176,14 +174,8 @@ function RecognizeScreen(): React.JSX.Element {
 
   const renderContent = () => {
     switch (state.phase) {
-      case 'loading-model':
-        return renderLoading('正在加载 AI 模型...');
-
       case 'idle':
         return renderIdle();
-
-      case 'preprocessing':
-        return renderLoading('正在处理图片...');
 
       case 'inferring':
         return renderInferring(state.imageUri);
@@ -208,25 +200,21 @@ function RecognizeScreen(): React.JSX.Element {
         <Button
           mode="contained"
           onPress={handleEnterCamera}
+          disabled={!modelReady}
+          loading={!modelReady}
           style={styles.captureButton}
           labelStyle={styles.captureButtonText}>
-          拍照识别
+          {modelReady ? '拍照识别' : '模型加载中…'}
         </Button>
         <Button
           mode="outlined"
           onPress={handlePickImage}
+          disabled={!modelReady}
           style={styles.albumButtonStyle}
           labelStyle={styles.albumButtonLabel}>
           从相册选择
         </Button>
       </View>
-    </View>
-  );
-
-  const renderLoading = (msg: string) => (
-    <View style={styles.centerContent}>
-      <ActivityIndicator size="large" color={GREEN} />
-      <Text style={[styles.statusText, {color: textColor}]}>{msg}</Text>
     </View>
   );
 
@@ -241,6 +229,16 @@ function RecognizeScreen(): React.JSX.Element {
   );
 
   const renderResult = (imageUri: string, result: InferenceResult) => {
+    // 暗色模式专用颜色
+    const dividerColor = isDarkMode ? '#3A3A36' : '#E0E0E0';
+    const trackBg = isDarkMode ? '#3A3A36' : '#E8E8E8';
+    const hintGreenBg = isDarkMode ? '#1A3A2A' : '#D4EDDA';
+    const hintGreenText = isDarkMode ? '#A3CFAB' : '#155724';
+    const hintWarnBg = isDarkMode ? '#3A3010' : '#FFF3CD';
+    const hintWarnText = isDarkMode ? '#D4A574' : '#856404';
+    const hintErrorBg = isDarkMode ? '#3A1A1A' : '#F8D7DA';
+    const hintErrorText = isDarkMode ? '#E8A0A0' : '#721C24';
+
     // 五重判断：置信度 + 边距 + 熵 + 跌落比 + 底部和 + 绿色占比 + 饱和度
     const confOk = result.confidence >= 0.85;
     const marginOk = result.margin >= 0.15;
@@ -253,91 +251,133 @@ function RecognizeScreen(): React.JSX.Element {
     const isHigh =
       confOk && marginOk && entropyOk && dropOffOk && bottomOk && greenOk && satOk;
 
-    // ━━━ 非花卉 / 低置信度：统一提示重新拍摄 ━━━
+    // ━━━ 非花卉 / 低置信度 ━━━
     if (!isHigh) {
       return (
-        <ScrollView contentContainerStyle={styles.resultScroll}>
-          <Image source={{uri: imageUri}} style={styles.resultPreview} />
-          <View style={[styles.resultCard, {backgroundColor: cardBg}]}>
-            <Text style={styles.notFlowerIcon}>🔍</Text>
-            <Text style={[styles.notFlowerTitle, {color: textColor}]}>
-              未识别到花卉
-            </Text>
-            <Text style={[styles.notFlowerHint, {color: textColor}]}>
-              请重新拍摄花卉照片{'\n'}确保花朵在画面中央、光线充足
-            </Text>
-          </View>
-          <Button
-            mode="contained"
-            onPress={handleReset}
-            style={styles.retryButton}
-            labelStyle={styles.retryButtonText}>
-            重新拍摄
-          </Button>
-        </ScrollView>
+        <View style={styles.resultScroll}>
+          <NeumorphView level="l2" bg={pageBg}>
+            <Image source={{uri: imageUri}} style={styles.heroImage} />
+            <View style={styles.heroBody}>
+              <Text style={styles.notFlowerIcon}>🔍</Text>
+              <Text style={[styles.notFlowerTitle, {color: textColor}]}>
+                未识别到花卉
+              </Text>
+              <Text style={[styles.notFlowerHint, {color: secondaryColor}]}>
+                请重新拍摄花卉照片{'\n'}确保花朵在画面中央、光线充足
+              </Text>
+              <Button
+                mode="contained"
+                onPress={handleReset}
+                style={styles.retryButton}
+                labelStyle={styles.retryButtonText}>
+                重新拍摄
+              </Button>
+            </View>
+          </NeumorphView>
+        </View>
       );
     }
 
-    // ━━━ HIGH：正常展示识别结果 ━━━
+    // ━━━ HIGH：杂志式排版 ━━━
     return (
-      <ScrollView contentContainerStyle={styles.resultScroll}>
+      <View style={styles.resultScroll}>
 
-        {/* 预览缩略图 */}
-        <Image source={{uri: imageUri}} style={styles.resultPreview} />
-
-        {/* 主结果 */}
-        <View style={[styles.resultCard, {backgroundColor: cardBg}]}>
-          <Text style={[styles.flowerName, {color: textColor}]}>
-            {result.topClass}
-          </Text>
-
-          <View style={[styles.confBadge, {backgroundColor: GREEN}]}>
-            <Text style={styles.confBadgeText}>
-              ✅ 置信度: {(result.confidence * 100).toFixed(1)}%
+        {/* ── Hero：大图 + 花名 + 置信度 ── */}
+        <NeumorphView level="l2" bg={pageBg}>
+          <Image source={{uri: imageUri}} style={styles.heroImage} />
+          <View style={styles.heroBody}>
+            <Text style={[styles.flowerName, {color: textColor}]}>
+              {result.topClass}
             </Text>
-          </View>
-
-          <Text style={[styles.inferTime, {color: textColor}]}>
-            推理耗时: {result.inferenceTimeMs.toFixed(1)}ms
-          </Text>
-        </View>
-
-        {/* 各类别概率 */}
-        <View style={[styles.card, {backgroundColor: cardBg}]}>
-          <Text style={[styles.cardTitle, {color: textColor}]}>
-            各类别概率
-          </Text>
-          {result.allClasses.map((item, i) => (
-            <View key={i} style={styles.probRow}>
-              <Text style={[styles.probLabel, {color: textColor}]}>
-                {item.name}
-              </Text>
-              <View style={styles.probTrack}>
-                <View
-                  style={[
-                    styles.probBar,
-                    {width: `${(item.probability * 100).toFixed(1)}%` as any},
-                  ]}
-                />
+            <View style={styles.confRow}>
+              <View style={[styles.confBadge, {backgroundColor: COLORS.primary}]}>
+                <Text style={styles.confBadgeText}>
+                  ✅ {(result.confidence * 100).toFixed(1)}%
+                </Text>
               </View>
-              <Text style={[styles.probValue, {color: textColor}]}>
-                {(item.probability * 100).toFixed(1)}%
+              <Text style={[styles.inferTime, {color: secondaryColor}]}>
+                {modelEp ?? 'CPU'} · {result.inferenceTimeMs.toFixed(0)}ms
               </Text>
             </View>
-          ))}
-        </View>
+          </View>
+        </NeumorphView>
 
-        {/* 置信度说明 */}
-        <View style={styles.hintBox}>
-          <Text style={styles.hintText}>
-            🎯 高置信度识别，结果可直接使用
-          </Text>
-        </View>
+        {/* ── 花卉档案：2 列网格 ── */}
+        <NeumorphView level="l1" bg={pageBg}>
+          <View style={styles.card}>
+            <Text style={[styles.cardTitle, {color: textColor}]}>📋 花卉档案</Text>
+            {knowledge ? (
+              <View style={styles.grid}>
+                <View style={styles.gridCell}>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>学名</Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.scientificName}</Text>
+                </View>
+                <View style={styles.gridCell}>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>科属</Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.family} · {knowledge.genus}</Text>
+                </View>
+                <View style={styles.gridCell}>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>产地</Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.origin}</Text>
+                </View>
+                <View style={styles.gridCell}>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>花期</Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.bloomPeriod}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.knowledgePlaceholder}>
+                <Text style={[styles.knowledgePlaceholderIcon, {color: textColor}]}>📚</Text>
+                <Text style={[styles.knowledgePlaceholderText, {color: secondaryColor}]}>
+                  知识库建设中，更多花卉养护知识即将上线
+                </Text>
+              </View>
+            )}
+          </View>
+        </NeumorphView>
 
-        <Button mode="contained" onPress={handleReset} style={styles.retryButton} labelStyle={styles.retryButtonText}>
-          识别另一张照片
-        </Button>
-      </ScrollView>
+        {/* ── 概率 + 提示 ── */}
+        <NeumorphView level="l1" bg={pageBg}>
+          <View style={styles.card}>
+            <Text style={[styles.cardTitle, {color: textColor}]}>各类别概率</Text>
+            {result.allClasses.map((item, i) => (
+              <View key={i} style={styles.probRow}>
+                <Text style={[styles.probLabel, {color: textColor}]}>{item.name}</Text>
+                <View style={[styles.probTrack, {backgroundColor: trackBg}]}>
+                  <View style={[styles.probBar, {width: `${(item.probability * 100).toFixed(1)}%` as any}]} />
+                </View>
+                <Text style={[styles.probValue, {color: textColor}]}>
+                  {(item.probability * 100).toFixed(1)}%
+                </Text>
+              </View>
+            ))}
+            <View style={[styles.hintBox, {backgroundColor: hintGreenBg}]}>
+              <Text style={[styles.hintText, {color: hintGreenText}]}>
+                🎯 高置信度，结果可直接使用
+              </Text>
+            </View>
+          </View>
+        </NeumorphView>
+
+        {/* ── 操作按钮：3 个横排 ── */}
+        <View style={styles.actionRow}>
+          <Button mode="outlined" compact
+            onPress={() => Alert.alert('提醒功能即将上线', '敬请期待！')}
+            style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>
+            🔔 提醒
+          </Button>
+          <Button mode="outlined" compact
+            onPress={() => Alert.alert('纠错功能即将上线', '感谢您的反馈！')}
+            style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>
+            ✏️ 纠错
+          </Button>
+          <Button mode="contained" compact
+            onPress={handleReset}
+            style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>
+            重新识别
+          </Button>
+        </View>
+      </View>
     );
   };
 
@@ -353,7 +393,8 @@ function RecognizeScreen(): React.JSX.Element {
 
   // ━━━ 主布局 ━━━
 
-  const modelLoaded = state.phase !== 'loading-model';
+  const modelLoaded = YoloService.getInstance().isLoaded;
+  const modelEp = YoloService.getInstance().info?.executionProvider;
 
   if (state.phase === 'camera') {
     return (
@@ -370,8 +411,9 @@ function RecognizeScreen(): React.JSX.Element {
 
   return (
     <ScrollView
-      style={[styles.container, {backgroundColor: bg}]}
-      contentContainerStyle={styles.scrollContent}>
+      style={[styles.container, {backgroundColor: pageBg}]}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
       <Text style={[styles.title, {color: textColor}]}>
         🌿 智慧花园
       </Text>
@@ -379,7 +421,7 @@ function RecognizeScreen(): React.JSX.Element {
       {modelLoaded && (
         <View style={styles.modelBadge}>
           <Text style={styles.modelBadgeText}>
-            {YoloService.getInstance().info?.executionProvider ?? 'CPU'} 就绪
+            {modelEp ?? 'CPU'} 就绪
           </Text>
         </View>
       )}
@@ -394,7 +436,7 @@ function RecognizeScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   root: {flex: 1},
   container: {flex: 1},
-  scrollContent: {padding: 20, paddingBottom: 60, minHeight: '100%'},
+  scrollContent: {padding: 20, paddingBottom: 60},
   title: {
     fontSize: 22,
     fontWeight: '700',
@@ -426,8 +468,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   captureButton: {
-    backgroundColor: GREEN,
-    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.pill,
     paddingVertical: 14,
     paddingHorizontal: 24,
   },
@@ -446,23 +488,44 @@ const styles = StyleSheet.create({
   spinner: {marginBottom: 8},
 
   // result
-  resultScroll: {alignItems: 'center', paddingBottom: 40},
-  resultPreview: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 3,
-    borderColor: GREEN,
-  },
-  resultCard: {
+  resultScroll: {width: '100%', alignItems: 'center', paddingBottom: 40},
+
+  // hero
+  heroImage: {
     width: '100%',
-    borderRadius: 12,
+    height: 240,
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
+  },
+  heroBody: {
     padding: 20,
     alignItems: 'center',
-    marginBottom: 12,
   },
-  flowerName: {fontSize: 32, fontWeight: '700', marginBottom: 10},
+  flowerName: {fontSize: 30, fontWeight: '700', marginBottom: 10},
+  confRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  // grid knowledge
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  gridCell: {
+    width: '50%',
+    paddingVertical: 8,
+    paddingRight: 8,
+  },
+  gridLabel: {fontSize: 12, marginBottom: 2},
+  gridValue: {fontSize: 14, fontWeight: '500'},
+  knowledgePlaceholder: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  knowledgePlaceholderIcon: {fontSize: 28, marginBottom: 6},
+  knowledgePlaceholderText: {fontSize: 13, opacity: 0.5},
   confBadge: {
     borderRadius: 8,
     paddingHorizontal: 16,
@@ -475,9 +538,9 @@ const styles = StyleSheet.create({
   // prob bars
   card: {
     width: '100%',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: RADIUS.lg,
+    padding: 18,
+    marginBottom: 14,
   },
   cardTitle: {fontSize: 16, fontWeight: '600', marginBottom: 10},
   probRow: {
@@ -489,7 +552,6 @@ const styles = StyleSheet.create({
   probTrack: {
     flex: 1,
     height: 10,
-    backgroundColor: '#e8e8e8',
     borderRadius: 5,
     marginHorizontal: 8,
     overflow: 'hidden',
@@ -510,13 +572,12 @@ const styles = StyleSheet.create({
   hintBox: {
     width: '100%',
     padding: 12,
-    backgroundColor: '#d4edda',
     borderRadius: 8,
     marginBottom: 12,
   },
-  hintWarn: {backgroundColor: '#fff3cd'},
-  hintError: {backgroundColor: '#f8d7da'},
-  hintText: {fontSize: 13, color: '#155724', textAlign: 'center'},
+  hintWarn: {},
+  hintError: {},
+  hintText: {fontSize: 13, textAlign: 'center'},
 
   // ── 未识别到花卉 ──
   notFlowerIcon: {fontSize: 48, textAlign: 'center', marginBottom: 12},
@@ -533,15 +594,30 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  // buttons
+  // action row
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 20,
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  actionBtn: {
+    flex: 1,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 8,
+  },
+  actionBtnLabel: {fontSize: 13, fontWeight: '600'},
+  // retry (used in not-flower)
   retryButton: {
-    backgroundColor: BLUE,
-    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.pill,
     paddingVertical: 12,
     paddingHorizontal: 28,
-    marginTop: 8,
+    marginTop: 16,
   },
-  retryButtonText: {color: '#fff', fontSize: 16, fontWeight: '600'},
+  retryButtonText: {color: '#fff', fontSize: 15, fontWeight: '600'},
 
   // error
   errorEmoji: {fontSize: 48},

@@ -3,29 +3,41 @@
  */
 
 import React from 'react';
-import {useColorScheme} from 'react-native';
+import {StyleSheet, useColorScheme} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Icon} from 'react-native-paper';
 
 import HomeScreen from '../screens/HomeScreen';
 import RecognizeScreen from '../screens/RecognizeScreen';
 import GardenScreen from '../screens/GardenScreen';
+import {COLORS} from '../constants';
 
 import type {MainTabParamList} from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabNavigator(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDark = useColorScheme() === 'dark';
+
+  const pageBg = isDark ? COLORS.bgDark : COLORS.bg;
 
   const tabBarStyle = {
-    backgroundColor: isDarkMode ? '#1a1a2e' : '#ffffff',
-    borderTopColor: isDarkMode ? '#333333' : '#e0e0e0',
-    borderTopWidth: 1,
+    backgroundColor: pageBg,
+    borderTopColor: 'transparent',
+    borderTopWidth: 0,
+    // 新拟态浮起：底部栏上沿加亮影 + 暗影
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+    height: 60,
+    paddingBottom: 6,
+    paddingTop: 6,
   };
 
-  const activeColor = '#4caf50';
-  const inactiveColor = isDarkMode ? '#888888' : '#999999';
+  const activeColor = COLORS.primary;
+  const inactiveColor = isDark ? '#5A5A55' : '#A0A89A';
 
   return (
     <Tab.Navigator
@@ -35,8 +47,9 @@ function MainTabNavigator(): React.JSX.Element {
         tabBarInactiveTintColor: inactiveColor,
         tabBarStyle,
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600' as const,
+          fontSize: 11,
+          fontWeight: '700' as const,
+          marginTop: 2,
         },
       }}>
       <Tab.Screen

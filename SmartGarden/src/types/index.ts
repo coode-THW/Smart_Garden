@@ -89,32 +89,44 @@ export type RecognitionSource = 'yolov11' | 'llm';
 
 export type ConfidenceStatus = 'recognized' | 'uncertain' | 'unknown';
 
+export type RecognitionStatus =
+  | 'success'
+  | 'rejected'
+  | 'low_confidence'
+  | 'llm_error';
+
 export interface RecognitionResult {
+  status?: RecognitionStatus;
   flowerName: string;
   confidence: number;
-  scientificName: string;
-  family: string;
-  origin: string;
-  bloomPeriod: string;
-  similarFlowers: string[];
+  scientificName?: string;
+  family?: string;
+  origin?: string;
+  bloomPeriod?: string;
+  similarFlowers?: string[];
   source: RecognitionSource;
   flowerId?: number;
-  careGuide?: string;
+  careGuide?: CareGuide;
+  description?: string;
+  allClasses?: Array<{ name: string; probability: number }>;
+  inferenceTimeMs?: number;
+  llmLatencyMs?: number;
+  errorMessage?: string;
 }
 
 // ━━━━━ 数据库实体类型（对应 SQLite 三张表） ━━━━━
 
 export interface UserEntity {
-  userId: string;       // UUID v4
-  createdAt: string;    // ISO 8601
+  userId: string; // UUID v4
+  createdAt: string; // ISO 8601
   phone: string | null;
   passwordHash: string | null;
-  nickname: string;     // default '花友'
+  nickname: string; // default '花友'
   avatarPath: string | null;
 }
 
 export interface GardenEntity {
-  gardenId?: number;    // AUTOINCREMENT, undefined 表示新增
+  gardenId?: number; // AUTOINCREMENT, undefined 表示新增
   userId: string;
   flowerId: number;
   customName: string | null;
@@ -126,15 +138,15 @@ export interface GardenEntity {
 }
 
 export interface FeedbackEntity {
-  id?: number;          // AUTOINCREMENT
+  id?: number; // AUTOINCREMENT
   userId: string;
   imageHash: string;
   yoloResult: string;
   confidence: number;
   userCorrection: string;
   timestamp: string;
-  source: string;       // 'yolov11' | 'llm'
-  synced: number;       // 0 | 1
+  source: string; // 'yolov11' | 'llm'
+  synced: number; // 0 | 1
 }
 
 // ━━━━━ 提醒类型（Phase 2 预留） ━━━━━
@@ -149,12 +161,12 @@ export interface ReminderEntity {
   type: ReminderType;
   frequency: ReminderFrequency;
   intervalValue: number | null;
-  daysOfWeek: string | null;    // e.g. "2,4,6"
+  daysOfWeek: string | null; // e.g. "2,4,6"
   dayOfMonth: number | null;
-  time: string;                 // HH:mm
+  time: string; // HH:mm
   nextRemindTime: string;
   title: string | null;
   note: string | null;
-  enabled: number;              // 0 | 1
+  enabled: number; // 0 | 1
   createdAt: string;
 }

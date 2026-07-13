@@ -39,10 +39,18 @@ export interface PreprocessedInput {
 // ━━━ 纯 JS base64 → Uint8Array（不依赖 Buffer polyfill） ━━━
 
 function base64ToBytes(base64: string): Uint8Array {
-  const binaryStr = atob(base64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
-    bytes[i] = binaryStr.charCodeAt(i);
+  const lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const len = base64.length;
+  const bytes = new Uint8Array(((len * 3) >> 2) - (base64[len - 1] === '=' ? base64[len - 2] === '=' ? 2 : 1 : 0));
+  let j = 0;
+  for (let i = 0; i < len; i += 4) {
+    const a = lookup.indexOf(base64[i]);
+    const b = lookup.indexOf(base64[i + 1]);
+    const c = lookup.indexOf(base64[i + 2]);
+    const d = lookup.indexOf(base64[i + 3]);
+    bytes[j++] = (a << 2) | (b >> 4);
+    if (c !== -1) bytes[j++] = ((b & 15) << 4) | (c >> 2);
+    if (d !== -1) bytes[j++] = ((c & 3) << 6) | d;
   }
   return bytes;
 }

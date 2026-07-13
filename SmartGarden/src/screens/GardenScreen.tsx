@@ -10,19 +10,19 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import type {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
-import type {MainTabParamList} from '../navigation/types';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { MainTabParamList } from '../navigation/types';
 import NeumorphView from '../components/NeumorphView';
-import {COLORS, RADIUS} from '../constants';
+import { COLORS, RADIUS } from '../constants';
 
 type Nav = BottomTabNavigationProp<MainTabParamList>;
 
 const COMING_FEATURES = [
-  {icon: '🔔', label: '养护提醒'},
-  {icon: '📝', label: '生长日记'},
-  {icon: '💧', label: '浇水日程'},
-  {icon: '📸', label: '拍照记录'},
+  { icon: '🔔', label: '养护提醒' },
+  { icon: '📝', label: '生长日记' },
+  { icon: '💧', label: '浇水日程' },
+  { icon: '📸', label: '拍照记录' },
 ];
 
 function GardenScreen(): React.JSX.Element {
@@ -30,14 +30,16 @@ function GardenScreen(): React.JSX.Element {
   const navigation = useNavigation<Nav>();
 
   const textColor = isDark ? COLORS.textDark : COLORS.text;
-  const secondaryColor = isDark ? COLORS.textSecondaryDark : COLORS.textSecondary;
+  const secondaryColor = isDark
+    ? COLORS.textSecondaryDark
+    : COLORS.textSecondary;
   const pageBg = isDark ? COLORS.bgDark : COLORS.bg;
 
   return (
-    <View style={[styles.page, {backgroundColor: pageBg}]}>
+    <View style={[styles.page, { backgroundColor: pageBg }]}>
       {/* ━━ 标题 ━━ */}
       <Text style={styles.label}>MY GARDEN</Text>
-      <Text style={[styles.title, {color: textColor}]}>我的花园</Text>
+      <Text style={[styles.title, { color: textColor }]}>我的花园</Text>
 
       {/* ━━ 空状态 ━━ */}
       <View style={styles.emptyState}>
@@ -48,19 +50,22 @@ function GardenScreen(): React.JSX.Element {
           </View>
         </NeumorphView>
 
-        <Text style={[styles.emptyTitle, {color: textColor}]}>
+        <Text style={[styles.emptyTitle, { color: textColor }]}>
           还没有添加植物
         </Text>
-        <Text style={[styles.emptyHint, {color: secondaryColor}]}>
+        <Text style={[styles.emptyHint, { color: secondaryColor }]}>
           识别花卉后可以收藏到这里{'\n'}打造属于你的数字花园
         </Text>
 
         {/* CTA 按钮：深凸 neumorphic */}
-        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Recognize')}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Recognize')}
+        >
           <NeumorphView level="l3" bg={pageBg} radius={RADIUS.pill}>
             <View style={styles.ctaInner}>
               <Text style={styles.ctaIcon}>📷</Text>
-              <Text style={[styles.ctaText, {color: textColor}]}>
+              <Text style={[styles.ctaText, { color: textColor }]}>
                 开始识别
               </Text>
             </View>
@@ -71,14 +76,14 @@ function GardenScreen(): React.JSX.Element {
       {/* ━━ 即将支持 ━━ */}
       <NeumorphView level="l1" bg={pageBg}>
         <View style={styles.comingInner}>
-          <Text style={[styles.comingTitle, {color: secondaryColor}]}>
+          <Text style={[styles.comingTitle, { color: secondaryColor }]}>
             即将支持
           </Text>
           <View style={styles.comingRow}>
             {COMING_FEATURES.map((f, i) => (
               <View key={i} style={styles.comingItem}>
                 <Text style={styles.comingIcon}>{f.icon}</Text>
-                <Text style={[styles.comingLabel, {color: secondaryColor}]}>
+                <Text style={[styles.comingLabel, { color: secondaryColor }]}>
                   {f.label}
                 </Text>
               </View>
@@ -104,7 +109,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginBottom: 6,
   },
-  title: {fontSize: 22, fontWeight: '600', marginBottom: 36},
+  title: { fontSize: 22, fontWeight: '600', marginBottom: 36 },
 
   // ── 空状态 ──
   emptyState: {
@@ -120,8 +125,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyIcon: {fontSize: 40},
-  emptyTitle: {fontSize: 18, fontWeight: '600'},
+  emptyIcon: { fontSize: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '600' },
   emptyHint: {
     fontSize: 14,
     textAlign: 'center',
@@ -138,11 +143,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
     gap: 8,
   },
-  ctaIcon: {fontSize: 18},
-  ctaText: {fontSize: 16, fontWeight: '600'},
+  ctaIcon: { fontSize: 18 },
+  ctaText: { fontSize: 16, fontWeight: '600' },
 
   // ── 即将支持 ──
-  comingInner: {padding: 20},
+  comingInner: { padding: 20 },
   comingTitle: {
     fontSize: 11,
     fontWeight: '600',
@@ -153,9 +158,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  comingItem: {alignItems: 'center', gap: 6},
-  comingIcon: {fontSize: 20},
-  comingLabel: {fontSize: 11},
+  comingItem: { alignItems: 'center', gap: 6 },
+  comingIcon: { fontSize: 20 },
+  comingLabel: { fontSize: 11 },
 });
 
 export default GardenScreen;

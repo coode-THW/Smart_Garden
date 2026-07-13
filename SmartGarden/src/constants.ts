@@ -52,6 +52,22 @@ export const GREEN_RATIO_MAX = 0.5;
 /** 中心区域最低饱和度（0-255）：低于此值可能是墙壁/天空等 */
 export const SATURATION_MIN = 20;
 
+// ━━━ LLM 配置 ━━━
+/** 主 LLM API 基础 URL */
+export const LLM_PRIMARY_URL = 'https://api.openai.com/v1/chat/completions';
+/** 备用 LLM API 基础 URL */
+export const LLM_SECONDARY_URL = 'https://api.moonshot.cn/v1/chat/completions';
+/** LLM 请求超时 (ms) */
+export const LLM_TIMEOUT_MS = 15000;
+/** LLM 最大重试次数 */
+export const LLM_MAX_RETRIES = 2;
+/** 主模型名称 */
+export const LLM_MODEL_NAME = 'gpt-4o-mini';
+/** 备用模型名称 */
+export const LLM_SECONDARY_MODEL = 'moonshot-v1-8k';
+/** LLM 温度参数（0-1，越低越确定性） */
+export const LLM_TEMPERATURE = 0.1;
+
 // ━━━ 设计主题 — 新拟态 Neumorphism ━━━
 // 卡片与背景同色，层次由双影（亮+暗）区分
 

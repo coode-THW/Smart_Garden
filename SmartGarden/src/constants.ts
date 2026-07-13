@@ -19,10 +19,14 @@ export const MODEL_INPUT_SIZE = 1 * 3 * 224 * 224; // 150528
 /**
  * 模型实际类别顺序（与 class_order.json 保持一致）
  * 索引 0-8 对应 ONNX 输出的概率数组顺序
+ *
+ * 新增花卉请修改 src/data/flowerClasses.ts
  */
-export const CLASS_NAMES_EN = ['daisy', 'dandelion', 'gerbera', 'hydrangea', 'lily', 'lotus', 'roses', 'sunflowers', 'tulips'] as const;
-export const CLASS_NAMES = ['雏菊', '蒲公英', '非洲菊', '绣球花', '百合', '荷花', '玫瑰', '向日葵', '郁金香'] as const;
-export type FlowerClass = (typeof CLASS_NAMES)[number];
+export {
+  CLASS_NAMES_EN,
+  CLASS_NAMES,
+  type FlowerClass,
+} from './data/flowerClasses';
 
 // ━━━ 预处理参数 ━━━
 /** YOLO 分类模型只做 /255 归一化，无 mean/std */
@@ -34,9 +38,9 @@ export const LETTERBOX_PAD_COLOR = '#727272';
 /** 高置信度：直接返回本地结果 */
 export const HIGH_CONFIDENCE = 0.85;
 /** 中等置信度：可调 LLM 增强 */
-export const MID_CONFIDENCE = 0.30;
+export const MID_CONFIDENCE = 0.3;
 /** 低于此值判定为非花卉 */
-export const LOW_CONFIDENCE = 0.30;
+export const LOW_CONFIDENCE = 0.3;
 /** 推理超时 (ms) */
 export const INFERENCE_TIMEOUT_MS = 30000;
 
@@ -67,6 +71,12 @@ export const LLM_MODEL_NAME = 'gpt-4o-mini';
 export const LLM_SECONDARY_MODEL = 'moonshot-v1-8k';
 /** LLM 温度参数（0-1，越低越确定性） */
 export const LLM_TEMPERATURE = 0.1;
+
+// ━━━ 环境变量名 ━━━
+/** 主模型 API Key 环境变量名 */
+export const LLM_PRIMARY_KEY_ENV = 'LLM_API_KEY';
+/** 备用模型 API Key 环境变量名 */
+export const LLM_SECONDARY_KEY_ENV = 'MOONSHOT_API_KEY';
 
 // ━━━ 设计主题 — 新拟态 Neumorphism ━━━
 // 卡片与背景同色，层次由双影（亮+暗）区分
@@ -112,20 +122,20 @@ export const RADIUS = {
 export const NEU_LEVEL = {
   /** L1 浅凸：小元素 */
   l1: {
-    lightOffset: {width: -2, height: -2} as const,
-    darkOffset: {width: 2, height: 2} as const,
+    lightOffset: { width: -2, height: -2 } as const,
+    darkOffset: { width: 2, height: 2 } as const,
     blur: 4,
   },
   /** L2 标准凸：卡片、按钮 */
   l2: {
-    lightOffset: {width: -4, height: -4} as const,
-    darkOffset: {width: 4, height: 4} as const,
+    lightOffset: { width: -4, height: -4 } as const,
+    darkOffset: { width: 4, height: 4 } as const,
     blur: 8,
   },
   /** L3 深凸：弹窗、CTA */
   l3: {
-    lightOffset: {width: -6, height: -6} as const,
-    darkOffset: {width: 6, height: 6} as const,
+    lightOffset: { width: -6, height: -6 } as const,
+    darkOffset: { width: 6, height: 6 } as const,
     blur: 12,
   },
 } as const;

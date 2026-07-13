@@ -4,7 +4,7 @@
  * 启动流程：显示启动画面 → 预加载 ONNX 模型 → 淡入主界面
  */
 
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   StatusBar,
@@ -13,7 +13,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import {Provider as PaperProvider, DefaultTheme} from 'react-native-paper';
+import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import {
   NavigationContainer,
   DefaultTheme as NavigationDefaultTheme,
@@ -33,9 +33,11 @@ const paperTheme = {
   },
 };
 
+const ENABLE_STARTUP_TESTS = false;
+
 // ━━━ 启动画面 ━━━
 
-function SplashScreen({progress}: {progress: number}) {
+function SplashScreen({ progress }: { progress: number }) {
   const isDark = useColorScheme() === 'dark';
   const bg = isDark ? '#1E1E1C' : '#F9F8F4';
   const textColor = isDark ? '#E4E0D8' : '#2D2D2A';
@@ -43,15 +45,13 @@ function SplashScreen({progress}: {progress: number}) {
   const barWidth = Math.min(progress, 100);
 
   return (
-    <View style={[styles.splash, {backgroundColor: bg}]}>
+    <View style={[styles.splash, { backgroundColor: bg }]}>
       <Text style={styles.splashIcon}>🌿</Text>
-      <Text style={[styles.splashTitle, {color: textColor}]}>智慧花园</Text>
+      <Text style={[styles.splashTitle, { color: textColor }]}>智慧花园</Text>
       <Text style={styles.splashSub}>Smart Garden</Text>
 
       <View style={styles.progressTrack}>
-        <View
-          style={[styles.progressBar, {width: `${barWidth}%`}]}
-        />
+        <View style={[styles.progressBar, { width: `${barWidth}%` }]} />
       </View>
       <Text style={styles.splashHint}>AI 引擎初始化中…</Text>
     </View>
@@ -66,8 +66,10 @@ function App(): React.JSX.Element {
     ? NavigationDarkTheme
     : NavigationDefaultTheme;
 
-  // 应用启动时执行测试
+  // 应用启动时执行测试（默认关闭，手动开启 ENABLE_STARTUP_TESTS 启用）
   useEffect(() => {
+    if (!ENABLE_STARTUP_TESTS) return;
+
     console.log('\n========== SmartGarden 启动测试 ==========');
 
     // Test 1: ONNX 推理最小示例
@@ -118,8 +120,9 @@ function App(): React.JSX.Element {
       {/* 启动覆盖层 */}
       {!isReady && (
         <Animated.View
-          style={[styles.overlay, {opacity: fadeAnim}]}
-          pointerEvents="none">
+          style={[styles.overlay, { opacity: fadeAnim }]}
+          pointerEvents="none"
+        >
           <SplashScreen progress={progress} />
         </Animated.View>
       )}
@@ -140,7 +143,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  splashIcon: {fontSize: 64, marginBottom: 16},
+  splashIcon: { fontSize: 64, marginBottom: 16 },
   splashTitle: {
     fontSize: 28,
     fontWeight: '600',

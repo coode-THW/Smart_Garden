@@ -9,6 +9,7 @@ pluginManagement {
     }
     includeBuild("../node_modules/@react-native/gradle-plugin")
 }
+
 plugins { id("com.facebook.react.settings") }
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
 rootProject.name = 'SmartGarden'
@@ -17,6 +18,7 @@ includeBuild('../node_modules/@react-native/gradle-plugin')
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
+        maven { url 'https://maven.aliyun.com/repository/central' }
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/public' }
         google()

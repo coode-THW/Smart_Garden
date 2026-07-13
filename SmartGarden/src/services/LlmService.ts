@@ -9,6 +9,8 @@ import {
   LLM_MODEL_NAME,
   LLM_SECONDARY_MODEL,
   LLM_TEMPERATURE,
+  LLM_PRIMARY_KEY_ENV,
+  LLM_SECONDARY_KEY_ENV,
 } from '../constants';
 
 export interface LlmFlowerInfo {
@@ -17,7 +19,7 @@ export interface LlmFlowerInfo {
   scientificName: string;
   family: string;
   origin: string;
-  floweringSeason: string;
+  bloomPeriod: string;
   description: string;
   careGuide: {
     water: string;
@@ -63,8 +65,8 @@ const getApiConfig = (
   useSecondary: boolean,
 ): LlmApiConfig & { supportsImage: boolean } => {
   const apiKey = useSecondary
-    ? getApiKey('MOONSHOT_API_KEY')
-    : getApiKey('LLM_API_KEY');
+    ? getApiKey(LLM_SECONDARY_KEY_ENV)
+    : getApiKey(LLM_PRIMARY_KEY_ENV);
 
   return {
     url: useSecondary ? LLM_SECONDARY_URL : LLM_PRIMARY_URL,
@@ -99,7 +101,7 @@ ${guessText}
   "scientificName": "学名（拉丁名）",
   "family": "科属",
   "origin": "产地",
-  "floweringSeason": "花期",
+  "bloomPeriod": "花期",
   "description": "简要描述（20-50字）",
   "careGuide": {
     "water": "浇水建议",
@@ -340,7 +342,7 @@ class LlmService {
   "scientificName": "学名（拉丁名）",
   "family": "科属",
   "origin": "产地",
-  "floweringSeason": "花期",
+  "bloomPeriod": "花期",
   "description": "简要描述（20-50字）",
   "careGuide": {
     "water": "浇水建议",

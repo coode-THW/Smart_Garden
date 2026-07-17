@@ -10,7 +10,26 @@
 
 import React from 'react';
 import {StyleSheet, View, type ViewStyle} from 'react-native';
-import {COLORS, NEU_LEVEL, RADIUS} from '../constants';
+import {COLORS, RADIUS} from '../constants';
+
+/** 新拟态层次 — 三个深度级别（本地定义，避免依赖已移除的常量） */
+const NEU_LEVEL = {
+  l1: {
+    lightOffset: {width: -2, height: -2} as const,
+    darkOffset: {width: 2, height: 2} as const,
+    blur: 4,
+  },
+  l2: {
+    lightOffset: {width: -4, height: -4} as const,
+    darkOffset: {width: 4, height: 4} as const,
+    blur: 8,
+  },
+  l3: {
+    lightOffset: {width: -6, height: -6} as const,
+    darkOffset: {width: 6, height: 6} as const,
+    blur: 12,
+  },
+};
 
 type Level = keyof typeof NEU_LEVEL;
 

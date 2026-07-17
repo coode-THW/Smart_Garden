@@ -10,6 +10,8 @@ const config = {
   resolver: {
     assetExts: [...getDefaultConfig(__dirname).resolver.assetExts, 'onnx'],
   },
+  watchFolders: [__dirname],
+  resetCache: true,
 };
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

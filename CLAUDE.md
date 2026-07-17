@@ -26,8 +26,9 @@ Phase 1
   ✅ 端到端识别：拍照 → 预处理 → ONNX 推理 → 显示结果
   ✅ 非花卉过滤（7 重判断：置信度+边距+熵+跌落比+底部和+绿色占比+饱和度）
   ✅ 相机组件（闪光灯/权限/生命周期/isActive）
-  ✅ 新拟态 UI（NeumorphView 双影组件 + 三层深度体系）
-  ✅ 启动预加载（Splash → 模型加载进度条 → 淡入主界面）
+  ✅ 有机自然主义 UI（DesignCard 精致阴影 + 圆角卡片 + 杂志编辑风格）
+  ✅ WelcomeScreen 沉浸式引导页（4 页水平滑动 + 叶子生长动画）
+  ✅ 按钮系统重构（ActionButton 6 种变体 + ButtonGroup 自动换行）
   ✅ 花卉档案卡片（学名/科属/产地/花期 — 2 列网格布局）
   ✅ 拍照按钮状态管理（模型未就绪时灰色禁用）
   ✅ Jest 单元测试
@@ -48,23 +49,30 @@ Phase 1
 - **分支策略**: `main` = 产品代码 + ONNX + 文档
 - **环境变量**: `.env` 含 API Key, **绝对不能提交**
 - **团队注意**: `build.gradle` 含阿里云 Maven 镜像，海外队员构建可能超时
+- **Metro 配置**: `metro.config.js` 已添加 `watchFolders` 和 `resetCache: true`，解决模块解析和缓存问题
 
 ## 代码结构
 
 ```
 SmartGarden/src/
-├── constants.ts              # 模型配置、类别名、阈值、设计令牌（COLORS/RADIUS/NEU_LEVEL）
+├── constants.ts              # 模型配置、类别名、阈值、设计令牌（COLORS/SHADOWS/SPACING/TYPOGRAPHY）
 ├── navigation/
 │   ├── types.ts              # 导航类型定义
 │   ├── RootNavigator.tsx     # 根导航栈
 │   └── MainTabNavigator.tsx  # 底部标签栏（首页/识别/花园）
 ├── screens/
-│   ├── HomeScreen.tsx        # 首页 — Hero + 新拟态功能卡片
+│   ├── WelcomeScreen.tsx     # 全屏沉浸式引导页（4 页水平滑动 + 品牌/功能/加载）
+│   ├── HomeScreen.tsx        # 首页 — Hero + 有机自然功能卡片
 │   ├── RecognizeScreen.tsx   # 识别主界面 — 状态机 + 杂志式结果页
 │   └── GardenScreen.tsx      # 我的花园 — 空状态 + CTA
 ├── components/
 │   ├── CameraViewfinder.tsx  # 全屏取景器（拍照/闪光灯/权限/生命周期）
-│   └── NeumorphView.tsx      # 新拟态容器（双 View 叠影，L1/L2/L3 深度）
+│   ├── DesignCard.tsx        # 精致阴影 + 圆角卡片（NeumorphView 替代方案）
+│   ├── SectionHeader.tsx     # 杂志编辑风格区块标题（英文标签 + 中文大标题）
+│   ├── FlowerAvatar.tsx      # 彩色圆形头像，替代 emoji
+│   ├── StatusBadge.tsx       # 胶囊状态标签
+│   ├── ActionButton.tsx      # 统一行动按钮（6 种变体 + 3 种尺寸 + 图标 + 按压动画）
+│   └── ButtonGroup.tsx       # 按钮组容器（自动换行，解决小屏幕溢出问题）
 ├── services/
 │   ├── YoloService.ts        # ONNX 模型加载与推理（单例 + 进度回调）
 │   ├── ImagePreprocessor.ts  # 图片预处理（缩放→解码→归一化→CHW）+ 颜色分析
@@ -75,15 +83,60 @@ SmartGarden/src/
 
 ## UI 设计系统
 
+### 颜色体系（有机自然主义）
+
 | Token | 值 | 用途 |
 |-------|-----|------|
-| `COLORS.primary` | `#A3B899` | 鼠尾草绿 — 强调色 |
-| `COLORS.bg` / `bgDark` | `#F9F8F4` / `#1E1E1C` | 页面底色（新拟态核心：卡片同色） |
-| `NEU_LEVEL.l1/l2/l3` | 浅凸/标准凸/深凸 | 三种深度级别 |
-| `RADIUS.pill` | `999` | 胶囊按钮 |
-| `RADIUS.lg` | `16` | 卡片圆角 |
+| `COLORS.forest` | `#2D5A3D` | 深森林绿 — 主品牌色 |
+| `COLORS.sage` | `#A3B899` | 鼠尾草绿 — 强调色（原 `primary` 别名） |
+| `COLORS.earth` | `#8B7355` | 大地棕 — 辅助色 |
+| `COLORS.cream` | `#F7F5F0` | 暖米白 — 页面底色（原 `bg` 别名） |
+| `COLORS.cinnabar` | `#CD5C5C` | 朱砂红 — 警示/高亮 |
+| `COLORS.bg` / `bgDark` | `#F7F5F0` / `#1E1E1C` | 页面底色（保留旧名向后兼容） |
 
-新拟态原则：卡片与背景同色，层次由左上亮影 + 右下暗影区分，按钮有浮起触感。
+> 向后兼容：旧颜色名称 `primary`、`sage` 等仍可用作别名。
+
+### 阴影系统
+
+| Token | 值 | 用途 |
+|-------|-----|------|
+| `SHADOWS.sm` | 轻阴影 | 小标签、头像 |
+| `SHADOWS.md` | 标准阴影 | 普通卡片 |
+| `SHADOWS.lg` | 重阴影 | 浮层、弹窗 |
+| `SHADOWS.xl` | 极重阴影 | 全屏覆盖层 |
+
+### 间距系统
+
+| Token | 值 | 用途 |
+|-------|-----|------|
+| `SPACING.xs` / `sm` / `md` / `lg` / `xl` | 4 / 8 / 16 / 24 / 32 | 基础间距阶梯 |
+| `SPACING.screen` | 20 | 屏幕安全边距 |
+
+### 排版系统
+
+| Token | 值 | 用途 |
+|-------|-----|------|
+| `TYPOGRAPHY.h1` | 32px / Bold | 页面大标题 |
+| `TYPOGRAPHY.h2` | 24px / SemiBold | 区块标题 |
+| `TYPOGRAPHY.body` | 16px / Regular | 正文 |
+| `TYPOGRAPHY.caption` | 12px / Medium | 标签、辅助文字 |
+
+### 圆角
+
+| Token | 值 | 用途 |
+|-------|-----|------|
+| `RADIUS.pill` | `999` | 胶囊按钮、标签 |
+| `RADIUS.lg` | `16` | 卡片圆角 |
+| `RADIUS.md` | `12` | 中等组件 |
+| `RADIUS.sm` | `8` | 小按钮、输入框 |
+
+有机自然主义原则：以森林绿为品牌锚点，大地色系营造温暖自然感；卡片使用精致分层阴影而非双色叠影；排版强调杂志编辑感（英文标签 + 中文大标题组合）。
+
+### 图标库依赖
+
+- `react-native-vector-icons` — 图标库主包
+- `@react-native-vector-icons/material-design-icons` — Material Design 图标子集
+- 字体文件需手动复制到 `android/app/src/main/assets/fonts/`
 
 ## 已知坑
 
@@ -100,10 +153,12 @@ SmartGarden/src/
 ## 启动流程
 
 ```
-App mount → SplashScreen (Logo + 进度条 + "AI 引擎初始化中")
-  → YoloService.loadModel(onProgress) 预加载模型
-  → 淡出动画 (0.35s)
-  → 主界面
+App mount → WelcomeScreen 全屏覆盖（状态栏自动隐藏）
+  → 第 1 页：品牌页（全屏森林绿背景 + 中央 160px 大图标 + 品牌名）
+  → 第 2-3 页：功能介绍（大幅居中图标 + 大标题滑动）
+  → 第 4 页：加载页（功能介绍 + 叶子生长动画 + 旋转水波纹 + 进度条）
+    → YoloService.loadModel(onProgress) 预加载模型
+  → 用户操作 / 加载完成后 → 状态栏恢复 → 进入主界面
   → RecognizeScreen 按钮初始为灰色 "模型加载中…"，
     isLoaded 为 true 后变为可用
 ```

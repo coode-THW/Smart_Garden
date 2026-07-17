@@ -31,7 +31,7 @@
 
 | 层级 | 技术 | 说明 |
 |------|------|------|
-| **UI 层** | React Native 0.86 + React Native Paper | 跨平台移动端界面 |
+| **UI 层** | React Native 0.86 + Organic/Natural 有机自然主义设计 | 跨平台移动端界面，精致阴影与植物色系 |
 | **业务逻辑层** | TypeScript + Zustand | 识别编排、状态管理 |
 | **AI 推理层** | ONNX Runtime Mobile + YOLOv11n | 本地离线推理 |
 | **数据层** | SQLite + JSON | 用户数据 + 养护知识库 |
@@ -43,6 +43,7 @@
 - **免注册即用**：首次启动自动生成匿名 UUID，无需注册即可使用全部功能
 - **离线可用**：YOLO 推理完全本地执行，网络仅用于 LLM 增强和知识库更新
 - **模型规格**：YOLOv11n 分类模型 → ONNX FP16 5.9MB → 输入 224×224 → 输出 5 类概率
+- **启动流程**：SplashScreen 淡出 → WelcomeScreen 全屏引导（4 页水平滑动）→ 进入首页
 
 ---
 
@@ -66,7 +67,7 @@ YOLO_smart-garden/
 │   └── 设计风格总结-植物养护App.md  # ← UI 设计参考
 │
 └── SmartGarden/              ⭐  React Native 移动端 APP
-    ├── App.tsx               ⭐  根组件（启动预加载 + 新拟态 UI）
+    ├── App.tsx               ⭐  根组件（启动预加载 + 有机自然主义 UI）
     ├── __tests__/            ⭐  Jest 单元测试
     ├── assets/
     │   └── yolov11n-flower.onnx  ⭐  随 APP 打包的模型
@@ -75,8 +76,8 @@ YOLO_smart-garden/
     └── src/                  ⭐  业务源码
         ├── constants.ts          模型配置、类别名、阈值、设计令牌
         ├── navigation/           导航（Root + 底部 Tab）
-        ├── screens/              首页 / 识别 / 花园
-        ├── components/           相机取景器 / 新拟态容器
+        ├── screens/              首页 / 识别 / 花园 / 欢迎引导
+        ├── components/           DesignCard / SectionHeader / FlowerAvatar / StatusBadge / ActionButton / ButtonGroup / 相机取景器
         ├── services/             YoloService / ImagePreprocessor / KnowledgeService
         ├── store/                Zustand 状态管理
         └── types/                类型声明
@@ -140,7 +141,23 @@ python app.py
 # 浏览器访问 http://localhost:5000
 ```
 
-### 5. 运行 React Native APP
+### 5. 安装图标库字体（Android）
+
+项目使用 `react-native-vector-icons` + `@react-native-vector-icons/material-design-icons`，需将字体文件复制到 Android 工程目录：
+
+```bash
+cd SmartGarden
+mkdir -p android/app/src/main/assets/fonts
+cp node_modules/@react-native-vector-icons/material-design-icons/fonts/MaterialDesignIcons.ttf android/app/src/main/assets/fonts/
+```
+
+> iOS 使用 CocoaPods 自动链接字体，无需手动复制。
+
+### 6. Metro 配置
+
+确保 `metro.config.js` 已配置 `watchFolders` 和 `resetCache`，以支持图标库的 monorepo 结构。配置示例已包含在项目中。
+
+### 7. 运行 React Native APP
 
 ```bash
 cd SmartGarden
@@ -168,7 +185,7 @@ npx react-native run-ios
 | **Phase 2** | 第 41-60 天 | 一键设置养护提醒、本地通知、知识库在线更新 |
 | **Phase 3** | 第 61-80 天 | 远程推送、纠错数据收集、发布上线 |
 
-当前进度：**Phase 1** — 模型导出 ✅ | 项目初始化 ✅ | 端到端识别 ✅ | 新拟态 UI ✅ | 养护知识库（示例数据已内置）📋
+当前进度：**Phase 1** — 模型导出 ✅ | 项目初始化 ✅ | 端到端识别 ✅ | 有机自然主义 UI ✅ | 欢迎引导页 ✅ | 图标系统 ✅ | 养护知识库（示例数据已内置）📋
 
 > 详见 [开发线路图](docs/智慧花园开发线路图.md)
 
@@ -198,7 +215,7 @@ npx react-native run-ios
 | [项目架构文档](docs/智慧花园项目架构文档.md) | 技术架构、模块设计、数据协议（**权威参考**） |
 | [开发线路图](docs/智慧花园开发线路图.md) | 80 天 3 人分工、里程碑、风险评估 |
 | [模块名称结构图](docs/模块名称结构图.md) | 文件结构、分支归属、Git 忽略策略 |
-| [设计风格总结](docs/设计风格总结-植物养护App.md) | UI 设计系统参考（色彩/新拟态/组件/动画） |
+| [设计风格总结](docs/设计风格总结-植物养护App.md) | UI 设计系统参考（色彩/有机自然主义/组件/动画） |
 
 ---
 

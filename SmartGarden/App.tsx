@@ -1,18 +1,11 @@
 /**
  * SmartGarden — 智慧花园 APP 入口
  *
- * 启动流程：显示启动画面 → 预加载 ONNX 模型 → 淡入主界面
+ * 启动流程：显示欢迎页（4页引导+模型加载进度）→ 进入主界面
  */
 
-import React, {useEffect, useRef, useState} from 'react';
-import {
-  Animated,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {StatusBar, useColorScheme} from 'react-native';
 import {Provider as PaperProvider, DefaultTheme} from 'react-native-paper';
 import {
   NavigationContainer,
@@ -20,41 +13,19 @@ import {
   DarkTheme as NavigationDarkTheme,
 } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
+import WelcomeScreen from './src/screens/WelcomeScreen';
 import YoloService from './src/services/YoloService';
+import {UserService} from './src/services/UserService';
+import {COLORS} from './src/constants';
 
 const paperTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#A3B899',
-    secondary: '#CD5C5C',
+    primary: COLORS.forest,
+    secondary: COLORS.earth,
   },
 };
-
-// ━━━ 启动画面 ━━━
-
-function SplashScreen({progress}: {progress: number}) {
-  const isDark = useColorScheme() === 'dark';
-  const bg = isDark ? '#1E1E1C' : '#F9F8F4';
-  const textColor = isDark ? '#E4E0D8' : '#2D2D2A';
-
-  const barWidth = Math.min(progress, 100);
-
-  return (
-    <View style={[styles.splash, {backgroundColor: bg}]}>
-      <Text style={styles.splashIcon}>🌿</Text>
-      <Text style={[styles.splashTitle, {color: textColor}]}>智慧花园</Text>
-      <Text style={styles.splashSub}>Smart Garden</Text>
-
-      <View style={styles.progressTrack}>
-        <View
-          style={[styles.progressBar, {width: `${barWidth}%`}]}
-        />
-      </View>
-      <Text style={styles.splashHint}>AI 引擎初始化中…</Text>
-    </View>
-  );
-}
 
 // ━━━ 根组件 ━━━
 
@@ -64,92 +35,49 @@ function App(): React.JSX.Element {
     ? NavigationDarkTheme
     : NavigationDefaultTheme;
 
-  const [isReady, setIsReady] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [progress, setProgress] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [isModelReady, setIsModelReady] = useState(false);
 
-  // — 启动时预加载模型 —
+  // — 启动时预加载模型 + 初始化用户 —
   useEffect(() => {
-    YoloService.getInstance()
-      .loadModel(pct => setProgress(pct))
+    Promise.all([
+      YoloService.getInstance().loadModel(pct => setProgress(pct)),
+      UserService.getInstance().initialize(),
+    ])
       .then(() => {
-        // 淡出启动画面
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 350,
-          useNativeDriver: true,
-        }).start(() => setIsReady(true));
+        setIsModelReady(true);
       })
       .catch(() => {
-        // 加载失败也进入主界面（识别页会显示错误）
-        setIsReady(true);
+        // 加载失败也允许进入（识别页会显示错误）
+        setIsModelReady(true);
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleEnterApp = () => {
+    setShowWelcome(false);
+  };
 
   return (
     <PaperProvider theme={paperTheme}>
       <NavigationContainer theme={navigationTheme}>
         <StatusBar
           barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+          backgroundColor={isDarkMode ? COLORS.bgDark : COLORS.bg}
         />
         <RootNavigator />
       </NavigationContainer>
 
-      {/* 启动覆盖层 */}
-      {!isReady && (
-        <Animated.View
-          style={[styles.overlay, {opacity: fadeAnim}]}
-          pointerEvents="none">
-          <SplashScreen progress={progress} />
-        </Animated.View>
+      {/* 欢迎页覆盖层 */}
+      {showWelcome && (
+        <WelcomeScreen
+          progress={progress}
+          isReady={isModelReady}
+          onEnterApp={handleEnterApp}
+        />
       )}
     </PaperProvider>
   );
 }
-
-// ━━━ 样式 ━━━
-
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    zIndex: 999,
-  },
-  splash: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  splashIcon: {fontSize: 64, marginBottom: 16},
-  splashTitle: {
-    fontSize: 28,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  splashSub: {
-    fontSize: 13,
-    color: '#A3B899',
-    letterSpacing: 4,
-    marginBottom: 48,
-  },
-  progressTrack: {
-    width: '80%',
-    maxWidth: 240,
-    height: 4,
-    backgroundColor: '#E0DCD4',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#A3B899',
-    borderRadius: 2,
-  },
-  splashHint: {
-    fontSize: 12,
-    color: '#A0A89A',
-  },
-});
 
 export default App;

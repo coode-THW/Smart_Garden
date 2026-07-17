@@ -47,66 +47,159 @@ export const GREEN_RATIO_MAX = 0.5;
 /** 中心区域最低饱和度（0-255）：低于此值可能是墙壁/天空等 */
 export const SATURATION_MIN = 20;
 
-// ━━━ 设计主题 — 新拟态 Neumorphism ━━━
-// 卡片与背景同色，层次由双影（亮+暗）区分
+// ━━━ 设计主题 — Organic/Natural 有机自然主义 ━━━
+// 深森林绿 + 温暖泥土色 + 大量留白，杂志编辑感层次
 
 export const COLORS = {
-  /** 鼠尾草绿 — 仅用于强调文字/图标，新拟态按钮不用填色 */
-  primary: '#A3B899',
-  primaryDark: '#5A7A5A',
+  // 主色阶
+  /** 深森林绿 — 主品牌色，用于标题、核心按钮、导航激活态 */
+  forest: '#2D5A3D',
+  forestLight: '#3D7A52',
+  forestDark: '#1F3D2A',
 
-  /** 朱砂红 — 错误/警告 */
+  /** 鼠尾草绿 — 次要强调，用于标签、图标、装饰 */
+  sage: '#A3B899',
+  sageLight: '#C8DDC5',
+  sageDark: '#5A7A5A',
+
+  /** 泥土棕 — 暖色点缀，用于装饰块、分割线、次要强调 */
+  earth: '#8B7355',
+  earthLight: '#B8A082',
+  earthDark: '#6B5A40',
+
+  // 功能色
+  /** 朱砂红 — 错误/警告/危险操作 */
   error: '#CD5C5C',
+  errorLight: '#F5D0D0',
   warning: '#E6A817',
   info: '#3B7DD8',
   success: '#5A9A6F',
 
-  /** 页面底色 — 新拟态核心：卡片与背景同色 */
-  bg: '#F9F8F4',
-  bgDark: '#1E1E1C',
+  // 背景色阶
+  /** 页面底色 — 温暖奶油白 */
+  bg: '#F7F5F0',
+  bgDark: '#1A1A1A',
+  /** 次级背景 — 晨露微绿 */
+  bgSecondary: '#F2F7F0',
+  /** 卡片背景 — 纯白 */
+  card: '#FFFFFF',
+  cardDark: '#252524',
 
-  /** 文字 */
-  text: '#2D2D2A',
-  textDark: '#E4E0D8',
-  textSecondary: '#5A5A55',
-  textSecondaryDark: '#8A8680',
+  // 文字色阶
+  /** 主文字 — 墨黑 */
+  text: '#1A1A1A',
+  textDark: '#F0EDE8',
+  /** 次要文字 — 石灰 */
+  textSecondary: '#6B6B6B',
+  textSecondaryDark: '#9A9894',
+  /** 占位文字 */
+  textMuted: '#A0A0A0',
+  textMutedDark: '#6B6B6B',
 
-  /** 新拟态双影 (iOS shadow) */
+  // 边框与分割
+  border: '#E8E4DC',
+  borderDark: '#333331',
+  divider: '#F0EDE8',
+  dividerDark: '#2D2D2B',
+
+  // 阴影（RGBA 用于跨平台兼容）
+  shadowLight: 'rgba(0,0,0,0.04)',
+  shadowMedium: 'rgba(0,0,0,0.08)',
+  shadowHeavy: 'rgba(0,0,0,0.12)',
+  shadowDark: 'rgba(0,0,0,0.35)',
+
+  // ━━━ 向后兼容别名（旧名称映射到新颜色） ━━━
+  /** @deprecated 请使用 COLORS.forest */
+  primary: '#2D5A3D',
+  /** @deprecated 请使用 COLORS.forestDark */
+  primaryDark: '#1F3D2A',
+  /** @deprecated 请使用 COLORS.sageLight */
   lightShadow: '#FFFFFF',
-  lightShadowDark: '#3A3A36',
+  /** @deprecated 请使用 COLORS.shadowMedium */
   darkShadow: 'rgba(0,0,0,0.08)',
-  darkShadowDark: 'rgba(0,0,0,0.35)',
 } as const;
 
-/** 圆角 */
+/** 圆角系统 */
 export const RADIUS = {
+  xs: 6,
   sm: 8,
   md: 12,
   lg: 16,
   xl: 20,
+  xxl: 24,
   pill: 999,
 } as const;
 
-/** 新拟态层次 — 三个深度级别 */
-export const NEU_LEVEL = {
-  /** L1 浅凸：小元素 */
-  l1: {
-    lightOffset: {width: -2, height: -2} as const,
-    darkOffset: {width: 2, height: 2} as const,
-    blur: 4,
+/** 间距系统 */
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+  huge: 48,
+} as const;
+
+/** 阴影样式预设 */
+export const SHADOWS = {
+  /** 轻阴影 — 卡片默认 */
+  card: {
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  /** L2 标准凸：卡片、按钮 */
-  l2: {
-    lightOffset: {width: -4, height: -4} as const,
-    darkOffset: {width: 4, height: 4} as const,
-    blur: 8,
+  /** 中阴影 — 卡片悬停/强调 */
+  cardHover: {
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 6,
   },
-  /** L3 深凸：弹窗、CTA */
-  l3: {
-    lightOffset: {width: -6, height: -6} as const,
-    darkOffset: {width: 6, height: 6} as const,
-    blur: 12,
+  /** 重阴影 — 弹窗/浮层 */
+  modal: {
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 12},
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
   },
+  /** 顶部阴影 — 底部导航栏 */
+  top: {
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+} as const;
+
+/** 排版系统 */
+export const TYPOGRAPHY = {
+  /** 页面大标题 */
+  hero: {fontSize: 32, fontWeight: '700' as const, lineHeight: 40, letterSpacing: -0.5},
+  /** 页面标题 */
+  h1: {fontSize: 26, fontWeight: '700' as const, lineHeight: 34, letterSpacing: -0.3},
+  /** 区块标题 */
+  h2: {fontSize: 20, fontWeight: '600' as const, lineHeight: 28, letterSpacing: -0.2},
+  /** 卡片标题 */
+  h3: {fontSize: 17, fontWeight: '600' as const, lineHeight: 24, letterSpacing: 0},
+  /** 正文 */
+  body: {fontSize: 15, fontWeight: '400' as const, lineHeight: 22, letterSpacing: 0},
+  /** 次要正文 */
+  bodySmall: {fontSize: 13, fontWeight: '400' as const, lineHeight: 20, letterSpacing: 0},
+  /** 英文标签 — 大写宽间距 */
+  label: {fontSize: 11, fontWeight: '600' as const, lineHeight: 14, letterSpacing: 2.5},
+  /** 按钮文字 */
+  button: {fontSize: 15, fontWeight: '600' as const, lineHeight: 20, letterSpacing: 0},
+  /** 小按钮/标签 */
+  buttonSmall: {fontSize: 13, fontWeight: '600' as const, lineHeight: 18, letterSpacing: 0},
+  /** 数据统计 */
+  stat: {fontSize: 28, fontWeight: '700' as const, lineHeight: 36, letterSpacing: -0.5},
 } as const;
 
 // ━━━ 模型资源 ━━━

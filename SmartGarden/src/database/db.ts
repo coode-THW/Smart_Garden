@@ -160,8 +160,47 @@ export async function getDatabase(): Promise<SqliteDatabaseAdapter> {
     const rawDb = open({name: DB_NAME});
     db = createAdapter(rawDb);
 
-    // 执行 DDL 建表
-    await db.executeSql(DDL_CREATE_TABLES);
+    // 逐条执行建表（CREATE TABLE IF NOT EXISTS 支持重复执行）
+    const cmds = [
+      `CREATE TABLE IF NOT EXISTS user (
+        userId TEXT NOT NULL PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        phone TEXT NULL,
+        passwordHash TEXT NULL,
+        nickname TEXT NOT NULL DEFAULT '花友',
+        avatarPath TEXT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS garden (
+        gardenId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        userId TEXT NOT NULL,
+        flowerId INTEGER NOT NULL,
+        customName TEXT NULL,
+        location TEXT NULL,
+        addedDate TEXT NULL,
+        photoPath TEXT NULL,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        updatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (userId) REFERENCES user(userId)
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_garden_user_flower ON garden(userId, flowerId, customName)`,
+      `CREATE INDEX IF NOT EXISTS idx_garden_userId ON garden(userId)`,
+      `CREATE TABLE IF NOT EXISTS feedback (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        userId TEXT NOT NULL,
+        imageHash TEXT NOT NULL,
+        yoloResult TEXT NOT NULL,
+        confidence REAL NOT NULL,
+        userCorrection TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'yolov11',
+        synced INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (userId) REFERENCES user(userId)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_feedback_hash ON feedback(imageHash)`,
+    ];
+    for (const sql of cmds) {
+      await db.executeSql(sql);
+    }
 
     console.log(`[DB] 已初始化: ${DB_NAME} (v${DB_VERSION})`);
     return db;

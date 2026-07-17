@@ -1,5 +1,5 @@
 /**
- * RecognizeScreen — 花卉识别主界面
+ * RecognizeScreen — 花卉识别主界面（Organic/Natural 重构版）
  *
  * 流程: 点击选图 → 预处理 → ONNX 推理 → 显示结果
  */
@@ -9,22 +9,31 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
   useColorScheme,
 } from 'react-native';
-import {Button} from 'react-native-paper';
+import {Icon} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import YoloService from '../services/YoloService';
 import CameraViewfinder from '../components/CameraViewfinder';
-import NeumorphView from '../components/NeumorphView';
-import {fetchKnowledge} from '../services/KnowledgeService';
+import DesignCard from '../components/DesignCard';
+import SectionHeader from '../components/SectionHeader';
+import FlowerAvatar from '../components/FlowerAvatar';
+import StatusBadge from '../components/StatusBadge';
+import ActionButton from '../components/ActionButton';
+import ButtonGroup from '../components/ButtonGroup';
+import {getKnowledge} from '../services/KnowledgeService';
+import {GardenService} from '../services/GardenService';
 import type {InferenceResult} from '../services/YoloService';
-import type {FlowerKnowledge} from '../services/KnowledgeService';
+import type {CareGuide} from '../types';
 import {
   COLORS,
   DROP_OFF_THRESHOLD,
@@ -32,6 +41,9 @@ import {
   GREEN_RATIO_MAX,
   SATURATION_MIN,
   RADIUS,
+  SPACING,
+  SHADOWS,
+  TYPOGRAPHY,
 } from '../constants';
 
 // ━━━ 状态 ━━━
@@ -53,11 +65,25 @@ function RecognizeScreen(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [state, setState] = useState<ScreenState>({phase: 'idle'});
   const navigation = useNavigation();
-  const [knowledge, setKnowledge] = useState<FlowerKnowledge | null>(null);
+  const [knowledge, setKnowledge] = useState<CareGuide | null>(null);
+  const [resultTab, setResultTab] = useState<'care' | 'info'>('care');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [gardenLocation, setGardenLocation] = useState('');
 
   const pageBg = isDarkMode ? COLORS.bgDark : COLORS.bg;
   const textColor = isDarkMode ? COLORS.textDark : COLORS.text;
-  const secondaryColor = isDarkMode ? COLORS.textSecondaryDark : COLORS.textSecondary;
+  const secondaryColor = isDarkMode
+    ? COLORS.textSecondaryDark
+    : COLORS.textSecondary;
+  const cardBg = isDarkMode ? COLORS.cardDark : COLORS.card;
+  const dividerColor = isDarkMode ? COLORS.borderDark : COLORS.border;
+  const hintGreenBg = isDarkMode ? '#1A3A2A' : '#D4EDDA';
+  const hintGreenText = isDarkMode ? '#A3CFAB' : '#155724';
+  const hintWarnBg = isDarkMode ? '#3A3010' : '#FFF3CD';
+  const hintWarnText = isDarkMode ? '#D4A574' : '#856404';
+  const hintErrorBg = isDarkMode ? '#3A1A1A' : '#F8D7DA';
+  const hintErrorText = isDarkMode ? '#E8A0A0' : '#721C24';
 
   // ━━━ 模型就绪状态（模型在 App.tsx 启动时预加载） ━━━
   const modelReady = YoloService.getInstance().isLoaded;
@@ -66,7 +92,7 @@ function RecognizeScreen(): React.JSX.Element {
 
   React.useEffect(() => {
     if (state.phase === 'result') {
-      fetchKnowledge(state.result.topClass).then(setKnowledge);
+      setKnowledge(getKnowledge(state.result.topClass));
     } else {
       setKnowledge(null);
     }
@@ -191,54 +217,77 @@ function RecognizeScreen(): React.JSX.Element {
   // ━━━ 子视图 ━━━
 
   const renderIdle = () => (
-    <View style={styles.centerContent}>
-      <Text style={[styles.emoji, {color: textColor}]}>📷</Text>
-      <Text style={[styles.hint, {color: textColor}]}>
-        拍照或从相册选择花卉照片{'\n'}AI 将自动识别品种
-      </Text>
-      <View style={styles.idleButtonRow}>
-        <Button
-          mode="contained"
-          onPress={handleEnterCamera}
-          disabled={!modelReady}
-          loading={!modelReady}
-          style={styles.captureButton}
-          labelStyle={styles.captureButtonText}>
-          {modelReady ? '拍照识别' : '模型加载中…'}
-        </Button>
-        <Button
-          mode="outlined"
-          onPress={handlePickImage}
-          disabled={!modelReady}
-          style={styles.albumButtonStyle}
-          labelStyle={styles.albumButtonLabel}>
-          从相册选择
-        </Button>
+    <View style={{flex: 1}}>
+      <View style={{paddingHorizontal: SPACING.lg, marginTop: 12}}>
+        <SectionHeader
+          label="AI RECOGNITION"
+          title="智慧识别"
+          labelColor={isDarkMode ? COLORS.sage : COLORS.sageDark}
+          titleColor={textColor}
+        />
+      </View>
+      <View style={[styles.centerContent, {paddingVertical: 60}]}>
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              backgroundColor: isDarkMode
+                ? COLORS.forest + '20'
+                : COLORS.sage + '25',
+            },
+          ]}>
+          <Icon
+            source="camera-enhance"
+            size={64}
+            color={isDarkMode ? COLORS.sage : COLORS.sageDark}
+          />
+        </View>
+        <Text
+          style={[
+            styles.hint,
+            {color: textColor, marginTop: SPACING.xl},
+          ]}>
+          拍照或从相册选择花卉照片{'\n'}AI 将自动识别品种
+        </Text>
+        <ButtonGroup align="center" wrap={true}>
+          <ActionButton
+            title={modelReady ? '拍照识别' : '模型加载中…'}
+            variant="primary"
+            size="lg"
+            icon="camera"
+            disabled={!modelReady}
+            onPress={handleEnterCamera}
+          />
+          <ActionButton
+            title="从相册选择"
+            variant="outline"
+            size="lg"
+            icon="image"
+            disabled={!modelReady}
+            onPress={handlePickImage}
+          />
+        </ButtonGroup>
       </View>
     </View>
   );
 
   const renderInferring = (imageUri: string) => (
-    <View style={styles.centerContent}>
-      <Image source={{uri: imageUri}} style={styles.preview} />
-      <ActivityIndicator size="large" color={GREEN} style={styles.spinner} />
-      <Text style={[styles.statusText, {color: textColor}]}>
-        正在识别...
-      </Text>
+    <View style={[styles.centerContent, {paddingVertical: 80}]}>
+      <DesignCard padding={SPACING.xxl} style={{alignItems: 'center'}}>
+        <Image source={{uri: imageUri}} style={styles.preview} />
+        <ActivityIndicator
+          size="large"
+          color={COLORS.forest}
+          style={styles.spinner}
+        />
+        <Text style={[styles.statusText, {color: textColor}]}>
+          正在识别...
+        </Text>
+      </DesignCard>
     </View>
   );
 
   const renderResult = (imageUri: string, result: InferenceResult) => {
-    // 暗色模式专用颜色
-    const dividerColor = isDarkMode ? '#3A3A36' : '#E0E0E0';
-    const trackBg = isDarkMode ? '#3A3A36' : '#E8E8E8';
-    const hintGreenBg = isDarkMode ? '#1A3A2A' : '#D4EDDA';
-    const hintGreenText = isDarkMode ? '#A3CFAB' : '#155724';
-    const hintWarnBg = isDarkMode ? '#3A3010' : '#FFF3CD';
-    const hintWarnText = isDarkMode ? '#D4A574' : '#856404';
-    const hintErrorBg = isDarkMode ? '#3A1A1A' : '#F8D7DA';
-    const hintErrorText = isDarkMode ? '#E8A0A0' : '#721C24';
-
     // 五重判断：置信度 + 边距 + 熵 + 跌落比 + 底部和 + 绿色占比 + 饱和度
     const confOk = result.confidence >= 0.85;
     const marginOk = result.margin >= 0.15;
@@ -255,139 +304,562 @@ function RecognizeScreen(): React.JSX.Element {
     if (!isHigh) {
       return (
         <View style={styles.resultScroll}>
-          <NeumorphView level="l2" bg={pageBg}>
-            <Image source={{uri: imageUri}} style={styles.heroImage} />
-            <View style={styles.heroBody}>
-              <Text style={styles.notFlowerIcon}>🔍</Text>
-              <Text style={[styles.notFlowerTitle, {color: textColor}]}>
+          <View style={{paddingHorizontal: SPACING.lg}}>
+            <Image
+              source={{uri: imageUri}}
+              style={{
+                width: '100%',
+                height: 240,
+                borderRadius: RADIUS.xl,
+              }}
+            />
+          </View>
+          <DesignCard
+            bg={cardBg}
+            style={{marginTop: -28, marginHorizontal: SPACING.lg}}
+            padding={SPACING.xl}>
+            <View style={{alignItems: 'center'}}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  {
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: isDarkMode
+                      ? COLORS.earth + '20'
+                      : COLORS.earth + '15',
+                    marginBottom: SPACING.lg,
+                  },
+                ]}>
+                <Icon
+                  source="magnify"
+                  size={40}
+                  color={isDarkMode ? COLORS.earthLight : COLORS.earth}
+                />
+              </View>
+              <Text
+                style={[styles.notFlowerTitle, {color: textColor}]}>
                 未识别到花卉
               </Text>
-              <Text style={[styles.notFlowerHint, {color: secondaryColor}]}>
+              <Text
+                style={[styles.notFlowerHint, {color: secondaryColor}]}>
                 请重新拍摄花卉照片{'\n'}确保花朵在画面中央、光线充足
               </Text>
-              <Button
-                mode="contained"
+              <ActionButton
+                title="重新拍摄"
+                variant="primary"
+                size="md"
+                icon="camera-retake"
+                fullWidth
                 onPress={handleReset}
-                style={styles.retryButton}
-                labelStyle={styles.retryButtonText}>
-                重新拍摄
-              </Button>
+              />
             </View>
-          </NeumorphView>
+          </DesignCard>
         </View>
       );
     }
 
-    // ━━━ HIGH：杂志式排版 ━━━
+    // ━━━ HIGH：Hero → 信息 → Tab → 内容 ━━━
+    const renderInfoRow = (
+      icon: string,
+      label: string,
+      value: string,
+    ) => (
+      <View style={styles.infoRow} key={label}>
+        <Icon
+          source={icon}
+          size={18}
+          color={isDarkMode ? COLORS.sage : COLORS.sageDark}
+        />
+        <Text style={[styles.infoLabel, {color: secondaryColor}]}>
+          {label}
+        </Text>
+        <Text style={[styles.infoValue, {color: textColor}]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+    );
+
     return (
       <View style={styles.resultScroll}>
+        {/* 图片 — 轻微超出卡片边界营造层次感 */}
+        <View style={{paddingHorizontal: SPACING.lg}}>
+          <Image
+            source={{uri: imageUri}}
+            style={{
+              width: '100%',
+              height: 260,
+              borderRadius: RADIUS.xl,
+            }}
+          />
+        </View>
 
-        {/* ── Hero：大图 + 花名 + 置信度 ── */}
-        <NeumorphView level="l2" bg={pageBg}>
-          <Image source={{uri: imageUri}} style={styles.heroImage} />
-          <View style={styles.heroBody}>
-            <Text style={[styles.flowerName, {color: textColor}]}>
-              {result.topClass}
-            </Text>
-            <View style={styles.confRow}>
-              <View style={[styles.confBadge, {backgroundColor: COLORS.primary}]}>
-                <Text style={styles.confBadgeText}>
-                  ✅ {(result.confidence * 100).toFixed(1)}%
-                </Text>
-              </View>
-              <Text style={[styles.inferTime, {color: secondaryColor}]}>
-                {modelEp ?? 'CPU'} · {result.inferenceTimeMs.toFixed(0)}ms
+        <DesignCard
+          bg={cardBg}
+          style={{marginTop: -32, marginHorizontal: SPACING.lg}}
+          padding={SPACING.xl}>
+          {/* 花名 + FlowerAvatar */}
+          <View style={styles.flowerNameRow}>
+            <FlowerAvatar
+              name={result.topClass}
+              size={48}
+              style={{marginRight: SPACING.md}}
+            />
+            <View style={{flex: 1}}>
+              <Text
+                style={[styles.flowerName, {color: textColor}]}
+                numberOfLines={1}>
+                {result.topClass}
               </Text>
+              {knowledge && (
+                <Text
+                  style={[styles.scientificName, {color: secondaryColor}]}
+                  numberOfLines={1}>
+                  {knowledge.scientificName}
+                </Text>
+              )}
             </View>
+            <StatusBadge
+              text={`${(result.confidence * 100).toFixed(0)}%`}
+              variant="success"
+            />
           </View>
-        </NeumorphView>
 
-        {/* ── 花卉档案：2 列网格 ── */}
-        <NeumorphView level="l1" bg={pageBg}>
-          <View style={styles.card}>
-            <Text style={[styles.cardTitle, {color: textColor}]}>📋 花卉档案</Text>
-            {knowledge ? (
+          {/* 信息区 — 图标 + 文字 */}
+          {knowledge && (
+            <View style={styles.infoBlock}>
+              {renderInfoRow('domain', '学名', knowledge.scientificName)}
+              {renderInfoRow('family-tree', '科属', knowledge.family)}
+              {renderInfoRow('map-marker', '产地', knowledge.origin)}
+              {renderInfoRow('calendar', '花期', knowledge.bloomPeriod)}
+            </View>
+          )}
+
+          {/* 细分隔 */}
+          <View
+            style={[
+              styles.divider,
+              {backgroundColor: dividerColor, marginVertical: SPACING.lg},
+            ]}
+          />
+
+          {/* Tab */}
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                resultTab === 'care' && {
+                  backgroundColor: isDarkMode
+                    ? COLORS.forest + '30'
+                    : COLORS.forest + '12',
+                  borderColor: isDarkMode
+                    ? COLORS.forest + '50'
+                    : COLORS.forest + '25',
+                },
+              ]}
+              onPress={() => setResultTab('care')}>
+              <Icon
+                source="book-open-variant"
+                size={16}
+                color={
+                  resultTab === 'care'
+                    ? isDarkMode
+                      ? COLORS.sage
+                      : COLORS.forest
+                    : secondaryColor
+                }
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  {color: secondaryColor},
+                  resultTab === 'care' && {
+                    color: isDarkMode ? COLORS.sage : COLORS.forest,
+                    fontWeight: '600',
+                  },
+                ]}>
+                养护指南
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                resultTab === 'info' && {
+                  backgroundColor: isDarkMode
+                    ? COLORS.forest + '30'
+                    : COLORS.forest + '12',
+                  borderColor: isDarkMode
+                    ? COLORS.forest + '50'
+                    : COLORS.forest + '25',
+                },
+              ]}
+              onPress={() => setResultTab('info')}>
+              <Icon
+                source="information"
+                size={16}
+                color={
+                  resultTab === 'info'
+                    ? isDarkMode
+                      ? COLORS.sage
+                      : COLORS.forest
+                    : secondaryColor
+                }
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  {color: secondaryColor},
+                  resultTab === 'info' && {
+                    color: isDarkMode ? COLORS.sage : COLORS.forest,
+                    fontWeight: '600',
+                  },
+                ]}>
+                详细信息
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tab 内容 */}
+          <View style={{marginTop: SPACING.lg}}>
+            {resultTab === 'care' ? (
+              knowledge ? (
+                <View
+                  style={[
+                    styles.careGrid,
+                    {borderColor: dividerColor},
+                  ]}>
+                  <View style={styles.careCell}>
+                    <Icon
+                      source="water"
+                      size={20}
+                      color={COLORS.info}
+                    />
+                    <Text
+                      style={[
+                        styles.careLabel,
+                        {color: isDarkMode ? COLORS.sage : COLORS.forest},
+                      ]}>
+                      浇水
+                    </Text>
+                    <Text style={[styles.careValue, {color: textColor}]}>
+                      {knowledge.watering.frequency}
+                    </Text>
+                    <Text style={[styles.careValue, {color: textColor}]}>
+                      {knowledge.watering.amount}
+                    </Text>
+                    <Text
+                      style={[styles.careSub, {color: secondaryColor}]}>
+                      {knowledge.watering.timing} ·{' '}
+                      {knowledge.watering.method}
+                    </Text>
+                  </View>
+                  <View style={styles.careCell}>
+                    <Icon
+                      source="sprout"
+                      size={20}
+                      color={COLORS.success}
+                    />
+                    <Text
+                      style={[
+                        styles.careLabel,
+                        {color: isDarkMode ? COLORS.sage : COLORS.forest},
+                      ]}>
+                      施肥
+                    </Text>
+                    <Text style={[styles.careValue, {color: textColor}]}>
+                      {knowledge.fertilizing.period}
+                    </Text>
+                    <Text style={[styles.careValue, {color: textColor}]}>
+                      {knowledge.fertilizing.amount}
+                    </Text>
+                    <Text
+                      style={[styles.careSub, {color: secondaryColor}]}>
+                      {knowledge.fertilizing.recommended.join('、')}
+                    </Text>
+                  </View>
+                  <View style={styles.careCell}>
+                    <Icon
+                      source="white-balance-sunny"
+                      size={20}
+                      color={COLORS.warning}
+                    />
+                    <Text
+                      style={[
+                        styles.careLabel,
+                        {color: isDarkMode ? COLORS.sage : COLORS.forest},
+                      ]}>
+                      光照
+                    </Text>
+                    <Text style={[styles.careValue, {color: textColor}]}>
+                      {knowledge.lighting.requirement}
+                    </Text>
+                    <Text
+                      style={[styles.careSub, {color: secondaryColor}]}>
+                      最佳：{knowledge.lighting.bestLocation}
+                    </Text>
+                  </View>
+                  <View style={styles.careCell}>
+                    <Icon
+                      source="thermometer"
+                      size={20}
+                      color={COLORS.error}
+                    />
+                    <Text
+                      style={[
+                        styles.careLabel,
+                        {color: isDarkMode ? COLORS.sage : COLORS.forest},
+                      ]}>
+                      环境
+                    </Text>
+                    <Text style={[styles.careValue, {color: textColor}]}>
+                      {knowledge.environment.temperature}
+                    </Text>
+                    <Text
+                      style={[styles.careSub, {color: secondaryColor}]}>
+                      湿度 {knowledge.environment.humidity} ·{' '}
+                      {knowledge.environment.ventilation}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.knowledgePlaceholder}>
+                  <Icon
+                    source="book-open-page-variant"
+                    size={32}
+                    color={secondaryColor}
+                  />
+                  <Text
+                    style={[
+                      styles.knowledgePlaceholderText,
+                      {color: secondaryColor},
+                    ]}>
+                    暂无该花卉的养护指南
+                  </Text>
+                </View>
+              )
+            ) : knowledge ? (
               <View style={styles.grid}>
                 <View style={styles.gridCell}>
-                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>学名</Text>
-                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.scientificName}</Text>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>
+                    学名
+                  </Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>
+                    {knowledge.scientificName}
+                  </Text>
                 </View>
                 <View style={styles.gridCell}>
-                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>科属</Text>
-                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.family} · {knowledge.genus}</Text>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>
+                    科属
+                  </Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>
+                    {knowledge.family}
+                  </Text>
                 </View>
                 <View style={styles.gridCell}>
-                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>产地</Text>
-                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.origin}</Text>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>
+                    产地
+                  </Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>
+                    {knowledge.origin}
+                  </Text>
                 </View>
                 <View style={styles.gridCell}>
-                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>花期</Text>
-                  <Text style={[styles.gridValue, {color: textColor}]}>{knowledge.bloomPeriod}</Text>
+                  <Text style={[styles.gridLabel, {color: secondaryColor}]}>
+                    花期
+                  </Text>
+                  <Text style={[styles.gridValue, {color: textColor}]}>
+                    {knowledge.bloomPeriod}
+                  </Text>
                 </View>
               </View>
             ) : (
               <View style={styles.knowledgePlaceholder}>
-                <Text style={[styles.knowledgePlaceholderIcon, {color: textColor}]}>📚</Text>
-                <Text style={[styles.knowledgePlaceholderText, {color: secondaryColor}]}>
-                  知识库建设中，更多花卉养护知识即将上线
+                <Icon
+                  source="book-open-page-variant"
+                  size={32}
+                  color={secondaryColor}
+                />
+                <Text
+                  style={[
+                    styles.knowledgePlaceholderText,
+                    {color: secondaryColor},
+                  ]}>
+                  知识库建设中
                 </Text>
               </View>
             )}
           </View>
-        </NeumorphView>
+        </DesignCard>
 
-        {/* ── 概率 + 提示 ── */}
-        <NeumorphView level="l1" bg={pageBg}>
-          <View style={styles.card}>
-            <Text style={[styles.cardTitle, {color: textColor}]}>各类别概率</Text>
-            {result.allClasses.map((item, i) => (
-              <View key={i} style={styles.probRow}>
-                <Text style={[styles.probLabel, {color: textColor}]}>{item.name}</Text>
-                <View style={[styles.probTrack, {backgroundColor: trackBg}]}>
-                  <View style={[styles.probBar, {width: `${(item.probability * 100).toFixed(1)}%` as any}]} />
-                </View>
-                <Text style={[styles.probValue, {color: textColor}]}>
-                  {(item.probability * 100).toFixed(1)}%
-                </Text>
-              </View>
-            ))}
-            <View style={[styles.hintBox, {backgroundColor: hintGreenBg}]}>
-              <Text style={[styles.hintText, {color: hintGreenText}]}>
-                🎯 高置信度，结果可直接使用
-              </Text>
-            </View>
-          </View>
-        </NeumorphView>
-
-        {/* ── 操作按钮：3 个横排 ── */}
-        <View style={styles.actionRow}>
-          <Button mode="outlined" compact
+        {/* ── 操作按钮组 ── */}
+        <ButtonGroup align="center" wrap={true}>
+          <ActionButton
+            title="提醒"
+            variant="outline"
+            size="sm"
+            icon="bell-outline"
             onPress={() => Alert.alert('提醒功能即将上线', '敬请期待！')}
-            style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>
-            🔔 提醒
-          </Button>
-          <Button mode="outlined" compact
+          />
+          <ActionButton
+            title="纠错"
+            variant="outline"
+            size="sm"
+            icon="pencil"
             onPress={() => Alert.alert('纠错功能即将上线', '感谢您的反馈！')}
-            style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>
-            ✏️ 纠错
-          </Button>
-          <Button mode="contained" compact
+          />
+          <ActionButton
+            title="添加"
+            variant="primary"
+            size="sm"
+            icon="plus"
+            onPress={() => {
+              setCustomName(knowledge?.flowerName ?? result.topClass);
+              setGardenLocation('');
+              setShowAddModal(true);
+            }}
+          />
+          <ActionButton
+            title="重新识别"
+            variant="earth"
+            size="sm"
+            icon="camera-retake"
             onPress={handleReset}
-            style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>
-            重新识别
-          </Button>
-        </View>
+          />
+        </ButtonGroup>
+
+        {/* ── 添加到花园弹窗 ── */}
+        <Modal
+          visible={showAddModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowAddModal(false)}>
+          <View style={styles.modalOverlay}>
+            <DesignCard
+              bg={cardBg}
+              shadow="modal"
+              style={{width: '100%', marginHorizontal: SPACING.xl}}>
+              <View style={{padding: SPACING.xxl}}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    {color: textColor},
+                  ]}>
+                  添加到我的花园
+                </Text>
+
+                <Text
+                  style={[styles.modalLabel, {color: secondaryColor}]}>
+                  花卉名称
+                </Text>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    {
+                      color: textColor,
+                      borderColor: dividerColor,
+                      backgroundColor: isDarkMode
+                        ? COLORS.bgDark
+                        : COLORS.bg,
+                    },
+                  ]}
+                  value={customName}
+                  onChangeText={setCustomName}
+                  placeholderTextColor={secondaryColor}
+                />
+
+                <Text
+                  style={[styles.modalLabel, {color: secondaryColor}]}>
+                  摆放位置（选填）
+                </Text>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    {
+                      color: textColor,
+                      borderColor: dividerColor,
+                      backgroundColor: isDarkMode
+                        ? COLORS.bgDark
+                        : COLORS.bg,
+                    },
+                  ]}
+                  value={gardenLocation}
+                  onChangeText={setGardenLocation}
+                  placeholder="如：阳台、客厅、书房"
+                  placeholderTextColor={secondaryColor}
+                />
+
+                <ButtonGroup align="stretch">
+                  <ActionButton
+                    title="取消"
+                    variant="outline"
+                    onPress={() => setShowAddModal(false)}
+                  />
+                  <ActionButton
+                    title="确认添加"
+                    variant="primary"
+                    onPress={async () => {
+                      setShowAddModal(false);
+                      try {
+                        if (!knowledge?.flowerId) {
+                          Alert.alert(
+                            '添加失败',
+                            '未找到该花卉的ID，无法添加',
+                          );
+                          return;
+                        }
+                        const resp =
+                          await GardenService.getInstance().addToGarden({
+                            flowerId: knowledge.flowerId,
+                            customName: customName || undefined,
+                            location: gardenLocation || undefined,
+                          });
+                        if (resp.code === 0) {
+                          Alert.alert('添加成功', '已添加到我的花园');
+                        } else {
+                          Alert.alert('添加失败', resp.message);
+                        }
+                      } catch (e: any) {
+                        Alert.alert(
+                          '添加失败',
+                          e?.message ?? '未知错误',
+                        );
+                      }
+                    }}
+                  />
+                </ButtonGroup>
+              </View>
+            </DesignCard>
+          </View>
+        </Modal>
       </View>
     );
   };
 
   const renderError = (message: string) => (
-    <View style={styles.centerContent}>
-      <Text style={[styles.errorEmoji, {color: RED}]}>⚠️</Text>
+    <View style={[styles.centerContent, {paddingVertical: 80}]}>
+      <View
+        style={[
+          styles.iconCircle,
+          {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: isDarkMode
+              ? COLORS.error + '20'
+              : COLORS.error + '12',
+          },
+        ]}>
+        <Icon source="alert-circle" size={40} color={COLORS.error} />
+      </View>
       <Text style={[styles.errorText, {color: RED}]}>{message}</Text>
-      <Button mode="contained" onPress={handleRetry} style={styles.retryButton} labelStyle={styles.retryButtonText}>
-        重试
-      </Button>
+      <ActionButton
+        title="重试"
+        variant="primary"
+        size="md"
+        fullWidth
+        onPress={handleRetry}
+      />
     </View>
   );
 
@@ -414,15 +886,12 @@ function RecognizeScreen(): React.JSX.Element {
       style={[styles.container, {backgroundColor: pageBg}]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={[styles.title, {color: textColor}]}>
-        🌿 智慧花园
-      </Text>
-
-      {modelLoaded && (
-        <View style={styles.modelBadge}>
-          <Text style={styles.modelBadgeText}>
-            {modelEp ?? 'CPU'} 就绪
-          </Text>
+      {modelLoaded && state.phase === 'idle' && (
+        <View style={{alignItems: 'center', marginBottom: SPACING.md}}>
+          <StatusBadge
+            text={`${modelEp ?? 'CPU'} 就绪`}
+            variant="success"
+          />
         </View>
       )}
 
@@ -436,151 +905,126 @@ function RecognizeScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   root: {flex: 1},
   container: {flex: 1},
-  scrollContent: {padding: 20, paddingBottom: 60},
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  modelBadge: {
-    alignSelf: 'center',
-    backgroundColor: GREEN,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    marginBottom: 20,
-  },
-  modelBadgeText: {color: '#fff', fontSize: 12, fontWeight: '600'},
+  scrollContent: {padding: SPACING.lg, paddingBottom: 60},
 
   // idle
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 80,
+    paddingVertical: 40,
   },
-  emoji: {fontSize: 60, marginBottom: 16},
-  hint: {fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 24},
-  idleButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  captureButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+  hint: {
+    ...TYPOGRAPHY.body,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: SPACING.xxl,
+    paddingHorizontal: SPACING.xl,
   },
-  captureButtonText: {color: '#fff', fontSize: 17, fontWeight: '600'},
-  albumButtonStyle: {
-    borderColor: GREEN,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-  },
-  albumButtonLabel: {color: GREEN, fontSize: 17, fontWeight: '600'},
-  statusText: {fontSize: 16, marginTop: 16, textAlign: 'center'},
 
   // inferring
-  preview: {width: 224, height: 224, borderRadius: 12, marginBottom: 12},
-  spinner: {marginBottom: 8},
+  preview: {width: 224, height: 224, borderRadius: RADIUS.lg, marginBottom: 16},
+  spinner: {marginBottom: 12},
+  statusText: {...TYPOGRAPHY.body, textAlign: 'center'},
 
   // result
-  resultScroll: {width: '100%', alignItems: 'center', paddingBottom: 40},
+  resultScroll: {
+    width: '100%',
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
 
   // hero
-  heroImage: {
-    width: '100%',
-    height: 240,
-    borderTopLeftRadius: RADIUS.lg,
-    borderTopRightRadius: RADIUS.lg,
-  },
-  heroBody: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  flowerName: {fontSize: 30, fontWeight: '700', marginBottom: 10},
-  confRow: {
+  flowerNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    marginBottom: SPACING.lg,
   },
-  // grid knowledge
-  grid: {
+  flowerName: {
+    ...TYPOGRAPHY.h1,
+    fontSize: 24,
+    flexShrink: 1,
+  },
+  scientificName: {
+    fontSize: 13,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+
+  // info rows
+  infoBlock: {width: '100%', marginTop: 4, gap: 10},
+  infoRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
+    alignItems: 'center',
+    gap: 8,
   },
-  gridCell: {
-    width: '50%',
-    paddingVertical: 8,
-    paddingRight: 8,
+  infoLabel: {
+    width: 36,
+    fontSize: 13,
+    fontWeight: '500',
   },
-  gridLabel: {fontSize: 12, marginBottom: 2},
+  infoValue: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // divider
+  divider: {height: StyleSheet.hairlineWidth},
+
+  // tab
+  tabRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: RADIUS.lg,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabText: {fontSize: 14, fontWeight: '500'},
+
+  // grid info
+  grid: {flexDirection: 'row', flexWrap: 'wrap', marginTop: 4},
+  gridCell: {width: '50%', paddingVertical: 10, paddingRight: 8},
+  gridLabel: {fontSize: 12, marginBottom: 3, fontWeight: '500'},
   gridValue: {fontSize: 14, fontWeight: '500'},
+
+  // care grid
+  careGrid: {flexDirection: 'row', flexWrap: 'wrap'},
+  careCell: {
+    width: '50%',
+    paddingVertical: 12,
+    paddingRight: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 4,
+  },
+  careLabel: {fontSize: 13, fontWeight: '700', marginTop: 2},
+  careValue: {fontSize: 13, lineHeight: 18},
+  careSub: {fontSize: 11, marginTop: 2, lineHeight: 16},
+
   knowledgePlaceholder: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 24,
+    gap: 8,
   },
-  knowledgePlaceholderIcon: {fontSize: 28, marginBottom: 6},
-  knowledgePlaceholderText: {fontSize: 13, opacity: 0.5},
-  confBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginBottom: 8,
-  },
-  confBadgeText: {color: '#fff', fontSize: 16, fontWeight: '600'},
-  inferTime: {fontSize: 13, opacity: 0.6},
-
-  // prob bars
-  card: {
-    width: '100%',
-    borderRadius: RADIUS.lg,
-    padding: 18,
-    marginBottom: 14,
-  },
-  cardTitle: {fontSize: 16, fontWeight: '600', marginBottom: 10},
-  probRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  probLabel: {width: 56, fontSize: 13},
-  probTrack: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
-    marginHorizontal: 8,
-    overflow: 'hidden',
-  },
-  probBar: {
-    height: '100%',
-    backgroundColor: BLUE,
-    borderRadius: 5,
-  },
-  probValue: {
-    width: 56,
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    textAlign: 'right',
-  },
-
-  // hints
-  hintBox: {
-    width: '100%',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  hintWarn: {},
-  hintError: {},
-  hintText: {fontSize: 13, textAlign: 'center'},
+  knowledgePlaceholderText: {fontSize: 13, opacity: 0.6},
 
   // ── 未识别到花卉 ──
-  notFlowerIcon: {fontSize: 48, textAlign: 'center', marginBottom: 12},
   notFlowerTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -592,36 +1036,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     opacity: 0.6,
+    marginBottom: 4,
   },
 
-  // action row
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 20,
-    width: '100%',
-    paddingHorizontal: 16,
-  },
-  actionBtn: {
+  // modal
+  modalOverlay: {
     flex: 1,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
   },
-  actionBtnLabel: {fontSize: 13, fontWeight: '600'},
-  // retry (used in not-flower)
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    marginTop: 16,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  retryButtonText: {color: '#fff', fontSize: 15, fontWeight: '600'},
+  modalLabel: {fontSize: 13, marginBottom: 6, marginTop: 8},
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 4,
+  },
 
   // error
-  errorEmoji: {fontSize: 48},
-  errorText: {fontSize: 15, textAlign: 'center', marginVertical: 16, paddingHorizontal: 20},
+  errorText: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 20,
+  },
 });
 
 export default RecognizeScreen;

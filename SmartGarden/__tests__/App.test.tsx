@@ -24,6 +24,14 @@ import ReactTestRenderer from 'react-test-renderer';
 
 // --- Mock native modules (no native bindings in Jest) ---
 
+jest.mock('react-native-quick-sqlite', () => ({
+  open: jest.fn(() => ({
+    execute: jest.fn(() => ({rows: []})),
+    executeAsync: jest.fn(() => ({rows: {_array: [], length: 0}})),
+    close: jest.fn(),
+  })),
+}));
+
 jest.mock('onnxruntime-react-native', () => ({
   InferenceSession: {
     create: jest.fn(),

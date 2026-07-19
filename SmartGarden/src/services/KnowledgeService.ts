@@ -1,11 +1,8 @@
 /**
  * KnowledgeService — 花卉养护知识查询
- *
- * 当前为接口空实现 + 开发用示例数据。
- * 后端知识库上线后，替换 fetchKnowledge 的实现即可。
  */
 
-// ━━━ 类型 ━━━
+import { CareGuide, ApiResponse, ErrorCode } from '../types';
 
 export interface FlowerKnowledge {
   nameZh: string;
@@ -17,8 +14,6 @@ export interface FlowerKnowledge {
   bloomPeriod: string;
   description: string;
 }
-
-// ━━━ 示例数据（5 种花，开发阶段用） ━━━
 
 const SAMPLE_KNOWLEDGE: Record<string, FlowerKnowledge> = {
   雏菊: {
@@ -78,18 +73,87 @@ const SAMPLE_KNOWLEDGE: Record<string, FlowerKnowledge> = {
   },
 };
 
-// ━━━ 查询接口 ━━━
-
-/**
- * 根据花名查询养护知识。
- * 当前返回内置示例数据；后端知识库上线后替换为 API 调用或 JSON 读取。
- *
- * @param flowerName 中文花名（如"向日葵"）
- * @returns 知识对象或 null（未收录）
- */
 export async function fetchKnowledge(
   flowerName: string,
 ): Promise<FlowerKnowledge | null> {
-  // TODO: 接入真实知识库（JSON 文件 / API / SQLite）
   return SAMPLE_KNOWLEDGE[flowerName] ?? null;
+}
+
+export class KnowledgeService {
+  private static instance: KnowledgeService;
+  private guides: Record<number, CareGuide> = {};
+  private nameMap: Record<string, number> = {};
+
+  static getInstance(): KnowledgeService {
+    if (!KnowledgeService.instance) {
+      KnowledgeService.instance = new KnowledgeService();
+    }
+    return KnowledgeService.instance;
+  }
+
+  constructor(initialGuides?: Record<string, CareGuide>) {
+    if (initialGuides) {
+      for (const [name, guide] of Object.entries(initialGuides)) {
+        this.guides[guide.flowerId] = guide;
+        this.nameMap[name] = guide.flowerId;
+      }
+    }
+  }
+
+  getCareGuide(flowerId: number): ApiResponse<CareGuide> {
+    if (!flowerId || flowerId < 1) {
+      return {
+        code: ErrorCode.INVALID_PARAM,
+        message: 'flowerId 无效',
+        data: null,
+      };
+    }
+    const guide = this.guides[flowerId];
+    if (!guide) {
+      return {
+        code: ErrorCode.DATA_QUERY_FAILED,
+        message: '养护指南功能开发中',
+        data: null,
+      };
+    }
+    return { code: ErrorCode.SUCCESS, message: 'success', data: guide };
+  }
+
+  getCareGuideByName(flowerName: string): ApiResponse<CareGuide> {
+    if (!flowerName || flowerName.trim() === '') {
+      return {
+        code: ErrorCode.INVALID_PARAM,
+        message: 'flowerName 无效',
+        data: null,
+      };
+    }
+    const flowerId = this.nameMap[flowerName.trim()];
+    if (flowerId === undefined) {
+      return {
+        code: ErrorCode.DATA_QUERY_FAILED,
+        message: '养护指南功能开发中',
+        data: null,
+      };
+    }
+    return this.getCareGuide(flowerId);
+  }
+
+  getAllFlowerNames(): string[] {
+    return Object.keys(this.nameMap);
+  }
+
+  getAllGuides(): CareGuide[] {
+    return Object.values(this.guides).sort((a, b) => a.flowerId - b.flowerId);
+  }
+
+  get count(): number {
+    return Object.keys(this.guides).length;
+  }
+
+  initialize(): void {}
+
+  reset(): void {
+    this.guides = {};
+    this.nameMap = {};
+  }
 }

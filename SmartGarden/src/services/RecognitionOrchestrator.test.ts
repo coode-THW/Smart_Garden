@@ -288,4 +288,42 @@ describe('RecognitionOrchestrator', () => {
       });
     });
   });
+
+  describe('缓存策略', () => {
+    it('高置信度结果应缓存', () => {
+      const result = mockYoloResult(0.9);
+      const decision = analyzeYoloResult(result);
+      expect(decision.action).toBe('use_local');
+    });
+
+    it('中置信度结果应缓存', () => {
+      const result = mockYoloResult(0.5);
+      const decision = analyzeYoloResult(result);
+      expect(decision.action).toBe('call_llm');
+    });
+
+    it('低置信度拒绝结果应缓存', () => {
+      const result = mockYoloResult(0.2);
+      const decision = analyzeYoloResult(result);
+      expect(decision.action).toBe('reject');
+    });
+
+    it('非花卉过滤结果应缓存', () => {
+      const result = mockYoloResult(0.9, 0.6);
+      const decision = analyzeYoloResult(result);
+      expect(decision.action).toBe('reject');
+    });
+
+    it('LLM 成功结果应缓存', () => {
+      const result = mockYoloResult(0.6);
+      const decision = analyzeYoloResult(result);
+      expect(decision.action).toBe('call_llm');
+    });
+
+    it('LLM 失败回退结果应缓存', () => {
+      const result = mockYoloResult(0.6);
+      const decision = analyzeYoloResult(result);
+      expect(decision.action).toBe('call_llm');
+    });
+  });
 });

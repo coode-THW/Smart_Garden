@@ -61,7 +61,6 @@ function CameraViewfinder({
     try {
       const photo: PhotoFile = await cameraRef.current.takePhoto({
         flash: flashMode,
-        skipMetadata: true,
       });
 
       // 从临时路径复制到缓存目录，避免系统清理

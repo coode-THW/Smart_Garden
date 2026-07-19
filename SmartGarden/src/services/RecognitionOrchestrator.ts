@@ -12,6 +12,7 @@ import YoloService, {
 } from './YoloService';
 import LlmService, { LlmFlowerInfo } from './LlmService';
 import { RecognitionSource, CareGuide } from '../types';
+import { RecognitionCache } from './RecognitionCache';
 
 export type RecognitionStatus =
   | 'success'
@@ -23,7 +24,14 @@ export interface RecognitionResult {
   status: RecognitionStatus;
   source: RecognitionSource;
   flowerName: string;
+  topClass: string;
   confidence: number;
+  margin: number;
+  entropy: number;
+  dropOff: number;
+  bottomSum: number;
+  greenRatio: number;
+  avgSaturation: number;
   scientificName?: string;
   family?: string;
   origin?: string;
@@ -156,10 +164,12 @@ class RecognitionOrchestrator {
   private static instance: RecognitionOrchestrator;
   private yoloService: YoloService;
   private llmService: LlmService;
+  private cache: RecognitionCache;
 
   private constructor() {
     this.yoloService = YoloService.getInstance();
     this.llmService = LlmService.getInstance();
+    this.cache = RecognitionCache.getInstance();
   }
 
   static getInstance(): RecognitionOrchestrator {
@@ -171,6 +181,10 @@ class RecognitionOrchestrator {
 
   get isModelLoaded(): boolean {
     return this.yoloService.isLoaded;
+  }
+
+  get executionProvider(): string | undefined {
+    return this.yoloService.info?.executionProvider;
   }
 
   async loadModels(): Promise<void> {
@@ -185,6 +199,17 @@ class RecognitionOrchestrator {
     try {
       console.log('[RecognitionOrchestrator] 开始识别:', imagePath);
 
+      const cacheKey = this.generateCacheKey(imagePath);
+
+      const cachedResult = this.cache.get(cacheKey);
+      if (cachedResult) {
+        console.log('[RecognitionOrchestrator] 命中缓存，跳过推理');
+        return {
+          ...cachedResult,
+          inferenceTimeMs: Date.now() - startTime,
+        };
+      }
+
       const yoloResult = await this.yoloService.detect(imagePath);
       const decision = analyzeYoloResult(yoloResult);
 
@@ -194,28 +219,48 @@ class RecognitionOrchestrator {
       );
 
       switch (decision.action) {
-        case 'reject':
-          return {
+        case 'reject': {
+          const rejectResult: RecognitionResult = {
             status: 'rejected',
             source: 'yolov11',
             flowerName: '未知',
+            topClass: yoloResult.topClass,
             confidence: yoloResult.confidence,
+            margin: yoloResult.margin,
+            entropy: yoloResult.entropy,
+            dropOff: yoloResult.dropOff,
+            bottomSum: yoloResult.bottomSum,
+            greenRatio: yoloResult.greenRatio,
+            avgSaturation: yoloResult.avgSaturation,
             allClasses: yoloResult.allClasses,
             inferenceTimeMs: Date.now() - startTime,
             yoloResult,
             errorMessage: decision.reason,
           };
+          this.cache.set(cacheKey, rejectResult);
+          return rejectResult;
+        }
 
-        case 'use_local':
-          return {
+        case 'use_local': {
+          const localResult: RecognitionResult = {
             status: 'success',
             source: 'yolov11',
             flowerName: yoloResult.topClass,
+            topClass: yoloResult.topClass,
             confidence: yoloResult.confidence,
+            margin: yoloResult.margin,
+            entropy: yoloResult.entropy,
+            dropOff: yoloResult.dropOff,
+            bottomSum: yoloResult.bottomSum,
+            greenRatio: yoloResult.greenRatio,
+            avgSaturation: yoloResult.avgSaturation,
             allClasses: yoloResult.allClasses,
             inferenceTimeMs: Date.now() - startTime,
             yoloResult,
           };
+          this.cache.set(cacheKey, localResult);
+          return localResult;
+        }
 
         case 'call_llm':
           const llmResponse = await this.llmService.identify(
@@ -227,24 +272,40 @@ class RecognitionOrchestrator {
             const flower = llmResponse.flowerInfo;
 
             if (flower.confidence < 0.5) {
-              return {
+              const llmRejectResult: RecognitionResult = {
                 status: 'rejected',
                 source: 'llm',
                 flowerName: '未知',
+                topClass: yoloResult.topClass,
                 confidence: flower.confidence,
+                margin: yoloResult.margin,
+                entropy: yoloResult.entropy,
+                dropOff: yoloResult.dropOff,
+                bottomSum: yoloResult.bottomSum,
+                greenRatio: yoloResult.greenRatio,
+                avgSaturation: yoloResult.avgSaturation,
                 allClasses: yoloResult.allClasses,
                 inferenceTimeMs: Date.now() - startTime,
                 llmLatencyMs: llmResponse.latencyMs,
                 yoloResult,
                 errorMessage: 'LLM 认为不是花卉',
               };
+              this.cache.set(cacheKey, llmRejectResult);
+              return llmRejectResult;
             }
 
-            return {
+            const llmSuccessResult: RecognitionResult = {
               status: 'success',
               source: 'llm',
               flowerName: flower.name,
+              topClass: flower.name,
               confidence: flower.confidence,
+              margin: yoloResult.margin,
+              entropy: yoloResult.entropy,
+              dropOff: yoloResult.dropOff,
+              bottomSum: yoloResult.bottomSum,
+              greenRatio: yoloResult.greenRatio,
+              avgSaturation: yoloResult.avgSaturation,
               scientificName: flower.scientificName,
               family: flower.family,
               origin: flower.origin,
@@ -256,35 +317,63 @@ class RecognitionOrchestrator {
               llmLatencyMs: llmResponse.latencyMs,
               yoloResult,
             };
+            this.cache.set(cacheKey, llmSuccessResult);
+            return llmSuccessResult;
           } else {
             console.log('[RecognitionOrchestrator] LLM 失败，回退到本地结果');
 
-            return {
+            const fallbackResult: RecognitionResult = {
               status: 'low_confidence',
               source: 'yolov11',
               flowerName: yoloResult.topClass,
+              topClass: yoloResult.topClass,
               confidence: yoloResult.confidence,
+              margin: yoloResult.margin,
+              entropy: yoloResult.entropy,
+              dropOff: yoloResult.dropOff,
+              bottomSum: yoloResult.bottomSum,
+              greenRatio: yoloResult.greenRatio,
+              avgSaturation: yoloResult.avgSaturation,
               allClasses: yoloResult.allClasses,
               inferenceTimeMs: Date.now() - startTime,
               llmLatencyMs: llmResponse.latencyMs,
               yoloResult,
               errorMessage: llmResponse.errorMessage,
             };
+            this.cache.set(cacheKey, fallbackResult);
+            return fallbackResult;
           }
       }
     } catch (error) {
       const err = error as Error;
       console.error('[RecognitionOrchestrator] 识别异常:', err.message);
 
-      return {
+      const errorResult: RecognitionResult = {
         status: 'low_confidence',
         source: 'yolov11',
         flowerName: '未知',
+        topClass: '未知',
         confidence: 0,
+        margin: 0,
+        entropy: 0,
+        dropOff: 0,
+        bottomSum: 0,
+        greenRatio: 0,
+        avgSaturation: 0,
         inferenceTimeMs: Date.now() - startTime,
         errorMessage: err.message,
       };
+      return errorResult;
     }
+  }
+
+  private generateCacheKey(imagePath: string): string {
+    let hash = 0;
+    for (let i = 0; i < imagePath.length; i++) {
+      hash = (hash << 5) - hash + imagePath.charCodeAt(i);
+      hash |= 0;
+    }
+    return `img_${hash.toString(16)}`;
   }
 
   async getFlowerDetails(name: string): Promise<RecognitionResult | null> {
@@ -300,7 +389,14 @@ class RecognitionOrchestrator {
           status: 'success',
           source: 'llm',
           flowerName: flower.name,
+          topClass: flower.name,
           confidence: flower.confidence,
+          margin: 0,
+          entropy: 0,
+          dropOff: 0,
+          bottomSum: 0,
+          greenRatio: 0,
+          avgSaturation: 0,
           scientificName: flower.scientificName,
           family: flower.family,
           origin: flower.origin,

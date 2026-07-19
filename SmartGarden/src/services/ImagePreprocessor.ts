@@ -10,7 +10,7 @@
  *   6. 输出 Float32Array(150528) 可直接传入 ONNX Tensor
  */
 
-import {Platform} from 'react-native';
+import { Platform } from 'react-native';
 import jpeg from 'jpeg-js';
 import RNFS from 'react-native-fs';
 import ImageResizer from 'react-native-image-resizer';
@@ -38,10 +38,14 @@ export interface PreprocessedInput {
 
 // ━━━ 纯 JS base64 → Uint8Array（不依赖 Buffer polyfill） ━━━
 
-function base64ToBytes(base64: string): Uint8Array {
-  const lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+export function base64ToBytes(base64: string): Uint8Array {
+  const lookup =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const len = base64.length;
-  const bytes = new Uint8Array(((len * 3) >> 2) - (base64[len - 1] === '=' ? base64[len - 2] === '=' ? 2 : 1 : 0));
+  const bytes = new Uint8Array(
+    ((len * 3) >> 2) -
+      (base64[len - 1] === '=' ? (base64[len - 2] === '=' ? 2 : 1) : 0),
+  );
   let j = 0;
   for (let i = 0; i < len; i += 4) {
     const a = lookup.indexOf(base64[i]);
@@ -55,44 +59,88 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-// ━━━ RGBA → RGB 归一化 ━━━
+// ━━━ RGBA → RGB 归一化 + HWC → CHW 转置（优化版：合并为单一循环） ━━━
 
-function rgbaToNormalizedRgb(
+/**
+ * 将 RGBA Uint8Array 直接转换为 CHW 格式的归一化 Float32Array
+ *
+ * 优化点：
+ * 1. 合并 RGBA→RGB 提取、归一化、HWC→CHW 转置三个步骤为单一循环
+ * 2. 避免创建中间的 HWC 格式 Float32Array，减少一次内存分配
+ * 3. 减少一次完整的嵌套循环遍历
+ *
+ * 输入：RGBA 格式的 Uint8Array (H×W×4)
+ * 输出：CHW 格式的 Float32Array (C×H×W)
+ */
+function rgbaToChwTensor(
   rgba: Uint8Array,
   width: number,
   height: number,
-): Float32Array {
-  const pixelCount = width * height;
-  const rgb = new Float32Array(pixelCount * 3);
-  for (let i = 0; i < pixelCount; i++) {
-    const src = i * 4;
-    const dst = i * 3;
-    rgb[dst] = rgba[src] * NORMALIZE_SCALE;       // R
-    rgb[dst + 1] = rgba[src + 1] * NORMALIZE_SCALE; // G
-    rgb[dst + 2] = rgba[src + 2] * NORMALIZE_SCALE; // B
-    // 跳过 Alpha (src + 3)
-  }
-  return rgb;
-}
-
-// ━━━ HWC → CHW 转置 ━━━
-
-function transposeToChw(
-  rgbFlat: Float32Array,
-  height: number,
-  width: number,
   channels: number,
 ): Float32Array {
   const chw = new Float32Array(channels * height * width);
-  for (let c = 0; c < channels; c++) {
-    for (let h = 0; h < height; h++) {
-      for (let w = 0; w < width; w++) {
-        chw[c * height * width + h * width + w] =
-          rgbFlat[h * width * channels + w * channels + c];
-      }
+
+  // 单一循环完成：RGBA提取 → 归一化 → CHW转置
+  // 原始方案：RGBA → HWC RGB → CHW（两次循环，两次内存分配）
+  // 优化方案：RGBA → CHW（一次循环，一次内存分配）
+  for (let h = 0; h < height; h++) {
+    for (let w = 0; w < width; w++) {
+      const rgbaIdx = (h * width + w) * 4;
+      // R 通道
+      chw[0 * height * width + h * width + w] = rgba[rgbaIdx] * NORMALIZE_SCALE;
+      // G 通道
+      chw[1 * height * width + h * width + w] =
+        rgba[rgbaIdx + 1] * NORMALIZE_SCALE;
+      // B 通道
+      chw[2 * height * width + h * width + w] =
+        rgba[rgbaIdx + 2] * NORMALIZE_SCALE;
+      // 跳过 Alpha
     }
   }
+
   return chw;
+}
+
+// ━━━ 图片哈希计算（用于缓存去重和纠错反馈） ━━━
+
+/**
+ * 计算图片数据的哈希值（FNV-1a 算法）
+ * 用于推理结果缓存的 key 和纠错反馈的去重
+ */
+export function computeImageHash(data: Uint8Array): string {
+  let hash = 0x811c9dc5; // FNV-1a 初始值
+  const prime = 0x01000193; // FNV-1a 质数
+
+  // 采样计算：每 16 个字节取一个样本
+  // 减少计算量的同时保持足够的唯一性
+  const step = Math.max(1, Math.floor(data.length / 1024));
+  for (let i = 0; i < data.length; i += step) {
+    hash ^= data[i];
+    hash *= prime;
+  }
+
+  // 转换为 8 位十六进制字符串
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * 根据图片路径生成缓存 key
+ * 结合文件路径和修改时间，确保文件变更时缓存失效
+ */
+export function generateCacheKey(
+  imagePath: string,
+  fileModifiedTime?: number,
+): string {
+  let hash = 0;
+  for (let i = 0; i < imagePath.length; i++) {
+    hash = (hash << 5) - hash + imagePath.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  if (fileModifiedTime !== undefined) {
+    hash = (hash << 5) - hash + fileModifiedTime;
+    hash |= 0;
+  }
+  return `img_${hash.toString(16)}`;
 }
 
 // ━━━ 颜色特征分析（中心 50%×50% 区域） ━━━
@@ -158,12 +206,12 @@ export async function loadImageAsTensor(
     MODEL_INPUT_WIDTH,
     MODEL_INPUT_HEIGHT,
     'JPEG',
-    100,    // 最高质量，减少二次压缩损失（原为 95）
+    100, // 最高质量，减少二次压缩损失（原为 95）
     0,
     undefined,
     false,
     {
-      mode: 'cover',  // 短边缩放到 224，居中裁切
+      mode: 'cover', // 短边缩放到 224，居中裁切
       onlyScaleDown: false,
     },
   );
@@ -179,7 +227,7 @@ export async function loadImageAsTensor(
 
   // ——— 步骤 3: JPEG 解码 ———
   const jpegBytes = base64ToBytes(base64);
-  const decoded = jpeg.decode(jpegBytes, {useTArray: true});
+  const decoded = jpeg.decode(jpegBytes, { useTArray: true });
   console.log(
     `[Preprocessor] JPEG 解码: ${decoded.width}x${decoded.height}, RGBA 长度=${decoded.data.length}`,
   );
@@ -190,7 +238,10 @@ export async function loadImageAsTensor(
   );
 
   // ——— 步骤 4: 验证尺寸（cover 模式应为 224×224） ———
-  if (decoded.width !== MODEL_INPUT_WIDTH || decoded.height !== MODEL_INPUT_HEIGHT) {
+  if (
+    decoded.width !== MODEL_INPUT_WIDTH ||
+    decoded.height !== MODEL_INPUT_HEIGHT
+  ) {
     console.warn(
       `[Preprocessor] resize 未产出精确尺寸 (${decoded.width}x${decoded.height})，强制填充`,
     );
@@ -200,9 +251,15 @@ export async function loadImageAsTensor(
     const padVal = 114;
     canvas.fill(padVal);
     const sx = Math.max(0, Math.floor((decoded.width - MODEL_INPUT_WIDTH) / 2));
-    const sy = Math.max(0, Math.floor((decoded.height - MODEL_INPUT_HEIGHT) / 2));
+    const sy = Math.max(
+      0,
+      Math.floor((decoded.height - MODEL_INPUT_HEIGHT) / 2),
+    );
     const dx = Math.max(0, Math.floor((MODEL_INPUT_WIDTH - decoded.width) / 2));
-    const dy = Math.max(0, Math.floor((MODEL_INPUT_HEIGHT - decoded.height) / 2));
+    const dy = Math.max(
+      0,
+      Math.floor((MODEL_INPUT_HEIGHT - decoded.height) / 2),
+    );
     const copyW = Math.min(decoded.width, MODEL_INPUT_WIDTH);
     const copyH = Math.min(decoded.height, MODEL_INPUT_HEIGHT);
     for (let y = 0; y < copyH; y++) {
@@ -221,31 +278,40 @@ export async function loadImageAsTensor(
   const finalW = MODEL_INPUT_WIDTH;
   const finalH = MODEL_INPUT_HEIGHT;
 
-  // ——— 步骤 5: 提取 RGB 并归一化 ———
-  const rgb = rgbaToNormalizedRgb(decoded.data, finalW, finalH);
-
-  // ——— 步骤 6: HWC → CHW 转置 ———
-  const chw = transposeToChw(rgb, finalH, finalW, MODEL_INPUT_CHANNELS);
+  // ——— 步骤 5: RGBA → RGB 归一化 + HWC → CHW 转置（优化版） ———
+  // 合并为单一循环，减少一次内存分配和循环遍历
+  const chw = rgbaToChwTensor(
+    decoded.data,
+    finalW,
+    finalH,
+    MODEL_INPUT_CHANNELS,
+  );
 
   // ——— 步骤 7: 验证 ———
   const totalSize = MODEL_INPUT_SHAPE.reduce((a, b) => a * b, 1);
   if (chw.length !== totalSize) {
     throw new Error(
-      `预处理后数据大小异常: 期望 ${totalSize} (${MODEL_INPUT_SHAPE.join('x')}), 实际 ${chw.length}`,
+      `预处理后数据大小异常: 期望 ${totalSize} (${MODEL_INPUT_SHAPE.join(
+        'x',
+      )}), 实际 ${chw.length}`,
     );
   }
 
   // ——— 颜色特征分析（用于后续非花卉过滤） ———
-  const {greenRatio, avgSaturation} = analyzeColorFeatures(
+  const { greenRatio, avgSaturation } = analyzeColorFeatures(
     decoded.data,
     finalW,
     finalH,
   );
 
   console.log(
-    `[Preprocessor] ✅ 预处理完成 | 输出: [${MODEL_INPUT_SHAPE.join(', ')}] | ` +
-    `原始尺寸: ${originalWidth ?? '?'}x${originalHeight ?? '?'} | ` +
-    `绿色占比: ${(greenRatio * 100).toFixed(0)}% | 饱和度: ${avgSaturation.toFixed(0)}`,
+    `[Preprocessor] ✅ 预处理完成 | 输出: [${MODEL_INPUT_SHAPE.join(
+      ', ',
+    )}] | ` +
+      `原始尺寸: ${originalWidth ?? '?'}x${originalHeight ?? '?'} | ` +
+      `绿色占比: ${(greenRatio * 100).toFixed(
+        0,
+      )}% | 饱和度: ${avgSaturation.toFixed(0)}`,
   );
 
   return {

@@ -6,9 +6,15 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
+const defaultConfig = getDefaultConfig(__dirname);
+
 const config = {
   resolver: {
-    assetExts: [...getDefaultConfig(__dirname).resolver.assetExts, 'onnx'],
+    assetExts: [...defaultConfig.resolver.assetExts, 'onnx'],
+    blockList: [/\.cxx\/.*/],
+  },
+  watcher: {
+    watchman: { deferStates: ['hg.update'] },
   },
   watchFolders: [__dirname],
   resetCache: true,

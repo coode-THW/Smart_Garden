@@ -65,7 +65,7 @@ function CameraViewfinder({
 
       // 从临时路径复制到缓存目录，避免系统清理
       const fileName = `capture_${Date.now()}.jpg`;
-      const destPath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+      const destPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
       await RNFS.copyFile(photo.path, destPath);
 

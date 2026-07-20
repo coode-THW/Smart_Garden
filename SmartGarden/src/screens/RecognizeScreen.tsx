@@ -10,7 +10,6 @@ import {
   Alert,
   Image,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,7 +21,9 @@ import {
 import {Icon} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
-import YoloService from '../services/YoloService';
+import RecognitionOrchestrator, {
+  type RecognitionResult,
+} from '../services/RecognitionOrchestrator';
 import CameraViewfinder from '../components/CameraViewfinder';
 import DesignCard from '../components/DesignCard';
 import SectionHeader from '../components/SectionHeader';
@@ -32,17 +33,11 @@ import ActionButton from '../components/ActionButton';
 import ButtonGroup from '../components/ButtonGroup';
 import {getKnowledge} from '../services/KnowledgeService';
 import {GardenService} from '../services/GardenService';
-import type {InferenceResult} from '../services/YoloService';
 import type {CareGuide} from '../types';
 import {
   COLORS,
-  DROP_OFF_THRESHOLD,
-  BOTTOM_SUM_MAX,
-  GREEN_RATIO_MAX,
-  SATURATION_MIN,
   RADIUS,
   SPACING,
-  SHADOWS,
   TYPOGRAPHY,
 } from '../constants';
 
@@ -52,14 +47,12 @@ type ScreenState =
   | {phase: 'idle'}
   | {phase: 'camera'}
   | {phase: 'inferring'; imageUri: string}
-  | {phase: 'result'; imageUri: string; result: InferenceResult}
+  | {phase: 'result'; imageUri: string; result: RecognitionResult}
   | {phase: 'error'; message: string};
 
 // ━━━ 颜色 ━━━
 
-const GREEN = COLORS.primary;
 const RED = COLORS.error;
-const BLUE = COLORS.info;
 
 function RecognizeScreen(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -78,15 +71,10 @@ function RecognizeScreen(): React.JSX.Element {
     : COLORS.textSecondary;
   const cardBg = isDarkMode ? COLORS.cardDark : COLORS.card;
   const dividerColor = isDarkMode ? COLORS.borderDark : COLORS.border;
-  const hintGreenBg = isDarkMode ? '#1A3A2A' : '#D4EDDA';
-  const hintGreenText = isDarkMode ? '#A3CFAB' : '#155724';
-  const hintWarnBg = isDarkMode ? '#3A3010' : '#FFF3CD';
-  const hintWarnText = isDarkMode ? '#D4A574' : '#856404';
-  const hintErrorBg = isDarkMode ? '#3A1A1A' : '#F8D7DA';
-  const hintErrorText = isDarkMode ? '#E8A0A0' : '#721C24';
 
   // ━━━ 模型就绪状态（模型在 App.tsx 启动时预加载） ━━━
-  const modelReady = YoloService.getInstance().isLoaded;
+  const modelReady = RecognitionOrchestrator.getInstance().isModelLoaded;
+  const modelEp = RecognitionOrchestrator.getInstance().executionProvider;
 
   // ━━━ 获取花卉知识 ━━━
 
@@ -142,7 +130,7 @@ function RecognizeScreen(): React.JSX.Element {
       async function run() {
         try {
           setState({phase: 'inferring', imageUri: localUri});
-          const result = await YoloService.getInstance().detect(localUri);
+          const result = await RecognitionOrchestrator.getInstance().recognize(localUri);
           setState({phase: 'result', imageUri: localUri, result});
         } catch (e: any) {
           setState({phase: 'error', message: e.message || String(e)});
@@ -173,13 +161,13 @@ function RecognizeScreen(): React.JSX.Element {
 
       setState({phase: 'inferring', imageUri: asset.uri});
 
-      // 一站式识别：预处理 + 推理
-      const inferenceResult = await YoloService.getInstance().detect(asset.uri);
+      // 一站式识别：Orchestrator（YOLO→决策→LLM）
+      const recResult = await RecognitionOrchestrator.getInstance().recognize(asset.uri);
 
       setState({
         phase: 'result',
         imageUri: asset.uri,
-        result: inferenceResult,
+        result: recResult,
       });
     } catch (e: any) {
       setState({phase: 'error', message: e.message || String(e)});
@@ -287,21 +275,12 @@ function RecognizeScreen(): React.JSX.Element {
     </View>
   );
 
-  const renderResult = (imageUri: string, result: InferenceResult) => {
-    // 五重判断：置信度 + 边距 + 熵 + 跌落比 + 底部和 + 绿色占比 + 饱和度
-    const confOk = result.confidence >= 0.85;
-    const marginOk = result.margin >= 0.15;
-    const entropyOk = result.entropy < 0.8;
-    const dropOffOk = result.dropOff >= DROP_OFF_THRESHOLD;
-    const bottomOk = result.bottomSum < BOTTOM_SUM_MAX;
-    const greenOk = result.greenRatio < GREEN_RATIO_MAX;
-    const satOk = result.avgSaturation >= SATURATION_MIN;
+  const renderResult = (imageUri: string, result: RecognitionResult) => {
+    // Orchestrator 已内置三级决策，直接使用 status
+    const isRejected = result.status === 'rejected';
 
-    const isHigh =
-      confOk && marginOk && entropyOk && dropOffOk && bottomOk && greenOk && satOk;
-
-    // ━━━ 非花卉 / 低置信度 ━━━
-    if (!isHigh) {
+    // ━━━ 非花卉 ━━━
+    if (isRejected) {
       return (
         <View style={styles.resultScroll}>
           <View style={{paddingHorizontal: SPACING.lg}}>
@@ -865,9 +844,6 @@ function RecognizeScreen(): React.JSX.Element {
 
   // ━━━ 主布局 ━━━
 
-  const modelLoaded = YoloService.getInstance().isLoaded;
-  const modelEp = YoloService.getInstance().info?.executionProvider;
-
   if (state.phase === 'camera') {
     return (
       <View style={styles.root}>
@@ -886,7 +862,7 @@ function RecognizeScreen(): React.JSX.Element {
       style={[styles.container, {backgroundColor: pageBg}]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      {modelLoaded && state.phase === 'idle' && (
+      {modelReady && state.phase === 'idle' && (
         <View style={{alignItems: 'center', marginBottom: SPACING.md}}>
           <StatusBadge
             text={`${modelEp ?? 'CPU'} 就绪`}

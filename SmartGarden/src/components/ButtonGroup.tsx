@@ -7,7 +7,6 @@
 
 import React from 'react';
 import {StyleSheet, View, type ViewStyle} from 'react-native';
-import {SPACING} from '../constants';
 
 interface Props {
   children: React.ReactNode;

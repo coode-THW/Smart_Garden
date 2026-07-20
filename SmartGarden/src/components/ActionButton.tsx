@@ -18,7 +18,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import {Icon} from 'react-native-paper';
-import {COLORS, RADIUS, SHADOWS, TYPOGRAPHY} from '../constants';
+import {COLORS, RADIUS, SHADOWS} from '../constants';
 
 export type ButtonVariant =
   | 'primary'

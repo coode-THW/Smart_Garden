@@ -14,7 +14,7 @@ import {
 } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
 import WelcomeScreen from './src/screens/WelcomeScreen';
-import YoloService from './src/services/YoloService';
+import RecognitionOrchestrator from './src/services/RecognitionOrchestrator';
 import {UserService} from './src/services/UserService';
 import {COLORS} from './src/constants';
 
@@ -42,7 +42,7 @@ function App(): React.JSX.Element {
   // — 启动时预加载模型 + 初始化用户 —
   useEffect(() => {
     Promise.all([
-      YoloService.getInstance().loadModel(pct => setProgress(pct)),
+      RecognitionOrchestrator.getInstance().loadModels(),
       UserService.getInstance().initialize(),
     ])
       .then(() => {

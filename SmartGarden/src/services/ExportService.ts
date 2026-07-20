@@ -18,16 +18,11 @@ import {getDatabase} from '../database/db';
 import {UserService} from './UserService';
 import {GardenRepository} from '../database/gardenRepository';
 import {CorrectionRepository} from '../database/correctionRepository';
-import {UserEntity, GardenEntity, FeedbackEntity} from '../types';
+import {UserEntity} from '../types';
 
 // ━━━━━ 常量 ━━━━━
 
 const EXPORT_DIR = 'SmartGardenExports';
-const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-};
 
 // ━━━━━ 导出结果类型 ━━━━━
 

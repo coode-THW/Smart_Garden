@@ -12,7 +12,7 @@ import {Icon} from 'react-native-paper';
 import HomeScreen from '../screens/HomeScreen';
 import RecognizeScreen from '../screens/RecognizeScreen';
 import GardenScreen from '../screens/GardenScreen';
-import {COLORS, RADIUS, SHADOWS, SPACING, TYPOGRAPHY} from '../constants';
+import {COLORS, RADIUS, SHADOWS, TYPOGRAPHY} from '../constants';
 
 import type {MainTabParamList} from './types';
 
@@ -21,7 +21,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabNavigator(): React.JSX.Element {
   const isDark = useColorScheme() === 'dark';
 
-  const pageBg = isDark ? COLORS.bgDark : COLORS.bg;
   const activeColor = COLORS.forest;
   const inactiveColor = isDark ? COLORS.textMutedDark : COLORS.textMuted;
 

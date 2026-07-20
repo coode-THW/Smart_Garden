@@ -4,7 +4,7 @@
  * 展示已添加花卉列表，支持查看详情、删除。
  */
 
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   Alert,
   FlatList,
@@ -27,9 +27,7 @@ import StatusBadge from '../components/StatusBadge';
 import ActionButton from '../components/ActionButton';
 import ButtonGroup from '../components/ButtonGroup';
 import {GardenService, type GardenEntry} from '../services/GardenService';
-import {KnowledgeService} from '../services/KnowledgeService';
-import type {CareGuide} from '../types';
-import {COLORS, RADIUS, SPACING, TYPOGRAPHY} from '../constants';
+import {COLORS, RADIUS, SPACING} from '../constants';
 
 type Nav = BottomTabNavigationProp<MainTabParamList>;
 
@@ -49,7 +47,6 @@ function GardenScreen(): React.JSX.Element {
   const [detailTab, setDetailTab] = useState<'care' | 'info'>('care');
 
   const gardenService = GardenService.getInstance();
-  const knowledgeService = KnowledgeService.getInstance();
 
   const loadGarden = useCallback(async () => {
     setLoading(true);
@@ -91,7 +88,10 @@ function GardenScreen(): React.JSX.Element {
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => setSelectedEntry(item)}
+        onPress={() => {
+          console.log('[GardenScreen] 点击:', item.garden.gardenId);
+          setSelectedEntry(item);
+        }}
         onLongPress={() => handleDelete(item)}>
         <DesignCard shadow="card" padding={SPACING.lg} bg={cardBg}>
           <View style={styles.itemInner}>
@@ -186,7 +186,7 @@ function GardenScreen(): React.JSX.Element {
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setSelectedEntry(null)}>
-        {selectedEntry && (
+        {selectedEntry ? (
           <GardenDetail
             entry={selectedEntry}
             isDark={isDark}
@@ -203,7 +203,7 @@ function GardenScreen(): React.JSX.Element {
               handleDelete(selectedEntry);
             }}
           />
-        )}
+        ) : null}
       </Modal>
     </View>
   );

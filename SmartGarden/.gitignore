@@ -35,6 +35,9 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Gradle wrapper distribution (large binaries)
+android/gradle/wrapper/dists/
+
 # node.js
 #
 node_modules/
@@ -55,6 +58,9 @@ yarn-error.log
 
 # Bundle artifact
 *.jsbundle
+
+# Metro bundler cache
+.bundle/
 
 # Ruby / CocoaPods
 **/Pods/

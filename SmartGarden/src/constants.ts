@@ -16,8 +16,17 @@ export const MODEL_INPUT_SHAPE: readonly number[] = [1, 3, 224, 224];
 export const MODEL_INPUT_SIZE = 1 * 3 * 224 * 224; // 150528
 
 // ━━━ 花卉类别 ━━━
-export const CLASS_NAMES = ['雏菊', '蒲公英', '玫瑰', '向日葵', '郁金香'] as const;
-export type FlowerClass = (typeof CLASS_NAMES)[number];
+/**
+ * 模型实际类别顺序（与 class_order.json 保持一致）
+ * 索引 0-8 对应 ONNX 输出的概率数组顺序
+ *
+ * 新增花卉请修改 src/data/flowerClasses.ts
+ */
+export {
+  CLASS_NAMES_EN,
+  CLASS_NAMES,
+  type FlowerClass,
+} from './data/flowerClasses';
 
 // ━━━ 预处理参数 ━━━
 /** YOLO 分类模型只做 /255 归一化，无 mean/std */
@@ -29,9 +38,9 @@ export const LETTERBOX_PAD_COLOR = '#727272';
 /** 高置信度：直接返回本地结果 */
 export const HIGH_CONFIDENCE = 0.85;
 /** 中等置信度：可调 LLM 增强 */
-export const MID_CONFIDENCE = 0.30;
+export const MID_CONFIDENCE = 0.3;
 /** 低于此值判定为非花卉 */
-export const LOW_CONFIDENCE = 0.30;
+export const LOW_CONFIDENCE = 0.3;
 /** 推理超时 (ms) */
 export const INFERENCE_TIMEOUT_MS = 30000;
 
@@ -49,6 +58,28 @@ export const SATURATION_MIN = 20;
 
 // ━━━ 设计主题 — Organic/Natural 有机自然主义 ━━━
 // 深森林绿 + 温暖泥土色 + 大量留白，杂志编辑感层次
+
+// ━━━ LLM 配置 ━━━
+/** 主 LLM API 基础 URL（阿里云通义千问） */
+export const LLM_PRIMARY_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+/** 备用 LLM API 基础 URL（DeepSeek） */
+export const LLM_SECONDARY_URL = 'https://api.deepseek.com/v1/chat/completions';
+/** LLM 请求超时 (ms) */
+export const LLM_TIMEOUT_MS = 15000;
+/** LLM 最大重试次数 */
+export const LLM_MAX_RETRIES = 2;
+/** 主模型名称（千问视觉模型，支持图片识别） */
+export const LLM_MODEL_NAME = 'qwen-vl-plus';
+/** 备用模型名称（DeepSeek，文字描述） */
+export const LLM_SECONDARY_MODEL = 'deepseek-chat';
+/** LLM 温度参数（0-1，越低越确定性） */
+export const LLM_TEMPERATURE = 0.1;
+
+// ━━━ 环境变量名 ━━━
+/** 主模型 API Key 环境变量名（阿里云 API Key） */
+export const LLM_PRIMARY_KEY_ENV = 'QWEN_API_KEY';
+/** 备用模型 API Key 环境变量名（DeepSeek API Key） */
+export const LLM_SECONDARY_KEY_ENV = 'DEEPSEEK_API_KEY';
 
 export const COLORS = {
   // 主色阶

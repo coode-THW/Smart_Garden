@@ -5,7 +5,7 @@
  * 权限处理: 未授权 / 永久拒绝 / 无后置摄像头
  */
 
-import React, {useCallback, useRef, useState} from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -24,7 +24,7 @@ import {
 } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
 
-const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // ━━━ 对焦框参数 ━━━
 const FOCUS_SIZE = 250;
@@ -45,7 +45,7 @@ function CameraViewfinder({
   onCancel,
 }: CameraViewfinderProps): React.JSX.Element {
   const cameraRef = useRef<Camera>(null);
-  const {hasPermission, requestPermission} = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [isCapturing, setIsCapturing] = useState(false);
   const [permissionError, setPermissionError] = useState('');
@@ -61,7 +61,6 @@ function CameraViewfinder({
     try {
       const photo: PhotoFile = await cameraRef.current.takePhoto({
         flash: flashMode,
-        skipMetadata: true,
       });
 
       // 从临时路径复制到缓存目录，避免系统清理
@@ -70,7 +69,8 @@ function CameraViewfinder({
 
       await RNFS.copyFile(photo.path, destPath);
 
-      const fileUri = Platform.OS === 'android' ? `file://${destPath}` : destPath;
+      const fileUri =
+        Platform.OS === 'android' ? `file://${destPath}` : destPath;
       onPhotoTaken(fileUri);
     } catch (e: any) {
       const msg = e?.message ?? String(e);
@@ -105,16 +105,15 @@ function CameraViewfinder({
       <View style={styles.permissionContainer}>
         <Text style={styles.permissionIcon}>📷</Text>
         <Text style={styles.permissionTitle}>需要相机权限</Text>
-        <Text style={styles.permissionHint}>
-          请授予相机权限以拍摄花卉照片
-        </Text>
+        <Text style={styles.permissionHint}>请授予相机权限以拍摄花卉照片</Text>
         {permissionError ? (
           <>
             <Text style={styles.permissionError}>{permissionError}</Text>
             {Platform.OS === 'ios' && (
               <TouchableOpacity
                 style={styles.settingsButton}
-                onPress={() => Linking.openSettings()}>
+                onPress={() => Linking.openSettings()}
+              >
                 <Text style={styles.settingsButtonText}>打开设置</Text>
               </TouchableOpacity>
             )}
@@ -122,7 +121,8 @@ function CameraViewfinder({
         ) : (
           <TouchableOpacity
             style={styles.grantButton}
-            onPress={handleRequestPermission}>
+            onPress={handleRequestPermission}
+          >
             <Text style={styles.grantButtonText}>授予权限</Text>
           </TouchableOpacity>
         )}
@@ -171,9 +171,8 @@ function CameraViewfinder({
       {/* ── 闪光灯切换 ── */}
       <TouchableOpacity
         style={styles.flashButton}
-        onPress={() =>
-          setFlashMode(mode => (mode === 'off' ? 'on' : 'off'))
-        }>
+        onPress={() => setFlashMode(mode => (mode === 'off' ? 'on' : 'off'))}
+      >
         <Text style={styles.flashText}>
           {flashMode === 'off' ? '⚡' : '💡'}
         </Text>
@@ -184,21 +183,21 @@ function CameraViewfinder({
         style={[
           styles.corner,
           styles.cornerTL,
-          {top: focusTop, left: focusLeft},
+          { top: focusTop, left: focusLeft },
         ]}
       />
       <View
         style={[
           styles.corner,
           styles.cornerTR,
-          {top: focusTop, left: focusLeft + FOCUS_SIZE - CORNER_LEN},
+          { top: focusTop, left: focusLeft + FOCUS_SIZE - CORNER_LEN },
         ]}
       />
       <View
         style={[
           styles.corner,
           styles.cornerBL,
-          {top: focusTop + FOCUS_SIZE - CORNER_LEN, left: focusLeft},
+          { top: focusTop + FOCUS_SIZE - CORNER_LEN, left: focusLeft },
         ]}
       />
       <View
@@ -224,7 +223,8 @@ function CameraViewfinder({
           style={styles.snapOuter}
           onPress={handleSnap}
           disabled={isCapturing}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+        >
           <View style={styles.snapInner}>
             {isCapturing && <View style={styles.snapCapturingDot} />}
           </View>
@@ -242,7 +242,7 @@ function CameraViewfinder({
 // ━━━ 样式 ━━━
 
 const styles = StyleSheet.create({
-  root: {flex: 1, backgroundColor: '#000'},
+  root: { flex: 1, backgroundColor: '#000' },
 
   // ── 对焦框角括号 ──
   corner: {
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  flashText: {fontSize: 20},
+  flashText: { fontSize: 20 },
 
   // ── 取消 ──
   cancelButton: {
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  permissionIcon: {fontSize: 64, marginBottom: 20},
+  permissionIcon: { fontSize: 64, marginBottom: 20 },
   permissionTitle: {
     color: '#e0e0e0',
     fontSize: 20,

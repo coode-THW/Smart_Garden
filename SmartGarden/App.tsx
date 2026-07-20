@@ -17,6 +17,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen';
 import YoloService from './src/services/YoloService';
 import {UserService} from './src/services/UserService';
 import {COLORS} from './src/constants';
+import logger from './src/services/LoggerService';
 
 const paperTheme = {
   ...DefaultTheme,
@@ -39,8 +40,11 @@ function App(): React.JSX.Element {
   const [progress, setProgress] = useState(0);
   const [isModelReady, setIsModelReady] = useState(false);
 
-  // — 启动时预加载模型 + 初始化用户 —
+  // — 启动时初始化日志 + 预加载模型 + 初始化用户 —
   useEffect(() => {
+    // 日志服务优先初始化（这样后续加载日志能正常写入文件）
+    logger.init();
+
     Promise.all([
       YoloService.getInstance().loadModel(pct => setProgress(pct)),
       UserService.getInstance().initialize(),

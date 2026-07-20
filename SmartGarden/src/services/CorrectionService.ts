@@ -1,3 +1,4 @@
+import logger from './LoggerService';
 import {CorrectionRepository} from '../database/correctionRepository';
 import {UserService} from './UserService';
 import {FeedbackEntity} from '../types';
@@ -55,14 +56,14 @@ export class CorrectionService {
         source: params.recognitionResult.source,
       });
 
-      console.log('[CorrectionService] 纠错记录已保存:', id);
+      logger.info('CorrectionService', '纠错记录已保存:', id);
       return {
         success: true,
         id,
         message: '感谢您的反馈，我们会持续优化识别模型',
       };
     } catch (error) {
-      console.error('[CorrectionService] 保存纠错记录失败:', error);
+      logger.error('CorrectionService', '保存纠错记录失败:', error);
       return {
         success: false,
         message: '保存失败，请稍后重试',

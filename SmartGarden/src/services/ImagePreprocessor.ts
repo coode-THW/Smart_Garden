@@ -14,6 +14,7 @@ import { Platform } from 'react-native';
 import jpeg from 'jpeg-js';
 import RNFS from 'react-native-fs';
 import ImageResizer from 'react-native-image-resizer';
+import logger from './LoggerService';
 
 import {
   MODEL_INPUT_WIDTH,
@@ -200,7 +201,7 @@ export async function loadImageAsTensor(
 ): Promise<PreprocessedInput> {
   // ——— 步骤 1: 原生缩放至 224×224（cover 模式 = CenterCrop） ———
   // YOLO 分类模型训练/推理使用 CenterCrop，并非 letterbox
-  console.log('[Preprocessor] 开始缩放...');
+  logger.info('Preprocessor', '开始缩放...');
   const resized = await ImageResizer.createResizedImage(
     imageUri,
     MODEL_INPUT_WIDTH,
@@ -215,7 +216,7 @@ export async function loadImageAsTensor(
       onlyScaleDown: false,
     },
   );
-  console.log('[Preprocessor] 缩放完成:', resized.uri);
+  logger.info('Preprocessor', '缩放完成:', resized.uri);
 
   // ——— 步骤 2: 读取文件为 base64 ———
   const filePath =
@@ -223,18 +224,19 @@ export async function loadImageAsTensor(
       ? resized.uri.replace('file://', '')
       : resized.uri;
   const base64 = await RNFS.readFile(filePath, 'base64');
-  console.log('[Preprocessor] base64 长度:', base64.length);
+  logger.info('Preprocessor', 'base64 长度:', base64.length);
 
   // ——— 步骤 3: JPEG 解码 ———
   const jpegBytes = base64ToBytes(base64);
   const decoded = jpeg.decode(jpegBytes, { useTArray: true });
-  console.log(
-    `[Preprocessor] JPEG 解码: ${decoded.width}x${decoded.height}, RGBA 长度=${decoded.data.length}`,
+  logger.info(
+    'Preprocessor',
+    `JPEG 解码: ${decoded.width}x${decoded.height}, RGBA 长度=${decoded.data.length}`,
   );
 
   // 清理 resize 临时文件（已读入内存，不再需要）
   RNFS.unlink(filePath).catch(e =>
-    console.warn('[Preprocessor] 清理临时文件失败:', e?.message ?? e),
+    logger.warn('Preprocessor', '清理临时文件失败:', e?.message ?? e),
   );
 
   // ——— 步骤 4: 验证尺寸（cover 模式应为 224×224） ———
@@ -242,8 +244,9 @@ export async function loadImageAsTensor(
     decoded.width !== MODEL_INPUT_WIDTH ||
     decoded.height !== MODEL_INPUT_HEIGHT
   ) {
-    console.warn(
-      `[Preprocessor] resize 未产出精确尺寸 (${decoded.width}x${decoded.height})，强制填充`,
+    logger.warn(
+      'Preprocessor',
+      `resize 未产出精确尺寸 (${decoded.width}x${decoded.height})，强制填充`,
     );
     // 兜底: 简单居中裁切/填充到 224×224
     const canvas = new Uint8Array(MODEL_INPUT_WIDTH * MODEL_INPUT_HEIGHT * 4);
@@ -304,14 +307,11 @@ export async function loadImageAsTensor(
     finalH,
   );
 
-  console.log(
-    `[Preprocessor] ✅ 预处理完成 | 输出: [${MODEL_INPUT_SHAPE.join(
-      ', ',
-    )}] | ` +
+  logger.info(
+    'Preprocessor',
+    `✅ 预处理完成 | 输出: [${MODEL_INPUT_SHAPE.join(', ')}] | ` +
       `原始尺寸: ${originalWidth ?? '?'}x${originalHeight ?? '?'} | ` +
-      `绿色占比: ${(greenRatio * 100).toFixed(
-        0,
-      )}% | 饱和度: ${avgSaturation.toFixed(0)}`,
+      `绿色占比: ${(greenRatio * 100).toFixed(0)}% | 饱和度: ${avgSaturation.toFixed(0)}`,
   );
 
   return {

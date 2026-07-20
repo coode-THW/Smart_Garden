@@ -18,6 +18,7 @@
  *   console.log(userService.getUserId());
  */
 
+import logger from './LoggerService';
 import {getDatabase} from '../database/db';
 import {UserEntity} from '../types';
 
@@ -89,7 +90,7 @@ export class UserService {
     }
 
     this.initialized = true;
-    console.log(`[UserService] 用户就绪: ${this.currentUser.userId}`);
+    logger.info('UserService', `用户就绪: ${this.currentUser.userId}`);
     return this.currentUser;
   }
 
@@ -150,7 +151,7 @@ export class UserService {
     );
 
     this.currentUser.phone = phone;
-    console.log('[UserService] 手机号已绑定');
+    logger.info('UserService', '手机号已绑定');
   }
 
   /**
@@ -169,7 +170,7 @@ export class UserService {
 
     this.currentUser.phone = null;
     this.currentUser.passwordHash = null;
-    console.log('[UserService] 手机号已解绑');
+    logger.info('UserService', '手机号已解绑');
   }
 
   // ─── 用户信息更新 ───

@@ -1,4 +1,5 @@
 import {RecognitionResult} from './RecognitionOrchestrator';
+import logger from './LoggerService';
 
 interface CacheEntry {
   result: RecognitionResult;
@@ -36,7 +37,7 @@ export class RecognitionCache {
     entry.hitCount++;
     entry.timestamp = now;
 
-    console.log(`[RecognitionCache] 缓存命中: ${imageHash} (命中次数: ${entry.hitCount})`);
+    logger.info('RecognitionCache', `缓存命中: ${imageHash} (命中次数: ${entry.hitCount})`);
     return entry.result;
   }
 
@@ -53,7 +54,7 @@ export class RecognitionCache {
       hitCount: 1,
     });
 
-    console.log(`[RecognitionCache] 缓存写入: ${imageHash} (当前缓存数: ${this.cache.size})`);
+    logger.info('RecognitionCache', `缓存写入: ${imageHash} (当前缓存数: ${this.cache.size})`);
   }
 
   private cleanupExpired(): void {
@@ -66,7 +67,7 @@ export class RecognitionCache {
       }
     }
     if (removed > 0) {
-      console.log(`[RecognitionCache] 清理过期缓存: ${removed} 条`);
+      logger.info('RecognitionCache', `清理过期缓存: ${removed} 条`);
     }
   }
 
@@ -83,13 +84,13 @@ export class RecognitionCache {
 
     if (oldestKey) {
       this.cache.delete(oldestKey);
-      console.log(`[RecognitionCache] LRU 淘汰: ${oldestKey}`);
+      logger.info('RecognitionCache', `LRU 淘汰: ${oldestKey}`);
     }
   }
 
   clear(): void {
     this.cache.clear();
-    console.log('[RecognitionCache] 缓存已清空');
+    logger.info('RecognitionCache', '缓存已清空');
   }
 
   get size(): number {

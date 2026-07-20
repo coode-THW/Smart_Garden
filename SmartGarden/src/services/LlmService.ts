@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
+import logger from './LoggerService';
 
 import {
   LLM_PRIMARY_URL,
@@ -124,7 +125,7 @@ function parseJsonResponse(rawText: string): LlmFlowerInfo | null {
       return parsed as LlmFlowerInfo;
     }
   } catch (e) {
-    console.warn('[LlmService] JSON 解析失败:', e);
+    logger.warn('LlmService', 'JSON 解析失败:', e);
   }
   return null;
 }
@@ -245,8 +246,9 @@ class LlmService {
       const config = getApiConfig(useSecondary);
 
       try {
-        console.log(
-          `[LlmService] 第 ${attempt + 1} 次尝试，模型: ${
+        logger.info(
+          'LlmService',
+          `第 ${attempt + 1} 次尝试，模型: ${
             useSecondary ? 'secondary' : 'primary'
           }`,
         );
@@ -271,8 +273,9 @@ class LlmService {
             this.primaryHealthy = true;
           }
 
-          console.log(
-            `[LlmService] ✅ LLM 识别成功 (${latency}ms)`,
+          logger.info(
+            'LlmService',
+            `✅ LLM 识别成功 (${latency}ms)`,
             `| 花名: ${flowerInfo.name}`,
             `| 置信度: ${(flowerInfo.confidence * 100).toFixed(1)}%`,
           );
@@ -289,15 +292,16 @@ class LlmService {
         }
       } catch (error) {
         lastError = error as Error;
-        console.warn(
-          `[LlmService] ❌ LLM 调用失败 (${
+        logger.warn(
+          'LlmService',
+          `❌ LLM 调用失败 (${
             useSecondary ? 'secondary' : 'primary'
           })`,
           lastError.message,
         );
 
         if (!useSecondary) {
-          console.log('[LlmService] 切换到备用模型');
+          logger.info('LlmService', '切换到备用模型');
           useSecondary = true;
           this.primaryHealthy = false;
         } else {
@@ -325,8 +329,9 @@ class LlmService {
       const config = getApiConfig(useSecondary);
 
       try {
-        console.log(
-          `[LlmService] describeFlower 第 ${attempt + 1} 次尝试，模型: ${
+        logger.info(
+          'LlmService',
+          `describeFlower 第 ${attempt + 1} 次尝试，模型: ${
             useSecondary ? 'secondary' : 'primary'
           }`,
         );
@@ -363,8 +368,9 @@ class LlmService {
             this.primaryHealthy = true;
           }
 
-          console.log(
-            `[LlmService] ✅ describeFlower 成功 (${latency}ms)`,
+          logger.info(
+            'LlmService',
+            `✅ describeFlower 成功 (${latency}ms)`,
             `| 花名: ${flowerInfo.name}`,
           );
 
@@ -380,8 +386,9 @@ class LlmService {
         }
       } catch (error) {
         lastError = error as Error;
-        console.warn(
-          `[LlmService] ❌ describeFlower 失败 (${
+        logger.warn(
+          'LlmService',
+          `❌ describeFlower 失败 (${
             useSecondary ? 'secondary' : 'primary'
           })`,
           lastError.message,

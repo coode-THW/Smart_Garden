@@ -23,6 +23,7 @@ import {
   type PhotoFile,
 } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
+import logger from '../services/LoggerService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -74,7 +75,7 @@ function CameraViewfinder({
       onPhotoTaken(fileUri);
     } catch (e: any) {
       const msg = e?.message ?? String(e);
-      console.error('[CameraViewfinder] 拍照失败:', msg);
+      logger.error('CameraViewfinder', '拍照失败:', msg);
       Alert.alert('拍照失败', msg || '请重试');
     } finally {
       setIsCapturing(false);

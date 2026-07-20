@@ -9,14 +9,8 @@ import {careGuides} from '../../assets/care';
 import type {CareGuide} from '../types';
 import type {ApiResponse} from '../types';
 import {ErrorCode} from '../types';
-
-// ━━━ 错误消息映射 ━━━
-
-const ERROR_MESSAGES: Record<number, string> = {
-  [ErrorCode.SUCCESS]: 'success',
-  [ErrorCode.DATA_QUERY_FAILED]: '未找到该花卉的养护指南',
-  [ErrorCode.INVALID_PARAM]: '参数错误',
-};
+import logger from './LoggerService';
+import {getErrorMessage} from './ErrorHandler';
 
 // ━━━ 简单函数接口（识别结果页用） ━━━
 
@@ -24,7 +18,7 @@ const nameMap = new Map<string, CareGuide>();
 for (const [name, guide] of Object.entries(careGuides)) {
   nameMap.set(name, guide as CareGuide);
 }
-console.log(`[KnowledgeService] 已加载 ${nameMap.size} 种花卉养护数据`);
+logger.info('KnowledgeService', `已加载 ${nameMap.size} 种花卉养护数据`);
 
 /**
  * 根据中文花名查询养护知识（同步）。
@@ -58,7 +52,7 @@ export class KnowledgeService {
       this.idCache.set(guide.flowerId, guide);
     }
     this.initialized = true;
-    console.log(`[KnowledgeService] 已加载 ${this.nameCache.size} 份养护指南`);
+    logger.info('KnowledgeService', `已加载 ${this.nameCache.size} 份养护指南`);
   }
 
   reset(): void {
@@ -104,10 +98,10 @@ export class KnowledgeService {
   }
 
   private ok<T>(data: T): ApiResponse<T> {
-    return {code: ErrorCode.SUCCESS, message: ERROR_MESSAGES[ErrorCode.SUCCESS], data};
+    return {code: ErrorCode.SUCCESS, message: 'success', data};
   }
 
   private err<T>(code: ErrorCode): ApiResponse<T> {
-    return {code, message: ERROR_MESSAGES[code] || '未知错误', data: null};
+    return {code, message: getErrorMessage(code), data: null};
   }
 }

@@ -34,6 +34,7 @@ import {getKnowledge} from '../services/KnowledgeService';
 import {GardenService} from '../services/GardenService';
 import type {InferenceResult} from '../services/YoloService';
 import type {CareGuide} from '../types';
+import {ErrorCode} from '../types';
 import {
   COLORS,
   DROP_OFF_THRESHOLD,
@@ -45,6 +46,11 @@ import {
   SHADOWS,
   TYPOGRAPHY,
 } from '../constants';
+import {
+  getErrorInfo,
+  getErrorInfoFromError,
+  getErrorMessage,
+} from '../services/ErrorHandler';
 
 // ━━━ 状态 ━━━
 
@@ -145,7 +151,8 @@ function RecognizeScreen(): React.JSX.Element {
           const result = await YoloService.getInstance().detect(localUri);
           setState({phase: 'result', imageUri: localUri, result});
         } catch (e: any) {
-          setState({phase: 'error', message: e.message || String(e)});
+          const info = getErrorInfoFromError(e);
+          setState({phase: 'error', message: info.fullMessage});
         }
       }
       run();
@@ -168,7 +175,8 @@ function RecognizeScreen(): React.JSX.Element {
 
       const asset = result.assets?.[0];
       if (!asset?.uri) {
-        throw new Error('未获取到图片');
+        const info = getErrorInfo(ErrorCode.INVALID_PARAM);
+        throw new Error(info.description);
       }
 
       setState({phase: 'inferring', imageUri: asset.uri});
@@ -182,7 +190,8 @@ function RecognizeScreen(): React.JSX.Element {
         result: inferenceResult,
       });
     } catch (e: any) {
-      setState({phase: 'error', message: e.message || String(e)});
+      const info = getErrorInfoFromError(e);
+      setState({phase: 'error', message: info.fullMessage});
     }
   }, []);
 
@@ -302,6 +311,7 @@ function RecognizeScreen(): React.JSX.Element {
 
     // ━━━ 非花卉 / 低置信度 ━━━
     if (!isHigh) {
+      const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
       return (
         <View style={styles.resultScroll}>
           <View style={{paddingHorizontal: SPACING.lg}}>
@@ -340,11 +350,11 @@ function RecognizeScreen(): React.JSX.Element {
               </View>
               <Text
                 style={[styles.notFlowerTitle, {color: textColor}]}>
-                未识别到花卉
+                {noFlowerInfo.title}
               </Text>
               <Text
                 style={[styles.notFlowerHint, {color: secondaryColor}]}>
-                请重新拍摄花卉照片{'\n'}确保花朵在画面中央、光线充足
+                {noFlowerInfo.description}{'\n'}{noFlowerInfo.suggestion}
               </Text>
               <ActionButton
                 title="重新拍摄"
@@ -802,10 +812,8 @@ function RecognizeScreen(): React.JSX.Element {
                       setShowAddModal(false);
                       try {
                         if (!knowledge?.flowerId) {
-                          Alert.alert(
-                            '添加失败',
-                            '未找到该花卉的ID，无法添加',
-                          );
+                          const info = getErrorInfo(ErrorCode.DATA_QUERY_FAILED);
+                          Alert.alert(info.title, info.description);
                           return;
                         }
                         const resp =
@@ -817,13 +825,12 @@ function RecognizeScreen(): React.JSX.Element {
                         if (resp.code === 0) {
                           Alert.alert('添加成功', '已添加到我的花园');
                         } else {
-                          Alert.alert('添加失败', resp.message);
+                          const info = getErrorInfoFromError(resp.message);
+                          Alert.alert('添加失败', `${info.title}：${resp.message}`);
                         }
                       } catch (e: any) {
-                        Alert.alert(
-                          '添加失败',
-                          e?.message ?? '未知错误',
-                        );
+                        const info = getErrorInfoFromError(e);
+                        Alert.alert('添加失败', info.fullMessage);
                       }
                     }}
                   />
@@ -836,32 +843,43 @@ function RecognizeScreen(): React.JSX.Element {
     );
   };
 
-  const renderError = (message: string) => (
-    <View style={[styles.centerContent, {paddingVertical: 80}]}>
-      <View
-        style={[
-          styles.iconCircle,
-          {
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: isDarkMode
-              ? COLORS.error + '20'
-              : COLORS.error + '12',
-          },
-        ]}>
-        <Icon source="alert-circle" size={40} color={COLORS.error} />
+  const renderError = (message: string) => {
+    // 尝试从消息反向推断错误码以获取正确的 UI 风格
+    const errorInfo = getErrorInfoFromError(message);
+    const iconColor = errorInfo.severity === 'error' ? RED
+      : errorInfo.severity === 'warning' ? COLORS.warning
+        : COLORS.info;
+    const bgColor = errorInfo.severity === 'error'
+      ? (isDarkMode ? COLORS.error + '20' : COLORS.error + '12')
+      : errorInfo.severity === 'warning'
+        ? (isDarkMode ? '#3A3010' : '#FFF3CD')
+        : (isDarkMode ? COLORS.info + '20' : COLORS.info + '12');
+
+    return (
+      <View style={[styles.centerContent, {paddingVertical: 80}]}>
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: bgColor,
+            },
+          ]}>
+          <Icon source={errorInfo.icon as any} size={40} color={iconColor} />
+        </View>
+        <Text style={[styles.errorText, {color: iconColor}]}>{message}</Text>
+        <ActionButton
+          title="重试"
+          variant="primary"
+          size="md"
+          fullWidth
+          onPress={handleRetry}
+        />
       </View>
-      <Text style={[styles.errorText, {color: RED}]}>{message}</Text>
-      <ActionButton
-        title="重试"
-        variant="primary"
-        size="md"
-        fullWidth
-        onPress={handleRetry}
-      />
-    </View>
-  );
+    );
+  };
 
   // ━━━ 主布局 ━━━
 

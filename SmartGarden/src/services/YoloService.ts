@@ -14,6 +14,7 @@ import {
   MODEL_ASSET,
 } from '../constants';
 import {loadImageAsTensor} from './ImagePreprocessor';
+import logger from './LoggerService';
 
 // ━━━ 类型 ━━━
 
@@ -139,10 +140,10 @@ class YoloService {
 
     onProgress?.(95);
 
-    console.log('[YoloService] ✅ 模型加载成功');
-    console.log(`  引擎: ${ep}`);
-    console.log(`  输入: ${sess.inputNames[0]}`, inputMeta.shape);
-    console.log(`  输出: ${sess.outputNames[0]}`, outputMeta.shape);
+    logger.info('YoloService', '✅ 模型加载成功');
+    logger.debug('YoloService', `引擎: ${ep}`);
+    logger.debug('YoloService', `输入: ${sess.inputNames[0]}`, inputMeta.shape);
+    logger.debug('YoloService', `输出: ${sess.outputNames[0]}`, outputMeta.shape);
 
     this.session = sess;
     this.modelInfo = {
@@ -221,11 +222,7 @@ class YoloService {
     // 熵：分布越均匀 → 越不确定（5 类时最大值 ln(5) ≈ 1.61）
     const entropy = computeEntropy(probabilities);
 
-    console.log(
-      `[YoloService] 推理完成 (${(t1 - t0).toFixed(1)}ms)`,
-      `| 结果: ${CLASS_NAMES[topIdx]} ${(probabilities[topIdx] * 100).toFixed(1)}%`,
-      `| 边距: ${(margin * 100).toFixed(1)}% 跌落比: ${dropOff.toFixed(1)}x`,
-      `| 熵: ${entropy.toFixed(3)} 底部: ${(bottomSum * 100).toFixed(1)}%`,
+    logger.info('YoloService', `推理完成 (${(t1 - t0).toFixed(1)}ms)`, `| 结果: ${CLASS_NAMES[topIdx]} ${(probabilities[topIdx] * 100).toFixed(1)}%`, `| 边距: ${(margin * 100).toFixed(1)}% 跌落比: ${dropOff.toFixed(1)}x`, `| 熵: ${entropy.toFixed(3)} 底部: ${(bottomSum * 100).toFixed(1)}%`,
       colorFeatures
         ? `| 绿色: ${(colorFeatures.greenRatio * 100).toFixed(0)}% 饱和: ${colorFeatures.avgSaturation.toFixed(0)}`
         : '',
@@ -255,7 +252,7 @@ class YoloService {
    * @returns 识别结果（花名、置信度、各类别概率、推理耗时）
    */
   async detect(imagePath: string): Promise<InferenceResult> {
-    console.log('[YoloService] detect() 开始, 路径:', imagePath);
+    logger.info('YoloService', 'detect() 开始, 路径:', imagePath);
 
     // 1. 预处理：图片 → Float32Array + 颜色特征
     const {tensor, shape, greenRatio, avgSaturation} =
@@ -267,9 +264,7 @@ class YoloService {
       avgSaturation,
     });
 
-    console.log(
-      `[YoloService] detect() 完成 → ${result.topClass} ${(result.confidence * 100).toFixed(1)}% (${result.inferenceTimeMs.toFixed(1)}ms)`,
-    );
+    logger.info('YoloService', `detect() 完成 → ${result.topClass} ${(result.confidence * 100).toFixed(1)}% (${result.inferenceTimeMs.toFixed(1)}ms)`);
 
     return result;
   }
@@ -285,7 +280,7 @@ class YoloService {
 
   private async resolveModel(): Promise<string | Uint8Array> {
     const resolved = Image.resolveAssetSource(MODEL_ASSET);
-    console.log('[YoloService] asset URI:', resolved.uri);
+    logger.debug('YoloService', 'asset URI:', resolved.uri);
 
     // Release 模式：file:// 路径
     if (resolved.uri.startsWith('file://')) {
@@ -293,12 +288,12 @@ class YoloService {
         Platform.OS === 'android'
           ? resolved.uri.replace('file://', '')
           : resolved.uri;
-      console.log('[YoloService] 本地文件路径:', path);
+      logger.debug('YoloService', '本地文件路径:', path);
       return path;
     }
 
     // Debug 模式：Metro http:// 地址 → fetch 字节
-    console.log('[YoloService] Debug 模式，fetch 模型字节:', resolved.uri);
+    logger.debug('YoloService', 'Debug 模式，fetch 模型字节:', resolved.uri);
     const resp = await fetch(resolved.uri);
     const buffer = await resp.arrayBuffer();
     return new Uint8Array(buffer);

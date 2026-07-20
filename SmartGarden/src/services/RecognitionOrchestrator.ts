@@ -11,8 +11,10 @@ import YoloService, {
   InferenceResult as YoloInferenceResult,
 } from './YoloService';
 import LlmService, { LlmFlowerInfo } from './LlmService';
-import { RecognitionSource, CareGuide } from '../types';
+import { RecognitionSource, CareGuide, ErrorCode } from '../types';
 import { RecognitionCache } from './RecognitionCache';
+import { getErrorInfo, getErrorMessage, getErrorInfoFromError } from './ErrorHandler';
+import logger from './LoggerService';
 
 export type RecognitionStatus =
   | 'success'
@@ -188,22 +190,22 @@ class RecognitionOrchestrator {
   }
 
   async loadModels(): Promise<void> {
-    console.log('[RecognitionOrchestrator] 加载模型...');
+    logger.info('Orchestrator', '加载模型...');
     await this.yoloService.loadModel();
-    console.log('[RecognitionOrchestrator] ✅ 模型加载完成');
+    logger.info('Orchestrator', '✅ 模型加载完成');
   }
 
   async recognize(imagePath: string): Promise<RecognitionResult> {
     const startTime = Date.now();
 
     try {
-      console.log('[RecognitionOrchestrator] 开始识别:', imagePath);
+      logger.info('Orchestrator', '开始识别:', imagePath);
 
       const cacheKey = this.generateCacheKey(imagePath);
 
       const cachedResult = this.cache.get(cacheKey);
       if (cachedResult) {
-        console.log('[RecognitionOrchestrator] 命中缓存，跳过推理');
+        logger.info('Orchestrator', '命中缓存，跳过推理');
         return {
           ...cachedResult,
           inferenceTimeMs: Date.now() - startTime,
@@ -213,13 +215,15 @@ class RecognitionOrchestrator {
       const yoloResult = await this.yoloService.detect(imagePath);
       const decision = analyzeYoloResult(yoloResult);
 
-      console.log(
-        `[RecognitionOrchestrator] 决策: ${decision.action}`,
+      logger.info(
+        'Orchestrator',
+        `决策: ${decision.action}`,
         `| 原因: ${decision.reason}`,
       );
 
       switch (decision.action) {
         case 'reject': {
+          const rejectInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
           const rejectResult: RecognitionResult = {
             status: 'rejected',
             source: 'yolov11',
@@ -235,7 +239,7 @@ class RecognitionOrchestrator {
             allClasses: yoloResult.allClasses,
             inferenceTimeMs: Date.now() - startTime,
             yoloResult,
-            errorMessage: decision.reason,
+            errorMessage: rejectInfo.fullMessage,
           };
           this.cache.set(cacheKey, rejectResult);
           return rejectResult;
@@ -272,6 +276,7 @@ class RecognitionOrchestrator {
             const flower = llmResponse.flowerInfo;
 
             if (flower.confidence < 0.5) {
+              const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
               const llmRejectResult: RecognitionResult = {
                 status: 'rejected',
                 source: 'llm',
@@ -288,7 +293,7 @@ class RecognitionOrchestrator {
                 inferenceTimeMs: Date.now() - startTime,
                 llmLatencyMs: llmResponse.latencyMs,
                 yoloResult,
-                errorMessage: 'LLM 认为不是花卉',
+                errorMessage: noFlowerInfo.fullMessage,
               };
               this.cache.set(cacheKey, llmRejectResult);
               return llmRejectResult;
@@ -320,7 +325,14 @@ class RecognitionOrchestrator {
             this.cache.set(cacheKey, llmSuccessResult);
             return llmSuccessResult;
           } else {
-            console.log('[RecognitionOrchestrator] LLM 失败，回退到本地结果');
+            logger.info('Orchestrator', 'LLM 失败，回退到本地结果');
+
+            // 根据错误信息映射到对应错误码的 UI 文案
+            const isTimeout = llmResponse.errorMessage?.includes('超时')
+              || llmResponse.errorMessage?.includes('timeout');
+            const llmErrorInfo = getErrorInfo(
+              isTimeout ? ErrorCode.LLM_TIMEOUT : ErrorCode.LLM_CALL_FAILED,
+            );
 
             const fallbackResult: RecognitionResult = {
               status: 'low_confidence',
@@ -338,7 +350,7 @@ class RecognitionOrchestrator {
               inferenceTimeMs: Date.now() - startTime,
               llmLatencyMs: llmResponse.latencyMs,
               yoloResult,
-              errorMessage: llmResponse.errorMessage,
+              errorMessage: `${llmErrorInfo.title}。${llmErrorInfo.suggestion}`,
             };
             this.cache.set(cacheKey, fallbackResult);
             return fallbackResult;
@@ -346,8 +358,10 @@ class RecognitionOrchestrator {
       }
     } catch (error) {
       const err = error as Error;
-      console.error('[RecognitionOrchestrator] 识别异常:', err.message);
+      logger.error('Orchestrator', '识别异常:', err.message);
 
+      // 使用 ErrorHandler 将异常映射为用户友好的错误文案
+      const errorInfo = getErrorInfoFromError(err, ErrorCode.RECOGNITION_FAILED);
       const errorResult: RecognitionResult = {
         status: 'low_confidence',
         source: 'yolov11',
@@ -361,7 +375,7 @@ class RecognitionOrchestrator {
         greenRatio: 0,
         avgSaturation: 0,
         inferenceTimeMs: Date.now() - startTime,
-        errorMessage: err.message,
+        errorMessage: errorInfo.fullMessage,
       };
       return errorResult;
     }
@@ -408,7 +422,7 @@ class RecognitionOrchestrator {
         };
       }
     } catch (error) {
-      console.error('[RecognitionOrchestrator] 获取花卉详情失败:', error);
+      logger.error('Orchestrator', '获取花卉详情失败:', error);
     }
 
     return null;

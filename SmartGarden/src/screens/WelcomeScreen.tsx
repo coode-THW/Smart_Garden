@@ -236,9 +236,9 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
   );
 
   /* ━━━ 水平进度条 ━━━ */
-  const barWidth = animProgress.interpolate({
+  const barScale = animProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
+    outputRange: [0, 1],
   });
 
   const ProgressBar = () => (
@@ -252,7 +252,10 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
       <Animated.View
         style={[
           styles.progressFill,
-          {width: barWidth, backgroundColor: COLORS.forest},
+          {
+            backgroundColor: COLORS.forest,
+            transform: [{scaleX: barScale}],
+          },
         ]}
       />
     </View>
@@ -702,6 +705,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   progressFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: '100%',
     height: '100%',
     borderRadius: 3,
   },

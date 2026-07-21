@@ -73,7 +73,7 @@ const getApiConfig = (
     url: useSecondary ? LLM_SECONDARY_URL : LLM_PRIMARY_URL,
     model: useSecondary ? LLM_SECONDARY_MODEL : LLM_MODEL_NAME,
     apiKey,
-    supportsImage: !useSecondary,
+    supportsImage: true,
   };
 };
 
@@ -189,9 +189,8 @@ async function callApiWithImage(
     Authorization: `Bearer ${config.apiKey}`,
   };
 
-  const prompt = localGuess
-    ? `请识别这张图片中的花卉。本地模型初步识别为：${localGuess}。请确认并提供详细信息。`
-    : '请识别这张图片中的花卉并提供详细信息。';
+  // 使用 buildPrompt 生成完整的 JSON 格式引导 prompt
+  const prompt = buildPrompt(base64Image, localGuess);
 
   const body = {
     model: config.model,
@@ -294,9 +293,7 @@ class LlmService {
         lastError = error as Error;
         logger.warn(
           'LlmService',
-          `❌ LLM 调用失败 (${
-            useSecondary ? 'secondary' : 'primary'
-          })`,
+          `❌ LLM 调用失败 (${useSecondary ? 'secondary' : 'primary'})`,
           lastError.message,
         );
 
@@ -388,9 +385,7 @@ class LlmService {
         lastError = error as Error;
         logger.warn(
           'LlmService',
-          `❌ describeFlower 失败 (${
-            useSecondary ? 'secondary' : 'primary'
-          })`,
+          `❌ describeFlower 失败 (${useSecondary ? 'secondary' : 'primary'})`,
           lastError.message,
         );
 

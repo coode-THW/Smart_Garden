@@ -13,7 +13,11 @@ import YoloService, {
 import LlmService, { LlmFlowerInfo } from './LlmService';
 import { RecognitionSource, CareGuide, ErrorCode } from '../types';
 import { RecognitionCache } from './RecognitionCache';
-import { getErrorInfo, getErrorMessage, getErrorInfoFromError } from './ErrorHandler';
+import {
+  getErrorInfo,
+  getErrorMessage,
+  getErrorInfoFromError,
+} from './ErrorHandler';
 import logger from './LoggerService';
 
 export type RecognitionStatus =
@@ -86,17 +90,7 @@ function buildCareGuide(flower: LlmFlowerInfo): CareGuide {
 }
 
 function analyzeYoloResult(result: YoloInferenceResult): RecognitionDecision {
-  const { confidence, greenRatio, avgSaturation, dropOff, bottomSum, entropy } =
-    result;
-
-  if (confidence < LOW_CONFIDENCE) {
-    return {
-      action: 'reject',
-      reason: `置信度 ${(confidence * 100).toFixed(1)}% < ${(
-        LOW_CONFIDENCE * 100
-      ).toFixed(0)}%`,
-    };
-  }
+  const { confidence, greenRatio, avgSaturation } = result;
 
   if (greenRatio > GREEN_RATIO_MAX) {
     return {
@@ -116,50 +110,21 @@ function analyzeYoloResult(result: YoloInferenceResult): RecognitionDecision {
     };
   }
 
-  if (dropOff < DROP_OFF_THRESHOLD) {
-    return {
-      action: 'call_llm',
-      reason: `跌落比 ${dropOff.toFixed(
-        1,
-      )} < ${DROP_OFF_THRESHOLD}，模型在类别间犹豫`,
-    };
-  }
-
-  if (bottomSum > BOTTOM_SUM_MAX) {
-    return {
-      action: 'call_llm',
-      reason: `底部概率和 ${(bottomSum * 100).toFixed(1)}% > ${(
-        BOTTOM_SUM_MAX * 100
-      ).toFixed(0)}%，分布太均匀`,
-    };
-  }
-
-  if (entropy > 1.2) {
-    return {
-      action: 'call_llm',
-      reason: `熵值 ${entropy.toFixed(3)} > 1.2，模型不确定`,
-    };
-  }
-
   if (confidence >= HIGH_CONFIDENCE) {
     return {
       action: 'use_local',
       reason: `置信度 ${(confidence * 100).toFixed(1)}% ≥ ${(
         HIGH_CONFIDENCE * 100
-      ).toFixed(0)}%，直接返回`,
+      ).toFixed(0)}%，使用本地识别结果`,
     };
   }
 
-  if (confidence >= MID_CONFIDENCE) {
-    return {
-      action: 'call_llm',
-      reason: `置信度 ${(confidence * 100).toFixed(1)}% 在 ${(
-        MID_CONFIDENCE * 100
-      ).toFixed(0)}-${(HIGH_CONFIDENCE * 100).toFixed(0)}% 之间，调用 LLM`,
-    };
-  }
-
-  return { action: 'reject', reason: '未满足任何条件' };
+  return {
+    action: 'call_llm',
+    reason: `置信度 ${(confidence * 100).toFixed(1)}% < ${(
+      HIGH_CONFIDENCE * 100
+    ).toFixed(0)}%，调用 LLM 优化结果`,
+  };
 }
 
 class RecognitionOrchestrator {
@@ -328,8 +293,9 @@ class RecognitionOrchestrator {
             logger.info('Orchestrator', 'LLM 失败，回退到本地结果');
 
             // 根据错误信息映射到对应错误码的 UI 文案
-            const isTimeout = llmResponse.errorMessage?.includes('超时')
-              || llmResponse.errorMessage?.includes('timeout');
+            const isTimeout =
+              llmResponse.errorMessage?.includes('超时') ||
+              llmResponse.errorMessage?.includes('timeout');
             const llmErrorInfo = getErrorInfo(
               isTimeout ? ErrorCode.LLM_TIMEOUT : ErrorCode.LLM_CALL_FAILED,
             );
@@ -361,7 +327,10 @@ class RecognitionOrchestrator {
       logger.error('Orchestrator', '识别异常:', err.message);
 
       // 使用 ErrorHandler 将异常映射为用户友好的错误文案
-      const errorInfo = getErrorInfoFromError(err, ErrorCode.RECOGNITION_FAILED);
+      const errorInfo = getErrorInfoFromError(
+        err,
+        ErrorCode.RECOGNITION_FAILED,
+      );
       const errorResult: RecognitionResult = {
         status: 'low_confidence',
         source: 'yolov11',

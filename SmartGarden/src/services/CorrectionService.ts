@@ -1,12 +1,15 @@
 import logger from './LoggerService';
-import {CorrectionRepository} from '../database/correctionRepository';
-import {UserService} from './UserService';
-import {FeedbackEntity} from '../types';
-import {RecognitionResult} from './RecognitionOrchestrator';
+import { CorrectionRepository } from '../database/correctionRepository';
+import { UserService } from './UserService';
+import { FeedbackEntity } from '../types';
+import { RecognitionResult } from './RecognitionOrchestrator';
+import { InferenceResult } from './YoloService';
+
+export type CorrectionResultType = RecognitionResult | InferenceResult;
 
 export interface CorrectionParams {
   imageHash: string;
-  recognitionResult: RecognitionResult;
+  recognitionResult: CorrectionResultType;
   userCorrection: string;
 }
 
@@ -38,7 +41,9 @@ export class CorrectionService {
       };
     }
 
-    const existing = await this.correctionRepo.findByImageHash(params.imageHash);
+    const existing = await this.correctionRepo.findByImageHash(
+      params.imageHash,
+    );
     if (existing) {
       return {
         success: false,
@@ -47,13 +52,14 @@ export class CorrectionService {
     }
 
     try {
+      const result = params.recognitionResult;
       const id = await this.correctionRepo.add({
         userId,
         imageHash: params.imageHash,
-        yoloResult: JSON.stringify(params.recognitionResult),
-        confidence: params.recognitionResult.confidence,
+        yoloResult: JSON.stringify(result),
+        confidence: result.confidence,
         userCorrection: params.userCorrection || '不是花卉',
-        source: params.recognitionResult.source,
+        source: (result as RecognitionResult).source || 'yolov11',
       });
 
       logger.info('CorrectionService', '纠错记录已保存:', id);

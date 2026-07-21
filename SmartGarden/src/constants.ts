@@ -61,25 +61,26 @@ export const SATURATION_MIN = 20;
 
 // ━━━ LLM 配置 ━━━
 /** 主 LLM API 基础 URL（阿里云通义千问） */
-export const LLM_PRIMARY_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-/** 备用 LLM API 基础 URL（DeepSeek） */
-export const LLM_SECONDARY_URL = 'https://api.deepseek.com/v1/chat/completions';
+export const LLM_PRIMARY_URL =
+  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+/** 备用 LLM API 基础 URL（字节跳动豆包，国内可用） */
+export const LLM_SECONDARY_URL = 'https://api.doubao.com/v1/chat/completions';
 /** LLM 请求超时 (ms) */
 export const LLM_TIMEOUT_MS = 15000;
 /** LLM 最大重试次数 */
 export const LLM_MAX_RETRIES = 2;
 /** 主模型名称（千问视觉模型，支持图片识别） */
 export const LLM_MODEL_NAME = 'qwen-vl-plus';
-/** 备用模型名称（DeepSeek，文字描述） */
-export const LLM_SECONDARY_MODEL = 'deepseek-chat';
+/** 备用模型名称（豆包视觉模型，支持图片识别） */
+export const LLM_SECONDARY_MODEL = 'doubao-vl-128k';
 /** LLM 温度参数（0-1，越低越确定性） */
 export const LLM_TEMPERATURE = 0.1;
 
 // ━━━ 环境变量名 ━━━
 /** 主模型 API Key 环境变量名（阿里云 API Key） */
 export const LLM_PRIMARY_KEY_ENV = 'QWEN_API_KEY';
-/** 备用模型 API Key 环境变量名（DeepSeek API Key） */
-export const LLM_SECONDARY_KEY_ENV = 'DEEPSEEK_API_KEY';
+/** 备用模型 API Key 环境变量名（豆包 API Key） */
+export const LLM_SECONDARY_KEY_ENV = 'DOUBAO_API_KEY';
 
 export const COLORS = {
   // 主色阶
@@ -178,7 +179,7 @@ export const SHADOWS = {
   /** 轻阴影 — 卡片默认 */
   card: {
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
@@ -186,7 +187,7 @@ export const SHADOWS = {
   /** 中阴影 — 卡片悬停/强调 */
   cardHover: {
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 8},
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 6,
@@ -194,7 +195,7 @@ export const SHADOWS = {
   /** 重阴影 — 弹窗/浮层 */
   modal: {
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 12},
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 12,
@@ -202,7 +203,7 @@ export const SHADOWS = {
   /** 顶部阴影 — 底部导航栏 */
   top: {
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: -4},
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 8,
@@ -212,25 +213,75 @@ export const SHADOWS = {
 /** 排版系统 */
 export const TYPOGRAPHY = {
   /** 页面大标题 */
-  hero: {fontSize: 32, fontWeight: '700' as const, lineHeight: 40, letterSpacing: -0.5},
+  hero: {
+    fontSize: 32,
+    fontWeight: '700' as const,
+    lineHeight: 40,
+    letterSpacing: -0.5,
+  },
   /** 页面标题 */
-  h1: {fontSize: 26, fontWeight: '700' as const, lineHeight: 34, letterSpacing: -0.3},
+  h1: {
+    fontSize: 26,
+    fontWeight: '700' as const,
+    lineHeight: 34,
+    letterSpacing: -0.3,
+  },
   /** 区块标题 */
-  h2: {fontSize: 20, fontWeight: '600' as const, lineHeight: 28, letterSpacing: -0.2},
+  h2: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    lineHeight: 28,
+    letterSpacing: -0.2,
+  },
   /** 卡片标题 */
-  h3: {fontSize: 17, fontWeight: '600' as const, lineHeight: 24, letterSpacing: 0},
+  h3: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    lineHeight: 24,
+    letterSpacing: 0,
+  },
   /** 正文 */
-  body: {fontSize: 15, fontWeight: '400' as const, lineHeight: 22, letterSpacing: 0},
+  body: {
+    fontSize: 15,
+    fontWeight: '400' as const,
+    lineHeight: 22,
+    letterSpacing: 0,
+  },
   /** 次要正文 */
-  bodySmall: {fontSize: 13, fontWeight: '400' as const, lineHeight: 20, letterSpacing: 0},
+  bodySmall: {
+    fontSize: 13,
+    fontWeight: '400' as const,
+    lineHeight: 20,
+    letterSpacing: 0,
+  },
   /** 英文标签 — 大写宽间距 */
-  label: {fontSize: 11, fontWeight: '600' as const, lineHeight: 14, letterSpacing: 2.5},
+  label: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    lineHeight: 14,
+    letterSpacing: 2.5,
+  },
   /** 按钮文字 */
-  button: {fontSize: 15, fontWeight: '600' as const, lineHeight: 20, letterSpacing: 0},
+  button: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    lineHeight: 20,
+    letterSpacing: 0,
+  },
   /** 小按钮/标签 */
-  buttonSmall: {fontSize: 13, fontWeight: '600' as const, lineHeight: 18, letterSpacing: 0},
+  buttonSmall: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    lineHeight: 18,
+    letterSpacing: 0,
+  },
   /** 数据统计 */
-  stat: {fontSize: 28, fontWeight: '700' as const, lineHeight: 36, letterSpacing: -0.5},
+  stat: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    lineHeight: 36,
+    letterSpacing: -0.5,
+  },
 } as const;
 
 // ━━━ 模型资源 ━━━

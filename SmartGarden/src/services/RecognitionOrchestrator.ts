@@ -17,14 +17,11 @@ import {
   getErrorInfo,
   getErrorMessage,
   getErrorInfoFromError,
+  inferErrorCode,
 } from './ErrorHandler';
 import logger from './LoggerService';
 
-export type RecognitionStatus =
-  | 'success'
-  | 'rejected'
-  | 'low_confidence'
-  | 'llm_error';
+export type RecognitionStatus = 'success' | 'rejected' | 'low_confidence';
 
 export interface RecognitionResult {
   status: RecognitionStatus;
@@ -43,12 +40,14 @@ export interface RecognitionResult {
   origin?: string;
   bloomPeriod?: string;
   description?: string;
+  imageContent?: string;
   careGuide?: CareGuide;
   allClasses?: Array<{ name: string; probability: number }>;
   inferenceTimeMs: number;
   llmLatencyMs?: number;
   yoloResult?: YoloInferenceResult;
   errorMessage?: string;
+  llmUsed?: boolean;
 }
 
 interface RecognitionDecision {
@@ -187,29 +186,6 @@ class RecognitionOrchestrator {
       );
 
       switch (decision.action) {
-        case 'reject': {
-          const rejectInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
-          const rejectResult: RecognitionResult = {
-            status: 'rejected',
-            source: 'yolov11',
-            flowerName: '未知',
-            topClass: yoloResult.topClass,
-            confidence: yoloResult.confidence,
-            margin: yoloResult.margin,
-            entropy: yoloResult.entropy,
-            dropOff: yoloResult.dropOff,
-            bottomSum: yoloResult.bottomSum,
-            greenRatio: yoloResult.greenRatio,
-            avgSaturation: yoloResult.avgSaturation,
-            allClasses: yoloResult.allClasses,
-            inferenceTimeMs: Date.now() - startTime,
-            yoloResult,
-            errorMessage: rejectInfo.fullMessage,
-          };
-          this.cache.set(cacheKey, rejectResult);
-          return rejectResult;
-        }
-
         case 'use_local': {
           const localResult: RecognitionResult = {
             status: 'success',
@@ -226,12 +202,14 @@ class RecognitionOrchestrator {
             allClasses: yoloResult.allClasses,
             inferenceTimeMs: Date.now() - startTime,
             yoloResult,
+            llmUsed: false,
           };
           this.cache.set(cacheKey, localResult);
           return localResult;
         }
 
-        case 'call_llm':
+        case 'reject':
+        case 'call_llm': {
           const llmResponse = await this.llmService.identify(
             imagePath,
             yoloResult.topClass,
@@ -240,7 +218,34 @@ class RecognitionOrchestrator {
           if (llmResponse.success && llmResponse.flowerInfo) {
             const flower = llmResponse.flowerInfo;
 
-            if (flower.confidence < 0.5) {
+            if (flower.confidence >= 0.3) {
+              const llmSuccessResult: RecognitionResult = {
+                status: 'success',
+                source: 'llm',
+                flowerName: flower.name,
+                topClass: flower.name,
+                confidence: flower.confidence,
+                margin: yoloResult.margin,
+                entropy: yoloResult.entropy,
+                dropOff: yoloResult.dropOff,
+                bottomSum: yoloResult.bottomSum,
+                greenRatio: yoloResult.greenRatio,
+                avgSaturation: yoloResult.avgSaturation,
+                scientificName: flower.scientificName,
+                family: flower.family,
+                origin: flower.origin,
+                bloomPeriod: flower.bloomPeriod,
+                description: flower.description,
+                careGuide: buildCareGuide(flower),
+                allClasses: yoloResult.allClasses,
+                inferenceTimeMs: Date.now() - startTime,
+                llmLatencyMs: llmResponse.latencyMs,
+                yoloResult,
+                llmUsed: true,
+              };
+              this.cache.set(cacheKey, llmSuccessResult);
+              return llmSuccessResult;
+            } else {
               const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
               const llmRejectResult: RecognitionResult = {
                 status: 'rejected',
@@ -259,46 +264,46 @@ class RecognitionOrchestrator {
                 llmLatencyMs: llmResponse.latencyMs,
                 yoloResult,
                 errorMessage: noFlowerInfo.fullMessage,
+                imageContent: flower.imageContent || flower.description,
+                llmUsed: true,
               };
               this.cache.set(cacheKey, llmRejectResult);
               return llmRejectResult;
             }
-
-            const llmSuccessResult: RecognitionResult = {
-              status: 'success',
-              source: 'llm',
-              flowerName: flower.name,
-              topClass: flower.name,
-              confidence: flower.confidence,
-              margin: yoloResult.margin,
-              entropy: yoloResult.entropy,
-              dropOff: yoloResult.dropOff,
-              bottomSum: yoloResult.bottomSum,
-              greenRatio: yoloResult.greenRatio,
-              avgSaturation: yoloResult.avgSaturation,
-              scientificName: flower.scientificName,
-              family: flower.family,
-              origin: flower.origin,
-              bloomPeriod: flower.bloomPeriod,
-              description: flower.description,
-              careGuide: buildCareGuide(flower),
-              allClasses: yoloResult.allClasses,
-              inferenceTimeMs: Date.now() - startTime,
-              llmLatencyMs: llmResponse.latencyMs,
-              yoloResult,
-            };
-            this.cache.set(cacheKey, llmSuccessResult);
-            return llmSuccessResult;
           } else {
-            logger.info('Orchestrator', 'LLM 失败，回退到本地结果');
+            const errorCode = llmResponse.errorMessage
+              ? inferErrorCode(llmResponse.errorMessage)
+              : ErrorCode.LLM_CALL_FAILED;
+            const errorInfo = getErrorInfo(errorCode);
 
-            // 根据错误信息映射到对应错误码的 UI 文案
-            const isTimeout =
-              llmResponse.errorMessage?.includes('超时') ||
-              llmResponse.errorMessage?.includes('timeout');
-            const llmErrorInfo = getErrorInfo(
-              isTimeout ? ErrorCode.LLM_TIMEOUT : ErrorCode.LLM_CALL_FAILED,
-            );
+            const isLikelyNotFlower =
+              decision.action === 'reject' ||
+              yoloResult.confidence < LOW_CONFIDENCE;
+
+            if (isLikelyNotFlower) {
+              const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
+              const rejectResult: RecognitionResult = {
+                status: 'rejected',
+                source: 'yolov11',
+                flowerName: '未知',
+                topClass: yoloResult.topClass,
+                confidence: yoloResult.confidence,
+                margin: yoloResult.margin,
+                entropy: yoloResult.entropy,
+                dropOff: yoloResult.dropOff,
+                bottomSum: yoloResult.bottomSum,
+                greenRatio: yoloResult.greenRatio,
+                avgSaturation: yoloResult.avgSaturation,
+                allClasses: yoloResult.allClasses,
+                inferenceTimeMs: Date.now() - startTime,
+                llmLatencyMs: llmResponse.latencyMs,
+                yoloResult,
+                errorMessage: noFlowerInfo.fullMessage,
+                llmUsed: false,
+              };
+              this.cache.set(cacheKey, rejectResult);
+              return rejectResult;
+            }
 
             const fallbackResult: RecognitionResult = {
               status: 'low_confidence',
@@ -316,17 +321,18 @@ class RecognitionOrchestrator {
               inferenceTimeMs: Date.now() - startTime,
               llmLatencyMs: llmResponse.latencyMs,
               yoloResult,
-              errorMessage: `${llmErrorInfo.title}。${llmErrorInfo.suggestion}`,
+              errorMessage: errorInfo.fullMessage,
+              llmUsed: false,
             };
             this.cache.set(cacheKey, fallbackResult);
             return fallbackResult;
           }
+        }
       }
     } catch (error) {
       const err = error as Error;
       logger.error('Orchestrator', '识别异常:', err.message);
 
-      // 使用 ErrorHandler 将异常映射为用户友好的错误文案
       const errorInfo = getErrorInfoFromError(
         err,
         ErrorCode.RECOGNITION_FAILED,
@@ -345,6 +351,7 @@ class RecognitionOrchestrator {
         avgSaturation: 0,
         inferenceTimeMs: Date.now() - startTime,
         errorMessage: errorInfo.fullMessage,
+        llmUsed: false,
       };
       return errorResult;
     }
@@ -388,6 +395,7 @@ class RecognitionOrchestrator {
           careGuide: buildCareGuide(flower),
           inferenceTimeMs: Date.now() - startTime,
           llmLatencyMs: llmResponse.latencyMs,
+          llmUsed: true,
         };
       }
     } catch (error) {

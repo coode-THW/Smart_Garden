@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
+import ImageResizer from 'react-native-image-resizer';
+import NetInfo from '@react-native-community/netinfo';
 import logger from './LoggerService';
+import { QWEN_API_KEY, DOUBAO_API_KEY } from '@env';
 
 import {
   LLM_PRIMARY_URL,
@@ -22,6 +25,7 @@ export interface LlmFlowerInfo {
   origin: string;
   bloomPeriod: string;
   description: string;
+  imageContent?: string;
   careGuide: {
     water: string;
     fertilize: string;
@@ -46,20 +50,21 @@ interface LlmApiConfig {
 }
 
 const getApiKey = (keyName: string): string => {
-  const globalAny = globalThis as unknown as Record<string, string | undefined>;
+  const envKeys: Record<string, string | undefined> = {
+    QWEN_API_KEY,
+    DOUBAO_API_KEY,
+  };
 
-  if (globalAny[keyName]) {
-    return globalAny[keyName]!;
+  const result = envKeys[keyName] || '';
+  const keyLength = result?.length || 0;
+  // 使用 console.log 确保在 Logcat 中可见
+  console.log(`[LlmService] getApiKey("${keyName}") 值长度: ${keyLength}`);
+  logger.info('LlmService', `getApiKey("${keyName}")`, `值长度: ${keyLength}`);
+  if (!result) {
+    console.warn(`[LlmService] API Key "${keyName}" 未配置，请检查 .env 文件`);
+    logger.warn('LlmService', `API Key "${keyName}" 未配置，请检查 .env 文件`);
   }
-
-  try {
-    const processEnv = (globalThis as any).process?.env;
-    if (processEnv && processEnv[keyName]) {
-      return processEnv[keyName];
-    }
-  } catch {}
-
-  return '';
+  return result;
 };
 
 const getApiConfig = (
@@ -77,11 +82,33 @@ const getApiConfig = (
   };
 };
 
+const IMAGE_MAX_WIDTH = 1024;
+const IMAGE_MAX_HEIGHT = 1024;
+const IMAGE_QUALITY = 80;
+
 async function readImageAsBase64(imagePath: string): Promise<string> {
-  const filePath =
-    Platform.OS === 'android' ? imagePath.replace('file://', '') : imagePath;
-  const base64 = await RNFS.readFile(filePath, 'base64');
-  return `data:image/jpeg;base64,${base64}`;
+  try {
+    const resizedImage = await ImageResizer.createResizedImage(
+      imagePath,
+      IMAGE_MAX_WIDTH,
+      IMAGE_MAX_HEIGHT,
+      'JPEG',
+      IMAGE_QUALITY,
+    );
+
+    const filePath =
+      Platform.OS === 'android'
+        ? resizedImage.uri.replace('file://', '')
+        : resizedImage.uri;
+    const base64 = await RNFS.readFile(filePath, 'base64');
+    return `data:image/jpeg;base64,${base64}`;
+  } catch (e) {
+    logger.warn('LlmService', '图片压缩失败，使用原始图片:', e);
+    const filePath =
+      Platform.OS === 'android' ? imagePath.replace('file://', '') : imagePath;
+    const base64 = await RNFS.readFile(filePath, 'base64');
+    return `data:image/jpeg;base64,${base64}`;
+  }
 }
 
 function buildPrompt(base64Image: string, localGuess?: string): string {
@@ -90,7 +117,7 @@ function buildPrompt(base64Image: string, localGuess?: string): string {
     : '';
 
   return `
-你是一个专业的花卉识别助手。请仔细分析这张图片中的花卉，提供详细的结构化信息。
+你是一个专业的花卉识别助手。请仔细分析这张图片中的内容。
 
 ${guessText}
 
@@ -104,6 +131,7 @@ ${guessText}
   "origin": "产地",
   "bloomPeriod": "花期",
   "description": "简要描述（20-50字）",
+  "imageContent": "仅在图片中不是花卉时填写，花卉时省略此字段",
   "careGuide": {
     "water": "浇水建议",
     "fertilize": "施肥建议",
@@ -112,13 +140,25 @@ ${guessText}
   }
 }
 
-如果图片中不是花卉或无法识别，请将 confidence 设为 0，并在 description 中说明原因。
+如果图片中是花卉：
+- confidence 设为 0.5-1.0（根据识别置信度）
+- imageContent 留空或与 description 相同
+
+如果图片中不是花卉或无法识别：
+- confidence 设为 0
+- name 设为 "未知"
+- imageContent 省略不输出
+- description 说明不是花卉的原因
 `;
 }
 
 function parseJsonResponse(rawText: string): LlmFlowerInfo | null {
   try {
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    const cleanText = rawText
+      .replace(/```json\s*/g, '')
+      .replace(/\s*```/g, '')
+      .trim();
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const jsonStr = jsonMatch[0];
       const parsed = JSON.parse(jsonStr);
@@ -168,7 +208,16 @@ async function callApi(config: LlmApiConfig, prompt: string): Promise<string> {
   ]);
 
   if (!response.ok) {
-    throw new Error(`LLM API 请求失败: ${response.status}`);
+    const errorText = await response.text().catch(() => '');
+    const statusText = response.statusText || '';
+    logger.error(
+      'LlmService',
+      `LLM API 请求失败`,
+      `| URL: ${config.url}`,
+      `| Status: ${response.status} ${statusText}`,
+      `| Response: ${errorText.slice(0, 500)}`,
+    );
+    throw new Error(`LLM API 请求失败: ${response.status} ${statusText}`);
   }
 
   const data = await response.json();
@@ -181,8 +230,29 @@ async function callApiWithImage(
   localGuess?: string,
 ): Promise<string> {
   if (!config.apiKey) {
-    throw new Error('LLM API Key 未配置');
+    const errorMsg = 'LLM API Key 未配置';
+    console.error(`[LlmService] ${errorMsg}`);
+    throw new Error(errorMsg);
   }
+
+  // 使用 console.log 确保在 Logcat 中可见
+  console.log(
+    `[LlmService] callApiWithImage - URL: ${config.url}, model: ${config.model}`,
+  );
+  console.log(
+    `[LlmService] callApiWithImage - base64图片长度: ${base64Image.length}`,
+  );
+  logger.info(
+    'LlmService',
+    'callApiWithImage',
+    `URL: ${config.url}`,
+    `model: ${config.model}`,
+  );
+  logger.info(
+    'LlmService',
+    'callApiWithImage',
+    `base64图片长度: ${base64Image.length}`,
+  );
 
   const headers = {
     'Content-Type': 'application/json',
@@ -207,6 +277,10 @@ async function callApiWithImage(
     max_tokens: 1024,
   };
 
+  // 使用 console.log 确保在 Logcat 中可见
+  console.log('[LlmService] callApiWithImage - 开始发送请求...');
+  logger.info('LlmService', 'callApiWithImage', '开始发送请求...');
+
   const response = await Promise.race([
     fetch(config.url, {
       method: 'POST',
@@ -216,18 +290,39 @@ async function callApiWithImage(
     createTimeoutPromise(),
   ]);
 
+  // 使用 console.log 确保在 Logcat 中可见
+  console.log(
+    `[LlmService] callApiWithImage - 收到响应, status: ${response.status}`,
+  );
+  logger.info(
+    'LlmService',
+    'callApiWithImage',
+    `收到响应, status: ${response.status}`,
+  );
+
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`LLM API 请求失败: ${response.status} ${errorText}`);
+    const statusText = response.statusText || '';
+    logger.error(
+      'LlmService',
+      `LLM API 请求失败`,
+      `| URL: ${config.url}`,
+      `| Status: ${response.status} ${statusText}`,
+      `| Response: ${errorText.slice(0, 500)}`,
+    );
+    throw new Error(`LLM API 请求失败: ${response.status} ${statusText}`);
   }
 
   const data = await response.json();
   return data.choices?.[0]?.message?.content || '';
 }
 
+const HEALTH_RETRY_INTERVAL_MS = 30000;
+
 class LlmService {
   private static instance: LlmService;
   private primaryHealthy: boolean = true;
+  private primaryFailureTime: number = 0;
 
   static getInstance(): LlmService {
     if (!LlmService.instance) {
@@ -236,10 +331,77 @@ class LlmService {
     return LlmService.instance;
   }
 
+  private shouldRetryPrimary(): boolean {
+    if (this.primaryHealthy) {
+      return true;
+    }
+    const elapsed = Date.now() - this.primaryFailureTime;
+    if (elapsed >= HEALTH_RETRY_INTERVAL_MS) {
+      logger.info('LlmService', '主模型失败已超过30秒，尝试重新连接');
+      return true;
+    }
+    return false;
+  }
+
+  private async checkNetwork(): Promise<boolean> {
+    try {
+      const state = await NetInfo.fetch();
+      const isConnected = state.isConnected ?? false;
+      const isReachable = state.isInternetReachable ?? false;
+      const type = state.type || 'unknown';
+      // 使用 console.log 确保在 Logcat 中可见
+      console.log(
+        `[LlmService] 网络状态检查 - type: ${type}, isConnected: ${isConnected}, isReachable: ${isReachable}`,
+      );
+      logger.info(
+        'LlmService',
+        '网络状态检查',
+        `type: ${type}`,
+        `isConnected: ${isConnected}`,
+        `isReachable: ${isReachable}`,
+      );
+
+      // 如果完全没有连接，直接返回false
+      if (!isConnected) {
+        console.warn('[LlmService] 网络未连接，跳过LLM调用');
+        logger.warn('LlmService', '网络未连接，跳过LLM调用');
+        return false;
+      }
+
+      // 如果已连接但 isReachable 为 false（如蜂窝网络刚连接时），继续尝试调用
+      // 因为 isReachable 检查在某些网络环境下可能不准确
+      if (!isReachable) {
+        console.warn(
+          '[LlmService] 网络已连接但可能无法访问互联网，尝试继续调用',
+        );
+        logger.warn(
+          'LlmService',
+          '网络已连接但可能无法访问互联网，尝试继续调用',
+        );
+        // 仍然返回 true，让调用继续
+      }
+
+      return true;
+    } catch (e) {
+      console.warn('[LlmService] 网络状态检查失败，继续尝试调用:', e);
+      logger.warn('LlmService', '网络状态检查失败，继续尝试调用:', e);
+      return true;
+    }
+  }
+
   async identify(imagePath: string, localGuess?: string): Promise<LlmResponse> {
     const startTime = Date.now();
-    let useSecondary = !this.primaryHealthy;
+    let useSecondary = !this.shouldRetryPrimary();
     let lastError: Error | null = null;
+
+    if (!(await this.checkNetwork())) {
+      return {
+        success: false,
+        errorMessage: '网络不可用',
+        modelUsed: useSecondary ? 'secondary' : 'primary',
+        latencyMs: Date.now() - startTime,
+      };
+    }
 
     for (let attempt = 0; attempt <= LLM_MAX_RETRIES; attempt++) {
       const config = getApiConfig(useSecondary);
@@ -298,9 +460,15 @@ class LlmService {
         );
 
         if (!useSecondary) {
+          const secondaryApiKey = getApiKey(LLM_SECONDARY_KEY_ENV);
+          if (!secondaryApiKey) {
+            logger.info('LlmService', '备用模型 API Key 未配置，跳过备用模型');
+            break;
+          }
           logger.info('LlmService', '切换到备用模型');
           useSecondary = true;
           this.primaryHealthy = false;
+          this.primaryFailureTime = Date.now();
         } else {
           break;
         }
@@ -319,8 +487,17 @@ class LlmService {
 
   async describeFlower(name: string): Promise<LlmResponse> {
     const startTime = Date.now();
-    let useSecondary = !this.primaryHealthy;
+    let useSecondary = !this.shouldRetryPrimary();
     let lastError: Error | null = null;
+
+    if (!(await this.checkNetwork())) {
+      return {
+        success: false,
+        errorMessage: '网络不可用',
+        modelUsed: useSecondary ? 'secondary' : 'primary',
+        latencyMs: Date.now() - startTime,
+      };
+    }
 
     for (let attempt = 0; attempt <= LLM_MAX_RETRIES; attempt++) {
       const config = getApiConfig(useSecondary);
@@ -390,8 +567,14 @@ class LlmService {
         );
 
         if (!useSecondary) {
+          const secondaryApiKey = getApiKey(LLM_SECONDARY_KEY_ENV);
+          if (!secondaryApiKey) {
+            logger.info('LlmService', '备用模型 API Key 未配置，跳过备用模型');
+            break;
+          }
           useSecondary = true;
           this.primaryHealthy = false;
+          this.primaryFailureTime = Date.now();
         } else {
           break;
         }

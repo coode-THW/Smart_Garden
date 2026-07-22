@@ -23,6 +23,7 @@ import { Icon } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import YoloService from '../services/YoloService';
+import RecognitionOrchestrator from '../services/RecognitionOrchestrator';
 import CameraViewfinder from '../components/CameraViewfinder';
 import DesignCard from '../components/DesignCard';
 import SectionHeader from '../components/SectionHeader';
@@ -33,7 +34,7 @@ import ButtonGroup from '../components/ButtonGroup';
 import { getKnowledge } from '../services/KnowledgeService';
 import { GardenService } from '../services/GardenService';
 import { CorrectionService } from '../services/CorrectionService';
-import type { InferenceResult } from '../services/YoloService';
+import type { RecognitionResult } from '../services/RecognitionOrchestrator';
 import type { CareGuide } from '../types';
 import { ErrorCode } from '../types';
 import {
@@ -59,7 +60,7 @@ type ScreenState =
   | { phase: 'idle' }
   | { phase: 'camera' }
   | { phase: 'inferring'; imageUri: string }
-  | { phase: 'result'; imageUri: string; result: InferenceResult }
+  | { phase: 'result'; imageUri: string; result: RecognitionResult }
   | { phase: 'error'; message: string };
 
 // ━━━ 颜色 ━━━
@@ -95,7 +96,7 @@ function RecognizeScreen(): React.JSX.Element {
   const hintErrorText = isDarkMode ? '#E8A0A0' : '#721C24';
 
   // ━━━ 模型就绪状态（模型在 App.tsx 启动时预加载） ━━━
-  const modelReady = YoloService.getInstance().isLoaded;
+  const modelReady = RecognitionOrchestrator.getInstance().isModelLoaded;
 
   // ━━━ 获取花卉知识 ━━━
 
@@ -150,7 +151,10 @@ function RecognizeScreen(): React.JSX.Element {
     async function run() {
       try {
         setState({ phase: 'inferring', imageUri: localUri });
-        const result = await YoloService.getInstance().detect(localUri);
+        // 使用 RecognitionOrchestrator 进行一站式识别（包含置信度判断和LLM调用）
+        const result = await RecognitionOrchestrator.getInstance().recognize(
+          localUri,
+        );
         setState({ phase: 'result', imageUri: localUri, result });
       } catch (e: any) {
         const info = getErrorInfoFromError(e);
@@ -181,8 +185,9 @@ function RecognizeScreen(): React.JSX.Element {
 
       setState({ phase: 'inferring', imageUri: asset.uri });
 
-      // 一站式识别：预处理 + 推理
-      const inferenceResult = await YoloService.getInstance().detect(asset.uri);
+      // 使用 RecognitionOrchestrator 进行一站式识别（包含置信度判断和LLM调用）
+      const inferenceResult =
+        await RecognitionOrchestrator.getInstance().recognize(asset.uri);
 
       setState({
         phase: 'result',
@@ -328,28 +333,9 @@ function RecognizeScreen(): React.JSX.Element {
     </View>
   );
 
-  const renderResult = (imageUri: string, result: InferenceResult) => {
-    // 五重判断：置信度 + 边距 + 熵 + 跌落比 + 底部和 + 绿色占比 + 饱和度
-    const confOk = result.confidence >= 0.85;
-    const marginOk = result.margin >= 0.15;
-    const entropyOk = result.entropy < 0.8;
-    const dropOffOk = result.dropOff >= DROP_OFF_THRESHOLD;
-    const bottomOk = result.bottomSum < BOTTOM_SUM_MAX;
-    const greenOk = result.greenRatio < GREEN_RATIO_MAX;
-    const satOk = result.avgSaturation >= SATURATION_MIN;
-
-    const isHigh =
-      confOk &&
-      marginOk &&
-      entropyOk &&
-      dropOffOk &&
-      bottomOk &&
-      greenOk &&
-      satOk;
-
-    // ━━━ 非花卉 / 低置信度 ━━━
-    if (!isHigh) {
-      const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
+  const renderResult = (imageUri: string, result: RecognitionResult) => {
+    // ━━━ 拒绝（非花卉） ━━━
+    if (result.status === 'rejected') {
       return (
         <View style={styles.resultScroll}>
           <View style={{ paddingHorizontal: SPACING.lg }}>
@@ -389,13 +375,12 @@ function RecognizeScreen(): React.JSX.Element {
                 />
               </View>
               <Text style={[styles.notFlowerTitle, { color: textColor }]}>
-                {noFlowerInfo.title}
+                未识别到花卉
               </Text>
               <Text style={[styles.notFlowerHint, { color: secondaryColor }]}>
-                {noFlowerInfo.description}
-                {'\n'}
-                {noFlowerInfo.suggestion}
+                {result.errorMessage || '图片中未检测到花卉，或图片质量过差'}
               </Text>
+
               <ActionButton
                 title="重新拍摄"
                 variant="primary"
@@ -404,6 +389,134 @@ function RecognizeScreen(): React.JSX.Element {
                 fullWidth
                 onPress={handleReset}
               />
+            </View>
+          </DesignCard>
+        </View>
+      );
+    }
+
+    // ━━━ 低置信度 ━━━
+    if (result.status === 'low_confidence') {
+      return (
+        <View style={styles.resultScroll}>
+          <View style={{ paddingHorizontal: SPACING.lg }}>
+            <Image
+              source={{ uri: imageUri }}
+              style={{
+                width: '100%',
+                height: 240,
+                borderRadius: RADIUS.xl,
+              }}
+            />
+          </View>
+          <DesignCard
+            bg={cardBg}
+            style={{ marginTop: -28, marginHorizontal: SPACING.lg }}
+            padding={SPACING.xl}
+          >
+            <View style={{ alignItems: 'center' }}>
+              <View
+                style={[
+                  styles.iconCircle,
+                  {
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: isDarkMode
+                      ? COLORS.warning + '20'
+                      : COLORS.warning + '15',
+                    marginBottom: SPACING.lg,
+                  },
+                ]}
+              >
+                <Icon source="alert-circle" size={40} color={COLORS.warning} />
+              </View>
+              <Text style={[styles.notFlowerTitle, { color: textColor }]}>
+                识别结果不确定
+              </Text>
+              <Text style={[styles.notFlowerHint, { color: secondaryColor }]}>
+                {result.errorMessage ||
+                  '大模型识别失败，以下为本地模型识别结果'}
+              </Text>
+              <View
+                style={{
+                  marginTop: SPACING.lg,
+                  width: '100%',
+                  padding: SPACING.md,
+                  backgroundColor: isDarkMode
+                    ? COLORS.bgDark
+                    : COLORS.bgSecondary,
+                  borderRadius: RADIUS.md,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: secondaryColor,
+                    marginBottom: SPACING.sm,
+                  }}
+                >
+                  识别详情：
+                </Text>
+                <Text style={{ fontSize: 12, color: textColor }}>
+                  本地模型识别：{result.topClass} (置信度:{' '}
+                  {(result.confidence * 100).toFixed(1)}%)
+                </Text>
+                {result.allClasses && (
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: secondaryColor,
+                      marginTop: SPACING.xs,
+                    }}
+                  >
+                    其他可能：
+                    {result.allClasses
+                      .slice(0, 3)
+                      .map(
+                        c => `${c.name}: ${(c.probability * 100).toFixed(1)}%`,
+                      )
+                      .join(', ')}
+                  </Text>
+                )}
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: secondaryColor,
+                    marginTop: SPACING.xs,
+                  }}
+                >
+                  识别来源：
+                  {result.source === 'yolov11' ? '本地模型' : '大模型'}
+                </Text>
+              </View>
+              <View
+                style={{
+                  marginTop: SPACING.lg,
+                  flexDirection: 'row',
+                  gap: SPACING.md,
+                  width: '100%',
+                }}
+              >
+                <ActionButton
+                  title="重新拍摄"
+                  variant="outline"
+                  size="md"
+                  icon="camera-retake"
+                  flex
+                  onPress={handleReset}
+                />
+                <ActionButton
+                  title="查看详情"
+                  variant="primary"
+                  size="md"
+                  icon="info"
+                  flex
+                  onPress={() =>
+                    setState({ phase: 'result', imageUri, result })
+                  }
+                />
+              </View>
             </View>
           </DesignCard>
         </View>
@@ -463,13 +576,43 @@ function RecognizeScreen(): React.JSX.Element {
               >
                 {result.topClass}
               </Text>
-              {knowledge && (
+              {result.llmUsed && (
                 <Text
-                  style={[styles.scientificName, { color: secondaryColor }]}
-                  numberOfLines={1}
+                  style={{
+                    fontSize: 12,
+                    color: COLORS.info,
+                    fontWeight: '500',
+                  }}
                 >
-                  {knowledge.scientificName}
+                  AI辅助识别
                 </Text>
+              )}
+              {(knowledge || result.scientificName) && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <Text
+                    style={[styles.scientificName, { color: secondaryColor }]}
+                    numberOfLines={1}
+                  >
+                    {knowledge?.scientificName || result.scientificName}
+                  </Text>
+                  {!knowledge && result.scientificName && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        color: COLORS.warning,
+                        marginLeft: SPACING.xs,
+                      }}
+                    >
+                      AI
+                    </Text>
+                  )}
+                </View>
               )}
             </View>
             <StatusBadge
@@ -477,33 +620,6 @@ function RecognizeScreen(): React.JSX.Element {
               variant="success"
             />
           </View>
-
-          {/* 信息区 — 图标 + 文字（优先使用LLM返回的数据） */}
-          {((knowledge && knowledge.scientificName) ||
-            result.scientificName) && (
-            <View style={styles.infoBlock}>
-              {renderInfoRow(
-                'domain',
-                '学名',
-                knowledge?.scientificName || result.scientificName || '',
-              )}
-              {renderInfoRow(
-                'family-tree',
-                '科属',
-                knowledge?.family || result.family || '',
-              )}
-              {renderInfoRow(
-                'map-marker',
-                '产地',
-                knowledge?.origin || result.origin || '',
-              )}
-              {renderInfoRow(
-                'calendar',
-                '花期',
-                knowledge?.bloomPeriod || result.bloomPeriod || '',
-              )}
-            </View>
-          )}
 
           {/* 细分隔 */}
           <View
@@ -678,6 +794,103 @@ function RecognizeScreen(): React.JSX.Element {
                     </Text>
                   </View>
                 </View>
+              ) : result.careGuide ? (
+                <View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: SPACING.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.warning,
+                        fontWeight: '500',
+                      }}
+                    >
+                      AI生成
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        color: secondaryColor,
+                        marginLeft: SPACING.xs,
+                      }}
+                    >
+                      信息仅供参考，请谨慎识别
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.careGrid, { borderColor: dividerColor }]}
+                  >
+                    <View style={styles.careCell}>
+                      <Icon source="water" size={20} color={COLORS.info} />
+                      <Text
+                        style={[
+                          styles.careLabel,
+                          { color: isDarkMode ? COLORS.sage : COLORS.forest },
+                        ]}
+                      >
+                        浇水
+                      </Text>
+                      <Text style={[styles.careValue, { color: textColor }]}>
+                        {result.careGuide.watering?.frequency || ''}
+                      </Text>
+                    </View>
+                    <View style={styles.careCell}>
+                      <Icon source="sprout" size={20} color={COLORS.success} />
+                      <Text
+                        style={[
+                          styles.careLabel,
+                          { color: isDarkMode ? COLORS.sage : COLORS.forest },
+                        ]}
+                      >
+                        施肥
+                      </Text>
+                      <Text style={[styles.careValue, { color: textColor }]}>
+                        {result.careGuide.fertilizing?.period || ''}
+                      </Text>
+                    </View>
+                    <View style={styles.careCell}>
+                      <Icon
+                        source="white-balance-sunny"
+                        size={20}
+                        color={COLORS.warning}
+                      />
+                      <Text
+                        style={[
+                          styles.careLabel,
+                          { color: isDarkMode ? COLORS.sage : COLORS.forest },
+                        ]}
+                      >
+                        光照
+                      </Text>
+                      <Text style={[styles.careValue, { color: textColor }]}>
+                        {result.careGuide.lighting?.requirement || ''}
+                      </Text>
+                    </View>
+                    <View style={styles.careCell}>
+                      <Icon
+                        source="thermometer"
+                        size={20}
+                        color={COLORS.error}
+                      />
+                      <Text
+                        style={[
+                          styles.careLabel,
+                          { color: isDarkMode ? COLORS.sage : COLORS.forest },
+                        ]}
+                      >
+                        环境
+                      </Text>
+                      <Text style={[styles.careValue, { color: textColor }]}>
+                        {result.careGuide.environment?.temperature || ''}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               ) : (
                 <View style={styles.knowledgePlaceholder}>
                   <Icon
@@ -731,20 +944,67 @@ function RecognizeScreen(): React.JSX.Element {
                 </View>
               </View>
             ) : (
-              <View style={styles.knowledgePlaceholder}>
-                <Icon
-                  source="book-open-page-variant"
-                  size={32}
-                  color={secondaryColor}
-                />
-                <Text
-                  style={[
-                    styles.knowledgePlaceholderText,
-                    { color: secondaryColor },
-                  ]}
+              <View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: SPACING.sm,
+                  }}
                 >
-                  知识库建设中
-                </Text>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      color: COLORS.warning,
+                      fontWeight: '500',
+                    }}
+                  >
+                    AI生成
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      color: secondaryColor,
+                      marginLeft: SPACING.xs,
+                    }}
+                  >
+                    信息仅供参考，请谨慎识别
+                  </Text>
+                </View>
+                <View style={styles.grid}>
+                  <View style={styles.gridCell}>
+                    <Text style={[styles.gridLabel, { color: secondaryColor }]}>
+                      学名
+                    </Text>
+                    <Text style={[styles.gridValue, { color: textColor }]}>
+                      {result.scientificName || '暂无'}
+                    </Text>
+                  </View>
+                  <View style={styles.gridCell}>
+                    <Text style={[styles.gridLabel, { color: secondaryColor }]}>
+                      科属
+                    </Text>
+                    <Text style={[styles.gridValue, { color: textColor }]}>
+                      {result.family || '暂无'}
+                    </Text>
+                  </View>
+                  <View style={styles.gridCell}>
+                    <Text style={[styles.gridLabel, { color: secondaryColor }]}>
+                      产地
+                    </Text>
+                    <Text style={[styles.gridValue, { color: textColor }]}>
+                      {result.origin || '暂无'}
+                    </Text>
+                  </View>
+                  <View style={styles.gridCell}>
+                    <Text style={[styles.gridLabel, { color: secondaryColor }]}>
+                      花期
+                    </Text>
+                    <Text style={[styles.gridValue, { color: textColor }]}>
+                      {result.bloomPeriod || '暂无'}
+                    </Text>
+                  </View>
+                </View>
               </View>
             )}
           </View>
@@ -997,8 +1257,8 @@ function RecognizeScreen(): React.JSX.Element {
 
   // ━━━ 主布局 ━━━
 
-  const modelLoaded = YoloService.getInstance().isLoaded;
-  const modelEp = YoloService.getInstance().info?.executionProvider;
+  const modelLoaded = RecognitionOrchestrator.getInstance().isModelLoaded;
+  const modelEp = RecognitionOrchestrator.getInstance().executionProvider;
 
   if (state.phase === 'camera') {
     return (

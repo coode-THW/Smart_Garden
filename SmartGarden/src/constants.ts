@@ -286,3 +286,20 @@ export const TYPOGRAPHY = {
 
 // ━━━ 模型资源 ━━━
 export const MODEL_ASSET = require('../assets/yolov11n-flower.onnx');
+export const MODEL_QUANTIZATION = 'fp16' as const;
+
+/**
+ * INT8 量化模型路径（延迟加载，避免不存在时的模块解析错误）
+ * 当需要使用 INT8 模型时，请先将 yolov11n-flower-int8.onnx 放置到 assets 目录
+ */
+export const getModelAssetInt8 = (): any => {
+  try {
+    return require('../assets/yolov11n-flower-int8.onnx');
+  } catch (e) {
+    console.warn(
+      'INT8 模型文件不存在，请使用 fp16 模式或添加 yolov11n-flower-int8.onnx 到 assets 目录',
+    );
+    return null;
+  }
+};
+export const MODEL_BENCHMARK_ENABLED = true;

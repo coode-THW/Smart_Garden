@@ -2,11 +2,16 @@
  * SmartGarden — 智慧花园 APP 入口
  *
  * 启动流程：显示欢迎页（4页引导+模型加载进度）→ 进入主界面
+ *
+ * Phase 1 第4单元优化：
+ * - 模型版本检查和更新
+ * - 启动预加载超时处理
+ * - 详细的加载状态管理
  */
 
-import React, {useEffect, useState} from 'react';
-import {StatusBar, useColorScheme} from 'react-native';
-import {Provider as PaperProvider, DefaultTheme} from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { StatusBar, useColorScheme } from 'react-native';
+import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import {
   NavigationContainer,
   DefaultTheme as NavigationDefaultTheme,
@@ -15,8 +20,9 @@ import {
 import RootNavigator from './src/navigation/RootNavigator';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import YoloService from './src/services/YoloService';
-import {UserService} from './src/services/UserService';
-import {COLORS} from './src/constants';
+import { UserService } from './src/services/UserService';
+import ModelUpdateService from './src/services/ModelUpdateService';
+import { COLORS } from './src/constants';
 import logger from './src/services/LoggerService';
 
 const paperTheme = {
@@ -28,7 +34,20 @@ const paperTheme = {
   },
 };
 
-// ━━━ 根组件 ━━━
+const PRELOAD_TIMEOUT_MS = 20000;
+
+async function checkModelUpdateInBackground(): Promise<void> {
+  try {
+    const updateService = ModelUpdateService.getInstance();
+    const updateInfo = await updateService.checkForUpdate();
+    if (updateInfo) {
+      logger.info('App', `发现模型更新: ${updateInfo.version}`);
+      logger.info('App', `更新说明: ${updateInfo.changelog}`);
+    }
+  } catch (e) {
+    logger.debug('App', '后台检查模型更新失败（可能是测试环境）:', e);
+  }
+}
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -39,24 +58,58 @@ function App(): React.JSX.Element {
   const [showWelcome, setShowWelcome] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isModelReady, setIsModelReady] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string>('');
 
-  // — 启动时初始化日志 + 预加载模型 + 初始化用户 —
   useEffect(() => {
-    // 日志服务优先初始化（这样后续加载日志能正常写入文件）
     logger.init();
 
-    Promise.all([
-      YoloService.getInstance().loadModel(pct => setProgress(pct)),
-      UserService.getInstance().initialize(),
-    ])
+    const startTime = Date.now();
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const timeoutPromise = new Promise<void>(resolve => {
+      timeoutId = setTimeout(() => {
+        logger.warn(
+          'App',
+          `预加载超时（${PRELOAD_TIMEOUT_MS}ms），跳过剩余任务`,
+        );
+        resolve();
+      }, PRELOAD_TIMEOUT_MS);
+    });
+
+    const initPromise = (async () => {
+      setLoadingStatus('初始化用户...');
+      await UserService.getInstance().initialize();
+
+      setLoadingStatus('检查模型更新...');
+      await ModelUpdateService.getInstance().initialize();
+      checkModelUpdateInBackground();
+
+      setLoadingStatus('加载AI模型...');
+      await YoloService.getInstance().loadModel(
+        pct => setProgress(pct),
+        PRELOAD_TIMEOUT_MS,
+      );
+
+      const loadTime = Date.now() - startTime;
+      logger.info('App', `启动预加载完成 (${loadTime}ms)`);
+    })();
+
+    Promise.race([initPromise, timeoutPromise])
       .then(() => {
+        clearTimeout(timeoutId);
         setIsModelReady(true);
+        logger.info('App', '启动预加载完成');
       })
-      .catch(() => {
-        // 加载失败也允许进入（识别页会显示错误）
+      .catch(error => {
+        clearTimeout(timeoutId);
+        logger.error('App', '启动预加载失败:', error);
         setIsModelReady(true);
       });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleEnterApp = () => {
     setShowWelcome(false);
@@ -72,12 +125,12 @@ function App(): React.JSX.Element {
         <RootNavigator />
       </NavigationContainer>
 
-      {/* 欢迎页覆盖层 */}
       {showWelcome && (
         <WelcomeScreen
           progress={progress}
           isReady={isModelReady}
           onEnterApp={handleEnterApp}
+          statusText={loadingStatus}
         />
       )}
     </PaperProvider>

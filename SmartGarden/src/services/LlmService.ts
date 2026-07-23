@@ -24,13 +24,36 @@ export interface LlmFlowerInfo {
   family: string;
   origin: string;
   bloomPeriod: string;
-  description: string;
-  imageContent?: string;
   careGuide: {
-    water: string;
-    fertilize: string;
-    sunlight: string;
-    temperature: string;
+    water: {
+      frequency: string;
+      amount: string;
+      timing: string;
+      method: string;
+    };
+    fertilize: {
+      period: string;
+      amount: string;
+      recommended: string[];
+    };
+    sunlight: {
+      requirement: string;
+      bestLocation: string;
+    };
+    temperature: {
+      ideal: string;
+      minimum: string;
+      maximum: string;
+    };
+    environment: {
+      humidity: string;
+      ventilation: string;
+    };
+    pests: {
+      common: string[];
+      prevention: string;
+      treatment: string;
+    };
   };
 }
 
@@ -117,7 +140,7 @@ function buildPrompt(base64Image: string, localGuess?: string): string {
     : '';
 
   return `
-你是一个专业的花卉识别助手。请仔细分析这张图片中的内容。
+你是一个专业的花卉识别与养护专家。请仔细分析这张图片中的内容，提供准确的花卉识别和专业养护建议。
 
 ${guessText}
 
@@ -126,29 +149,62 @@ ${guessText}
 {
   "name": "花卉名称（中文）",
   "confidence": 0.0-1.0（你对识别结果的置信度）,
-  "scientificName": "学名（拉丁名）",
-  "family": "科属",
-  "origin": "产地",
-  "bloomPeriod": "花期",
-  "description": "简要描述（20-50字）",
-  "imageContent": "仅在图片中不是花卉时填写，花卉时省略此字段",
+  "scientificName": "学名（拉丁名，如 Rosa hybrida）",
+  "family": "科属（如 蔷薇科蔷薇属）",
+  "origin": "产地（如 中国、欧洲、美洲热带）",
+  "bloomPeriod": "花期（如 春季3-5月）",
   "careGuide": {
-    "water": "浇水建议",
-    "fertilize": "施肥建议",
-    "sunlight": "光照要求",
-    "temperature": "温度要求"
+    "water": {
+      "frequency": "浇水频率（如 每周2-3次）",
+      "amount": "浇水量（如 保持盆土湿润，避免积水）",
+      "timing": "浇水时间（如 早晨或傍晚）",
+      "method": "浇水方式（如 沿盆边浇水，避免叶片沾水）"
+    },
+    "fertilize": {
+      "period": "施肥周期（如 生长期每月1次）",
+      "amount": "施肥量（如 薄肥勤施）",
+      "recommended": ["推荐肥料类型1", "推荐肥料类型2"]
+    },
+    "sunlight": {
+      "requirement": "光照需求（如 全日照、半日照、耐阴）",
+      "bestLocation": "最佳摆放位置（如 朝南阳台）"
+    },
+    "temperature": {
+      "ideal": "适宜温度（如 15-25°C）",
+      "minimum": "最低温度（如 5°C）",
+      "maximum": "最高温度（如 35°C）"
+    },
+    "environment": {
+      "humidity": "湿度要求（如 60%-80%）",
+      "ventilation": "通风要求（如 良好通风）"
+    },
+    "pests": {
+      "common": ["常见病虫害1", "常见病虫害2"],
+      "prevention": "预防措施（如 保持通风，定期检查）",
+      "treatment": "治疗方法（如 使用杀虫剂，剪除病叶）"
+    }
   }
 }
 
+## 识别规则：
+
 如果图片中是花卉：
-- confidence 设为 0.5-1.0（根据识别置信度）
-- imageContent 留空或与 description 相同
+- confidence 设为 0.5-1.0（根据识别置信度，越确定越高）
+- 提供完整的养护指南信息，每个字段都要填写
 
 如果图片中不是花卉或无法识别：
 - confidence 设为 0
 - name 设为 "未知"
-- imageContent 省略不输出
-- description 说明不是花卉的原因
+- 其他字段可以留空或填默认值
+
+## 养护建议质量要求：
+1. 浇水：说明频率、水量、时间、方法，避免笼统描述
+2. 施肥：说明周期、用量、推荐肥料类型
+3. 光照：明确光照需求等级和最佳摆放位置
+4. 温度：提供适宜温度范围和极端温度限制
+5. 病虫害：列出常见病虫害，提供预防和治疗建议
+
+请确保返回的 JSON 格式正确，所有字段值都使用双引号，数组使用方括号。
 `;
 }
 
@@ -195,7 +251,7 @@ async function callApi(config: LlmApiConfig, prompt: string): Promise<string> {
       },
     ],
     temperature: LLM_TEMPERATURE,
-    max_tokens: 1024,
+    max_tokens: 2048,
   };
 
   const response = await Promise.race([
@@ -274,7 +330,7 @@ async function callApiWithImage(
       },
     ],
     temperature: LLM_TEMPERATURE,
-    max_tokens: 1024,
+    max_tokens: 2048,
   };
 
   // 使用 console.log 确保在 Logcat 中可见
@@ -511,25 +567,58 @@ class LlmService {
         );
 
         const prompt = `
-请提供花卉"${name}"的详细信息。
+请提供花卉"${name}"的详细信息和专业养护指南。
 
 请严格按照以下 JSON 格式返回结果，不要包含任何 Markdown 格式或额外解释：
 
 {
   "name": "${name}",
   "confidence": 1.0,
-  "scientificName": "学名（拉丁名）",
-  "family": "科属",
-  "origin": "产地",
-  "bloomPeriod": "花期",
-  "description": "简要描述（20-50字）",
+  "scientificName": "学名（拉丁名，如 Rosa hybrida）",
+  "family": "科属（如 蔷薇科蔷薇属）",
+  "origin": "产地（如 中国、欧洲、美洲热带）",
+  "bloomPeriod": "花期（如 春季3-5月）",
   "careGuide": {
-    "water": "浇水建议",
-    "fertilize": "施肥建议",
-    "sunlight": "光照要求",
-    "temperature": "温度要求"
+    "water": {
+      "frequency": "浇水频率（如 每周2-3次）",
+      "amount": "浇水量（如 保持盆土湿润，避免积水）",
+      "timing": "浇水时间（如 早晨或傍晚）",
+      "method": "浇水方式（如 沿盆边浇水，避免叶片沾水）"
+    },
+    "fertilize": {
+      "period": "施肥周期（如 生长期每月1次）",
+      "amount": "施肥量（如 薄肥勤施）",
+      "recommended": ["推荐肥料类型1", "推荐肥料类型2"]
+    },
+    "sunlight": {
+      "requirement": "光照需求（如 全日照、半日照、耐阴）",
+      "bestLocation": "最佳摆放位置（如 朝南阳台）"
+    },
+    "temperature": {
+      "ideal": "适宜温度（如 15-25°C）",
+      "minimum": "最低温度（如 5°C）",
+      "maximum": "最高温度（如 35°C）"
+    },
+    "environment": {
+      "humidity": "湿度要求（如 60%-80%）",
+      "ventilation": "通风要求（如 良好通风）"
+    },
+    "pests": {
+      "common": ["常见病虫害1", "常见病虫害2"],
+      "prevention": "预防措施（如 保持通风，定期检查）",
+      "treatment": "治疗方法（如 使用杀虫剂，剪除病叶）"
+    }
   }
 }
+
+## 养护建议质量要求：
+1. 浇水：说明频率、水量、时间、方法，避免笼统描述
+2. 施肥：说明周期、用量、推荐肥料类型
+3. 光照：明确光照需求等级和最佳摆放位置
+4. 温度：提供适宜温度范围和极端温度限制
+5. 病虫害：列出常见病虫害，提供预防和治疗建议
+
+请确保返回的 JSON 格式正确，所有字段值都使用双引号，数组使用方括号。
 `;
 
         const rawResponse = await callApi(config, prompt);

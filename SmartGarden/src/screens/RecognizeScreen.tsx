@@ -838,6 +838,13 @@ function RecognizeScreen(): React.JSX.Element {
                       <Text style={[styles.careValue, { color: textColor }]}>
                         {result.careGuide.watering?.frequency || ''}
                       </Text>
+                      <Text style={[styles.careValue, { color: textColor }]}>
+                        {result.careGuide.watering?.amount || ''}
+                      </Text>
+                      <Text style={[styles.careSub, { color: secondaryColor }]}>
+                        {result.careGuide.watering?.timing || ''} ·{' '}
+                        {result.careGuide.watering?.method || ''}
+                      </Text>
                     </View>
                     <View style={styles.careCell}>
                       <Icon source="sprout" size={20} color={COLORS.success} />
@@ -851,6 +858,14 @@ function RecognizeScreen(): React.JSX.Element {
                       </Text>
                       <Text style={[styles.careValue, { color: textColor }]}>
                         {result.careGuide.fertilizing?.period || ''}
+                      </Text>
+                      <Text style={[styles.careValue, { color: textColor }]}>
+                        {result.careGuide.fertilizing?.amount || ''}
+                      </Text>
+                      <Text style={[styles.careSub, { color: secondaryColor }]}>
+                        {result.careGuide.fertilizing?.recommended?.join(
+                          '、',
+                        ) || ''}
                       </Text>
                     </View>
                     <View style={styles.careCell}>
@@ -870,6 +885,9 @@ function RecognizeScreen(): React.JSX.Element {
                       <Text style={[styles.careValue, { color: textColor }]}>
                         {result.careGuide.lighting?.requirement || ''}
                       </Text>
+                      <Text style={[styles.careSub, { color: secondaryColor }]}>
+                        最佳：{result.careGuide.lighting?.bestLocation || ''}
+                      </Text>
                     </View>
                     <View style={styles.careCell}>
                       <Icon
@@ -887,6 +905,10 @@ function RecognizeScreen(): React.JSX.Element {
                       </Text>
                       <Text style={[styles.careValue, { color: textColor }]}>
                         {result.careGuide.environment?.temperature || ''}
+                      </Text>
+                      <Text style={[styles.careSub, { color: secondaryColor }]}>
+                        湿度 {result.careGuide.environment?.humidity || ''} ·{' '}
+                        {result.careGuide.environment?.ventilation || ''}
                       </Text>
                     </View>
                   </View>

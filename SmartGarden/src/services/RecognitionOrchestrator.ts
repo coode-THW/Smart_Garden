@@ -19,6 +19,7 @@ import {
   getErrorInfoFromError,
   inferErrorCode,
 } from './ErrorHandler';
+import { getKnowledge } from './KnowledgeService';
 import logger from './LoggerService';
 
 export type RecognitionStatus = 'success' | 'rejected' | 'low_confidence';
@@ -39,8 +40,6 @@ export interface RecognitionResult {
   family?: string;
   origin?: string;
   bloomPeriod?: string;
-  description?: string;
-  imageContent?: string;
   careGuide?: CareGuide;
   allClasses?: Array<{ name: string; probability: number }>;
   inferenceTimeMs: number;
@@ -56,6 +55,7 @@ interface RecognitionDecision {
 }
 
 function buildCareGuide(flower: LlmFlowerInfo): CareGuide {
+  const care = flower.careGuide || {};
   return {
     flowerId: 0,
     flowerName: flower.name,
@@ -64,26 +64,30 @@ function buildCareGuide(flower: LlmFlowerInfo): CareGuide {
     origin: flower.origin,
     bloomPeriod: flower.bloomPeriod,
     watering: {
-      frequency: flower.careGuide?.water || '',
-      amount: '',
-      timing: '',
-      method: '',
+      frequency: care.water?.frequency || '',
+      amount: care.water?.amount || '',
+      timing: care.water?.timing || '',
+      method: care.water?.method || '',
     },
     fertilizing: {
-      period: flower.careGuide?.fertilize || '',
-      amount: '',
-      recommended: [],
+      period: care.fertilize?.period || '',
+      amount: care.fertilize?.amount || '',
+      recommended: care.fertilize?.recommended || [],
     },
     lighting: {
-      requirement: flower.careGuide?.sunlight || '',
-      bestLocation: '',
+      requirement: care.sunlight?.requirement || '',
+      bestLocation: care.sunlight?.bestLocation || '',
     },
     environment: {
-      temperature: flower.careGuide?.temperature || '',
-      humidity: '',
-      ventilation: '',
+      temperature: care.temperature?.ideal || care.temperature?.minimum || '',
+      humidity: care.environment?.humidity || '',
+      ventilation: care.environment?.ventilation || '',
     },
-    pests: [],
+    pests: (care.pests?.common || []).map(name => ({
+      name,
+      symptom: '',
+      treatment: care.pests?.treatment || '',
+    })),
     operations: [],
   };
 }
@@ -204,6 +208,36 @@ class RecognitionOrchestrator {
             yoloResult,
             llmUsed: false,
           };
+
+          // 检查本地知识库是否存在，不存在则调用LLM获取养护指南
+          const localKnowledge = getKnowledge(yoloResult.topClass);
+          if (!localKnowledge) {
+            logger.info(
+              'Orchestrator',
+              `本地知识库无${yoloResult.topClass}数据，调用LLM补充养护指南`,
+            );
+            try {
+              const llmResponse = await this.llmService.identify(
+                imagePath,
+                yoloResult.topClass,
+              );
+              if (llmResponse.success && llmResponse.flowerInfo) {
+                const flower = llmResponse.flowerInfo;
+                if (flower.confidence >= 0.3) {
+                  localResult.careGuide = buildCareGuide(flower);
+                  localResult.scientificName = flower.scientificName;
+                  localResult.family = flower.family;
+                  localResult.origin = flower.origin;
+                  localResult.bloomPeriod = flower.bloomPeriod;
+                  localResult.llmUsed = true;
+                  localResult.llmLatencyMs = llmResponse.latencyMs;
+                }
+              }
+            } catch (error) {
+              logger.warn('Orchestrator', 'LLM补充养护指南失败:', error);
+            }
+          }
+
           this.cache.set(cacheKey, localResult);
           return localResult;
         }
@@ -235,7 +269,6 @@ class RecognitionOrchestrator {
                 family: flower.family,
                 origin: flower.origin,
                 bloomPeriod: flower.bloomPeriod,
-                description: flower.description,
                 careGuide: buildCareGuide(flower),
                 allClasses: yoloResult.allClasses,
                 inferenceTimeMs: Date.now() - startTime,
@@ -264,7 +297,7 @@ class RecognitionOrchestrator {
                 llmLatencyMs: llmResponse.latencyMs,
                 yoloResult,
                 errorMessage: noFlowerInfo.fullMessage,
-                imageContent: flower.imageContent || flower.description,
+
                 llmUsed: true,
               };
               this.cache.set(cacheKey, llmRejectResult);
@@ -391,7 +424,6 @@ class RecognitionOrchestrator {
           family: flower.family,
           origin: flower.origin,
           bloomPeriod: flower.bloomPeriod,
-          description: flower.description,
           careGuide: buildCareGuide(flower),
           inferenceTimeMs: Date.now() - startTime,
           llmLatencyMs: llmResponse.latencyMs,

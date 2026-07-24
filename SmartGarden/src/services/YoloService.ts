@@ -5,15 +5,27 @@
  * 使用 Singleton 模式确保模型仅加载一次。
  */
 
-import {InferenceSession, Tensor} from 'onnxruntime-react-native';
-import {Image, Platform} from 'react-native';
+import { InferenceSession, Tensor } from 'onnxruntime-react-native';
+import { Image, Platform } from 'react-native';
 import {
   MODEL_INPUT_SHAPE,
   CLASS_NAMES,
   INFERENCE_TIMEOUT_MS,
   MODEL_ASSET,
+  getModelAssetInt8,
+  MODEL_QUANTIZATION,
+  MODEL_BENCHMARK_ENABLED,
 } from '../constants';
-import {loadImageAsTensor} from './ImagePreprocessor';
+import { loadImageAsTensor } from './ImagePreprocessor';
+import logger from './LoggerService';
+
+interface BenchmarkResult {
+  quantization: string;
+  loadTimeMs: number;
+  inferenceTimeMs: number;
+  avgInferenceTimeMs: number;
+  iterations: number;
+}
 
 // ━━━ 类型 ━━━
 
@@ -42,7 +54,7 @@ export interface InferenceResult {
   /** 中心区域平均饱和度 (0-255)，低 → 可能是墙壁/天空 */
   avgSaturation: number;
   inferenceTimeMs: number;
-  allClasses: Array<{name: string; probability: number}>;
+  allClasses: Array<{ name: string; probability: number }>;
 }
 
 // ━━━ 工具函数 ━━━
@@ -99,62 +111,78 @@ class YoloService {
 
   // ━━━ 模型加载 ━━━
 
+  private loadTimeoutMs: number = 30000;
+
   async loadModel(
     onProgress?: (pct: number) => void,
+    timeoutMs: number = this.loadTimeoutMs,
   ): Promise<YoloModelInfo> {
     if (this.session) {
       onProgress?.(100);
       return this.modelInfo!;
     }
 
-    onProgress?.(10);
-    const modelPathOrData = await this.resolveModel();
+    const startTime = Date.now();
 
-    onProgress?.(30);
-    const sess =
-      typeof modelPathOrData === 'string'
-        ? await InferenceSession.create(modelPathOrData, {
-            executionProviders: [
-              Platform.OS === 'ios' ? 'coreml' : 'xnnpack',
-              'cpu',
-            ],
-          })
-        : await InferenceSession.create(modelPathOrData, {
-            executionProviders: [
-              Platform.OS === 'ios' ? 'coreml' : 'xnnpack',
-              'cpu',
-            ],
-          });
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`模型加载超时（${timeoutMs}ms）`));
+      }, timeoutMs);
+    });
 
-    onProgress?.(80);
+    const loadPromise = (async () => {
+      onProgress?.(10);
+      const modelPath = await this.resolveModel();
 
-    const inputMeta = sess.inputMetadata[0];
-    const outputMeta = sess.outputMetadata[0];
+      onProgress?.(30);
+      const sess = await InferenceSession.create(modelPath, {
+        executionProviders: [
+          Platform.OS === 'ios' ? 'coreml' : 'xnnpack',
+          'cpu',
+        ],
+      });
 
-    if (!inputMeta.isTensor || !outputMeta.isTensor) {
-      throw new Error('模型输入/输出不是 Tensor 类型');
-    }
+      onProgress?.(80);
 
-    const ep = Platform.OS === 'ios' ? 'CoreML' : 'XNNPACK';
+      const inputMeta = sess.inputMetadata[0];
+      const outputMeta = sess.outputMetadata[0];
 
-    onProgress?.(95);
+      if (!inputMeta.isTensor || !outputMeta.isTensor) {
+        throw new Error('模型输入/输出不是 Tensor 类型');
+      }
 
-    console.log('[YoloService] ✅ 模型加载成功');
-    console.log(`  引擎: ${ep}`);
-    console.log(`  输入: ${sess.inputNames[0]}`, inputMeta.shape);
-    console.log(`  输出: ${sess.outputNames[0]}`, outputMeta.shape);
+      const ep = Platform.OS === 'ios' ? 'CoreML' : 'XNNPACK';
 
-    this.session = sess;
-    this.modelInfo = {
-      inputName: sess.inputNames[0],
-      inputShape: inputMeta.shape as number[],
-      outputName: sess.outputNames[0],
-      outputShape: outputMeta.shape as number[],
-      executionProvider: ep,
-    };
+      onProgress?.(95);
 
-    onProgress?.(100);
-    return this.modelInfo;
+      const loadTime = Date.now() - startTime;
+      logger.info('YoloService', `✅ 模型加载成功 (${loadTime}ms)`);
+      logger.debug('YoloService', `引擎: ${ep}`);
+      logger.debug(
+        'YoloService',
+        `输入: ${sess.inputNames[0]}`,
+        inputMeta.shape,
+      );
+      logger.debug(
+        'YoloService',
+        `输出: ${sess.outputNames[0]}`,
+        outputMeta.shape,
+      );
+
+      this.session = sess;
+      this.modelInfo = {
+        inputName: sess.inputNames[0],
+        inputShape: inputMeta.shape as number[],
+        outputName: sess.outputNames[0],
+        outputShape: outputMeta.shape as number[],
+        executionProvider: ep,
+      };
+
+      onProgress?.(100);
+      return this.modelInfo;
+    })();
+
+    return Promise.race([loadPromise, timeoutPromise]);
   }
 
   // ━━━ 推理 ━━━
@@ -162,7 +190,7 @@ class YoloService {
   async predict(
     inputData: Float32Array,
     inputShape: readonly number[],
-    colorFeatures?: {greenRatio: number; avgSaturation: number},
+    colorFeatures?: { greenRatio: number; avgSaturation: number },
   ): Promise<InferenceResult> {
     if (!this.session) {
       throw new Error('模型未加载，请先调用 loadModel()');
@@ -170,7 +198,10 @@ class YoloService {
 
     if (inputData.length !== MODEL_INPUT_SHAPE.reduce((a, b) => a * b, 1)) {
       throw new Error(
-        `输入数据长度错误: 期望 ${MODEL_INPUT_SHAPE.reduce((a, b) => a * b, 1)}, 实际 ${inputData.length}`,
+        `输入数据长度错误: 期望 ${MODEL_INPUT_SHAPE.reduce(
+          (a, b) => a * b,
+          1,
+        )}, 实际 ${inputData.length}`,
       );
     }
 
@@ -181,12 +212,9 @@ class YoloService {
     // 超时保护
     const t0 = Date.now();
     const result = await Promise.race([
-      this.session.run({[inputName]: tensor}),
+      this.session.run({ [inputName]: tensor }),
       new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('推理超时')),
-          INFERENCE_TIMEOUT_MS,
-        ),
+        setTimeout(() => reject(new Error('推理超时')), INFERENCE_TIMEOUT_MS),
       ),
     ]);
     const t1 = Date.now();
@@ -221,13 +249,18 @@ class YoloService {
     // 熵：分布越均匀 → 越不确定（5 类时最大值 ln(5) ≈ 1.61）
     const entropy = computeEntropy(probabilities);
 
-    console.log(
-      `[YoloService] 推理完成 (${(t1 - t0).toFixed(1)}ms)`,
-      `| 结果: ${CLASS_NAMES[topIdx]} ${(probabilities[topIdx] * 100).toFixed(1)}%`,
+    logger.info(
+      'YoloService',
+      `推理完成 (${(t1 - t0).toFixed(1)}ms)`,
+      `| 结果: ${CLASS_NAMES[topIdx]} ${(probabilities[topIdx] * 100).toFixed(
+        1,
+      )}%`,
       `| 边距: ${(margin * 100).toFixed(1)}% 跌落比: ${dropOff.toFixed(1)}x`,
       `| 熵: ${entropy.toFixed(3)} 底部: ${(bottomSum * 100).toFixed(1)}%`,
       colorFeatures
-        ? `| 绿色: ${(colorFeatures.greenRatio * 100).toFixed(0)}% 饱和: ${colorFeatures.avgSaturation.toFixed(0)}`
+        ? `| 绿色: ${(colorFeatures.greenRatio * 100).toFixed(
+            0,
+          )}% 饱和: ${colorFeatures.avgSaturation.toFixed(0)}`
         : '',
     );
 
@@ -255,10 +288,10 @@ class YoloService {
    * @returns 识别结果（花名、置信度、各类别概率、推理耗时）
    */
   async detect(imagePath: string): Promise<InferenceResult> {
-    console.log('[YoloService] detect() 开始, 路径:', imagePath);
+    logger.info('YoloService', 'detect() 开始, 路径:', imagePath);
 
     // 1. 预处理：图片 → Float32Array + 颜色特征
-    const {tensor, shape, greenRatio, avgSaturation} =
+    const { tensor, shape, greenRatio, avgSaturation } =
       await loadImageAsTensor(imagePath);
 
     // 2. 推理（传入颜色特征，用于非花卉判断）
@@ -267,8 +300,11 @@ class YoloService {
       avgSaturation,
     });
 
-    console.log(
-      `[YoloService] detect() 完成 → ${result.topClass} ${(result.confidence * 100).toFixed(1)}% (${result.inferenceTimeMs.toFixed(1)}ms)`,
+    logger.info(
+      'YoloService',
+      `detect() 完成 → ${result.topClass} ${(result.confidence * 100).toFixed(
+        1,
+      )}% (${result.inferenceTimeMs.toFixed(1)}ms)`,
     );
 
     return result;
@@ -283,25 +319,108 @@ class YoloService {
 
   // ━━━ 私有：模型路径解析 ━━━
 
-  private async resolveModel(): Promise<string | Uint8Array> {
-    const resolved = Image.resolveAssetSource(MODEL_ASSET);
-    console.log('[YoloService] asset URI:', resolved.uri);
-
-    // Release 模式：file:// 路径
-    if (resolved.uri.startsWith('file://')) {
-      const path =
-        Platform.OS === 'android'
-          ? resolved.uri.replace('file://', '')
-          : resolved.uri;
-      console.log('[YoloService] 本地文件路径:', path);
-      return path;
+  private async resolveModel(): Promise<string> {
+    // Android：模型在 APK assets 中，ONNX Runtime C++ 层无法直接读取
+    // /android_asset/ 虚拟路径，需要先复制到文件系统
+    if (Platform.OS === 'android') {
+      const RNFS = require('react-native-fs').default || require('react-native-fs');
+      const modelFileName =
+        MODEL_QUANTIZATION === 'int8'
+          ? 'yolov11n-flower-int8.onnx'
+          : 'yolov11n-flower.onnx';
+      const destPath = `${RNFS.DocumentDirectoryPath}/${modelFileName}`;
+      const exists = await RNFS.exists(destPath);
+      if (!exists) {
+        logger.info('YoloService', `从 APK assets 复制模型: ${modelFileName}`);
+        const base64 = await RNFS.readFileAssets(modelFileName, 'base64');
+        await RNFS.writeFile(destPath, base64, 'base64');
+        logger.info('YoloService', '模型复制完成');
+      } else {
+        logger.debug('YoloService', `模型已缓存: ${destPath}`);
+      }
+      return destPath;
     }
 
-    // Debug 模式：Metro http:// 地址 → fetch 字节
-    console.log('[YoloService] Debug 模式，fetch 模型字节:', resolved.uri);
-    const resp = await fetch(resolved.uri);
-    const buffer = await resp.arrayBuffer();
-    return new Uint8Array(buffer);
+    // iOS：通过 Image.resolveAssetSource 获取路径（可直接从 bundle 读取）
+    const asset =
+      MODEL_QUANTIZATION === 'int8' ? getModelAssetInt8() : MODEL_ASSET;
+    if (!asset && MODEL_QUANTIZATION === 'int8') {
+      throw new Error('INT8 模型文件不存在，请检查 assets 目录');
+    }
+    const resolved = Image.resolveAssetSource(asset);
+    logger.debug(
+      'YoloService',
+      `asset URI: ${resolved.uri} (量化: ${MODEL_QUANTIZATION})`,
+    );
+
+    if (resolved.uri.startsWith('file://')) {
+      logger.debug('YoloService', '本地文件路径:', resolved.uri);
+      return resolved.uri;
+    }
+
+    // Debug 模式（Metro http:// 地址）→ fetch 字节写入文件
+    logger.debug('YoloService', 'Debug 模式，fetch 模型:', resolved.uri);
+    const RNFS = require('react-native-fs').default || require('react-native-fs');
+    const modelFileName =
+      MODEL_QUANTIZATION === 'int8'
+        ? 'yolov11n-flower-int8.onnx'
+        : 'yolov11n-flower.onnx';
+    const destPath = `${RNFS.DocumentDirectoryPath}/${modelFileName}`;
+    const exists = await RNFS.exists(destPath);
+    if (!exists) {
+      const resp = await fetch(resolved.uri);
+      const base64 = await resp.text();
+      await RNFS.writeFile(destPath, base64, 'base64');
+    }
+    return destPath;
+  }
+
+  async runBenchmark(sampleImagePath: string): Promise<BenchmarkResult | null> {
+    if (!MODEL_BENCHMARK_ENABLED || !this.session) {
+      return null;
+    }
+
+    try {
+      logger.info('YoloService', '开始基准测试...');
+      const iterations = 5;
+      let totalTime = 0;
+
+      for (let i = 0; i < iterations; i++) {
+        const { tensor, shape, greenRatio, avgSaturation } =
+          await loadImageAsTensor(sampleImagePath);
+        const t0 = Date.now();
+        await this.predict(tensor, shape, { greenRatio, avgSaturation });
+        const t1 = Date.now();
+        totalTime += t1 - t0;
+        logger.debug(
+          'YoloService',
+          `基准测试迭代 ${i + 1}: ${(t1 - t0).toFixed(1)}ms`,
+        );
+      }
+
+      const avgTime = totalTime / iterations;
+      const result: BenchmarkResult = {
+        quantization: MODEL_QUANTIZATION,
+        loadTimeMs: 0,
+        inferenceTimeMs: totalTime,
+        avgInferenceTimeMs: avgTime,
+        iterations,
+      };
+
+      logger.info(
+        'YoloService',
+        `基准测试完成`,
+        `| 量化: ${MODEL_QUANTIZATION}`,
+        `| 迭代: ${iterations}`,
+        `| 总耗时: ${totalTime.toFixed(1)}ms`,
+        `| 平均: ${avgTime.toFixed(1)}ms`,
+      );
+
+      return result;
+    } catch (e) {
+      logger.error('YoloService', '基准测试失败:', e);
+      return null;
+    }
   }
 }
 

@@ -8,7 +8,7 @@
  *  - 背景装饰元素增加层次感
  */
 
-import React, {useEffect, useRef, useState, useCallback} from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Animated,
   Dimensions,
@@ -21,15 +21,16 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import {Icon} from 'react-native-paper';
-import {COLORS, RADIUS, SPACING, TYPOGRAPHY} from '../constants';
+import { Icon } from 'react-native-paper';
+import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../constants';
 
-const {width: SCREEN_W, height: SCREEN_H} = Dimensions.get('window');
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 interface Props {
   progress: number; // 0-100
   isReady: boolean;
   onEnterApp: () => void;
+  statusText?: string;
 }
 
 /* ━━━ 页面数据 ━━━ */
@@ -64,7 +65,12 @@ const PAGES = [
   },
 ];
 
-function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Element {
+function WelcomeScreen({
+  progress,
+  isReady,
+  onEnterApp,
+  statusText,
+}: Props): React.JSX.Element {
   const isDark = useColorScheme() === 'dark';
   const [currentPage, setCurrentPage] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -172,12 +178,9 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
     setCurrentPage(page);
   }, []);
 
-  const goToPage = useCallback(
-    (page: number) => {
-      scrollRef.current?.scrollTo({x: page * SCREEN_W, animated: true});
-    },
-    [],
-  );
+  const goToPage = useCallback((page: number) => {
+    scrollRef.current?.scrollTo({ x: page * SCREEN_W, animated: true });
+  }, []);
 
   const goNext = useCallback(() => {
     if (currentPage < PAGES.length - 1) {
@@ -202,7 +205,11 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
       <View
         style={[
           styles.ringBase,
-          {borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(45,90,61,0.08)'},
+          {
+            borderColor: isDark
+              ? 'rgba(255,255,255,0.08)'
+              : 'rgba(45,90,61,0.08)',
+          },
         ]}
       />
       {/* 旋转进度弧 */}
@@ -211,7 +218,7 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
           styles.ringArc,
           {
             borderTopColor: COLORS.sage,
-            transform: [{rotate: spinDeg}],
+            transform: [{ rotate: spinDeg }],
           },
         ]}
       />
@@ -220,15 +227,17 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
         style={[
           styles.leafWrap,
           {
-            transform: [{scale: leafScale}, {translateY: floatY}],
+            transform: [{ scale: leafScale }, { translateY: floatY }],
             opacity: leafOpacity,
           },
-        ]}>
+        ]}
+      >
         <View
           style={[
             styles.leafCircle,
-            {backgroundColor: isDark ? COLORS.forestDark : COLORS.sageLight},
-          ]}>
+            { backgroundColor: isDark ? COLORS.forestDark : COLORS.sageLight },
+          ]}
+        >
           <Icon source="leaf" size={48} color={COLORS.forest} />
         </View>
       </Animated.View>
@@ -236,9 +245,9 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
   );
 
   /* ━━━ 水平进度条 ━━━ */
-  const barWidth = animProgress.interpolate({
+  const barScale = animProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
+    outputRange: [0, 1],
   });
 
   const ProgressBar = () => (
@@ -246,13 +255,20 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
       <View
         style={[
           styles.progressTrack,
-          {backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'},
+          {
+            backgroundColor: isDark
+              ? 'rgba(255,255,255,0.1)'
+              : 'rgba(0,0,0,0.06)',
+          },
         ]}
       />
       <Animated.View
         style={[
           styles.progressFill,
-          {width: barWidth, backgroundColor: COLORS.forest},
+          {
+            backgroundColor: COLORS.forest,
+            transform: [{scaleX: barScale}],
+          },
         ]}
       />
     </View>
@@ -273,7 +289,14 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
             backgroundColor: isDark
               ? 'rgba(163,184,153,0.04)'
               : 'rgba(45,90,61,0.04)',
-            transform: [{translateY: floatAnim.interpolate({inputRange: [0,1], outputRange: [0, 16]})}],
+            transform: [
+              {
+                translateY: floatAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 16],
+                }),
+              },
+            ],
           },
         ]}
       />
@@ -289,7 +312,14 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
             backgroundColor: isDark
               ? 'rgba(163,184,153,0.03)'
               : 'rgba(139,115,85,0.05)',
-            transform: [{translateY: floatAnim.interpolate({inputRange: [0,1], outputRange: [0, -10]})}],
+            transform: [
+              {
+                translateY: floatAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -10],
+                }),
+              },
+            ],
           },
         ]}
       />
@@ -297,7 +327,7 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
   );
 
   /* ━━━ 页面渲染 ━━━ */
-  const renderPage = (page: typeof PAGES[0], index: number) => {
+  const renderPage = (page: (typeof PAGES)[0], index: number) => {
     const anim = pageAnims[index];
     const translateY = anim.interpolate({
       inputRange: [0, 1],
@@ -316,14 +346,16 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
           key={index}
           style={[
             styles.page,
-            {backgroundColor: COLORS.forest, width: SCREEN_W},
-          ]}>
+            { backgroundColor: COLORS.forest, width: SCREEN_W },
+          ]}
+        >
           <DecoCircles />
           <Animated.View
             style={[
               styles.brandContainer,
-              {transform: [{translateY}, {scale}], opacity},
-            ]}>
+              { transform: [{ translateY }, { scale }], opacity },
+            ]}
+          >
             {/* 中央大图标 */}
             <View style={styles.brandIconWrap}>
               <Icon source="leaf" size={100} color="rgba(255,255,255,0.9)" />
@@ -347,29 +379,36 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
       return (
         <View
           key={index}
-          style={[styles.page, {backgroundColor: pageBg, width: SCREEN_W}]}>
+          style={[styles.page, { backgroundColor: pageBg, width: SCREEN_W }]}
+        >
           <DecoCircles />
           <Animated.View
             style={[
               styles.featureContainer,
-              {transform: [{translateY}, {scale}], opacity},
-            ]}>
+              { transform: [{ translateY }, { scale }], opacity },
+            ]}
+          >
             {/* 大图标 */}
             <View
               style={[
                 styles.featureIconWrap,
-                {backgroundColor: isDark ? COLORS.forestDark : COLORS.sageLight},
-              ]}>
+                {
+                  backgroundColor: isDark
+                    ? COLORS.forestDark
+                    : COLORS.sageLight,
+                },
+              ]}
+            >
               <Icon source={page.icon} size={52} color={COLORS.forest} />
             </View>
 
-            <Text style={[styles.featureLabel, {color: mutedColor}]}>
+            <Text style={[styles.featureLabel, { color: mutedColor }]}>
               {page.subtitle}
             </Text>
-            <Text style={[styles.featureTitle, {color: textColor}]}>
+            <Text style={[styles.featureTitle, { color: textColor }]}>
               {page.title}
             </Text>
-            <Text style={[styles.featureDesc, {color: mutedColor}]}>
+            <Text style={[styles.featureDesc, { color: mutedColor }]}>
               {page.desc}
             </Text>
           </Animated.View>
@@ -381,41 +420,46 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
     return (
       <View
         key={index}
-        style={[styles.page, {backgroundColor: pageBg, width: SCREEN_W}]}>
+        style={[styles.page, { backgroundColor: pageBg, width: SCREEN_W }]}
+      >
         <DecoCircles />
         <Animated.View
           style={[
             styles.loadingContainer,
-            {transform: [{translateY}, {scale}], opacity},
-          ]}>
+            { transform: [{ translateY }, { scale }], opacity },
+          ]}
+        >
           {/* 功能图标 */}
           <View
             style={[
               styles.featureIconWrap,
-              {backgroundColor: isDark ? COLORS.forestDark : COLORS.sageLight},
-            ]}>
+              {
+                backgroundColor: isDark ? COLORS.forestDark : COLORS.sageLight,
+              },
+            ]}
+          >
             <Icon source={page.icon} size={44} color={COLORS.forest} />
           </View>
 
-          <Text style={[styles.featureLabel, {color: mutedColor}]}>
+          <Text style={[styles.featureLabel, { color: mutedColor }]}>
             {page.subtitle}
           </Text>
-          <Text style={[styles.featureTitle, {color: textColor}]}>
+          <Text style={[styles.featureTitle, { color: textColor }]}>
             {page.title}
           </Text>
-          <Text style={[styles.featureDesc, {color: mutedColor}]}>
+          <Text style={[styles.featureDesc, { color: mutedColor }]}>
             {page.desc}
           </Text>
 
           {/* 叶子生长进度区 */}
           <View style={styles.loadingAnimArea}>
             <RingProgress />
-            <Text style={[styles.percentText, {color: textColor}]}>
+            <Text style={[styles.percentText, { color: textColor }]}>
               {Math.round(progress)}%
             </Text>
             <ProgressBar />
-            <Text style={[styles.loadingHint, {color: mutedColor}]}>
-              {isReady ? '准备就绪' : 'AI 引擎初始化中…'}
+            <Text style={[styles.loadingHint, { color: mutedColor }]}>
+              {isReady ? '准备就绪' : statusText || 'AI 引擎初始化中…'}
             </Text>
           </View>
 
@@ -423,7 +467,8 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={onEnterApp}
-              style={[styles.enterBtn, {backgroundColor: COLORS.forest}]}>
+              style={[styles.enterBtn, { backgroundColor: COLORS.forest }]}
+            >
               <Text style={styles.enterBtnText}>进入应用</Text>
               <Icon source="arrow-right" size={20} color="#FFFFFF" />
             </TouchableOpacity>
@@ -445,7 +490,8 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
         onScroll={handleScroll}
         scrollEventThrottle={16}
         style={styles.scrollView}
-        contentContainerStyle={{width: SCREEN_W * PAGES.length}}>
+        contentContainerStyle={{ width: SCREEN_W * PAGES.length }}
+      >
         {PAGES.map((page, idx) => renderPage(page, idx))}
       </ScrollView>
 
@@ -454,8 +500,9 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onEnterApp}
-          style={[styles.skipBtn, {top: 52}]}>
-          <Text style={[styles.skipText, {color: mutedColor}]}>跳过</Text>
+          style={[styles.skipBtn, { top: 52 }]}
+        >
+          <Text style={[styles.skipText, { color: mutedColor }]}>跳过</Text>
         </TouchableOpacity>
       )}
 
@@ -470,8 +517,9 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
       <View
         style={[
           styles.bottomBar,
-          {backgroundColor: currentPage === 0 ? 'transparent' : pageBg},
-        ]}>
+          { backgroundColor: currentPage === 0 ? 'transparent' : pageBg },
+        ]}
+      >
         {/* 页面指示器 */}
         <View style={styles.dotsRow}>
           {PAGES.map((_, idx) => (
@@ -493,8 +541,8 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
                     currentPage === 0
                       ? 'rgba(255,255,255,0.3)'
                       : isDark
-                        ? COLORS.borderDark
-                        : COLORS.earthLight,
+                      ? COLORS.borderDark
+                      : COLORS.earthLight,
                 },
               ]}
             />
@@ -509,17 +557,18 @@ function WelcomeScreen({progress, isReady, onEnterApp}: Props): React.JSX.Elemen
             style={[
               styles.nextBtn,
               {
-                backgroundColor:
-                  currentPage === 0 ? '#FFFFFF' : COLORS.forest,
+                backgroundColor: currentPage === 0 ? '#FFFFFF' : COLORS.forest,
               },
-            ]}>
+            ]}
+          >
             <Text
               style={[
                 styles.nextBtnText,
                 {
                   color: currentPage === 0 ? COLORS.forest : '#FFFFFF',
                 },
-              ]}>
+              ]}
+            >
               下一步
             </Text>
             <Icon
@@ -702,6 +751,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   progressFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: '100%',
     height: '100%',
     borderRadius: 3,
   },
@@ -725,7 +778,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     gap: 8,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 6},
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
@@ -783,7 +836,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     gap: 4,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,

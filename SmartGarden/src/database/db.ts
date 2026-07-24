@@ -14,6 +14,7 @@
  * 本模块封装了 executeSql 适配层，使 Repositories 层无需关心底层库差异。
  */
 
+import logger from '../services/LoggerService';
 import {open, type QuickSQLiteConnection} from 'react-native-quick-sqlite';
 
 // ━━━━━ 常量 ━━━━━
@@ -69,7 +70,7 @@ function createAdapter(rawDb: QuickSQLiteConnection): SqliteDatabaseAdapter {
           },
         ];
       } catch (error) {
-        console.error('[DB] SQL 执行失败:', sql.slice(0, 80), error);
+        logger.error('DB', 'SQL 执行失败:', sql.slice(0, 80), error);
         throw error;
       }
     },
@@ -202,10 +203,10 @@ export async function getDatabase(): Promise<SqliteDatabaseAdapter> {
       await db.executeSql(sql);
     }
 
-    console.log(`[DB] 已初始化: ${DB_NAME} (v${DB_VERSION})`);
+    logger.info('DB', `已初始化: ${DB_NAME} (v${DB_VERSION})`);
     return db;
   } catch (error) {
-    console.error('[DB] 数据库初始化失败:', error);
+    logger.error('DB', '数据库初始化失败:', error);
     throw error;
   }
 }
@@ -231,9 +232,9 @@ export async function resetDatabase(): Promise<void> {
       'DROP TABLE IF EXISTS user;',
     );
     await db.executeSql(DDL_CREATE_TABLES);
-    console.log('[DB] 数据库已重置');
+    logger.info('DB', '数据库已重置');
   } catch (error) {
-    console.error('[DB] 数据库重置失败:', error);
+    logger.error('DB', '数据库重置失败:', error);
     throw error;
   }
 }
@@ -246,9 +247,9 @@ export function closeDatabase(): void {
   try {
     db.close();
     db = null;
-    console.log('[DB] 数据库连接已关闭');
+    logger.info('DB', '数据库连接已关闭');
   } catch (error) {
-    console.error('[DB] 关闭数据库失败:', error);
+    logger.error('DB', '关闭数据库失败:', error);
     throw error;
   }
 }

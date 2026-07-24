@@ -23,6 +23,7 @@ import {
   type PhotoFile,
 } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
+import logger from '../services/LoggerService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -48,6 +49,7 @@ function CameraViewfinder({
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [isCapturing, setIsCapturing] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
   const [permissionError, setPermissionError] = useState('');
   const [flashMode, setFlashMode] = useState<'off' | 'on'>('off');
 
@@ -71,11 +73,21 @@ function CameraViewfinder({
 
       const fileUri =
         Platform.OS === 'android' ? `file://${destPath}` : destPath;
-      onPhotoTaken(fileUri);
+
+      // 先停用 Camera，等待 native 层停止推送帧数据
+      // 防止组件卸载时 BufferQueue 和 ImageReader 被废弃导致的错误
+      setDeactivating(true);
+
+      // 等待 500ms 让 native camera 完全停止捕获会话并释放资源
+      // ImageReader 需要足够时间完成缓冲区释放
+      setTimeout(() => {
+        onPhotoTaken(fileUri);
+      }, 500);
     } catch (e: any) {
       const msg = e?.message ?? String(e);
-      console.error('[CameraViewfinder] 拍照失败:', msg);
+      logger.error('CameraViewfinder', '拍照失败:', msg);
       Alert.alert('拍照失败', msg || '请重试');
+      setDeactivating(false);
     } finally {
       setIsCapturing(false);
     }
@@ -163,7 +175,7 @@ function CameraViewfinder({
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         device={device}
-        isActive={isActive}
+        isActive={isActive && !deactivating}
         photo={true}
         enableZoomGesture={true}
       />

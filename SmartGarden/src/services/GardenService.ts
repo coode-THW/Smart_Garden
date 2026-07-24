@@ -23,14 +23,15 @@ import {GardenRepository} from '../database/gardenRepository';
 import {KnowledgeService} from './KnowledgeService';
 import {UserService} from './UserService';
 import {GardenEntity, CareGuide, ApiResponse, ErrorCode} from '../types';
+import {getErrorMessage} from './ErrorHandler';
 
 // ━━━━━ 常量 ━━━━━
 
-const ERROR_MESSAGES: Record<number, string> = {
-  [ErrorCode.SUCCESS]: 'success',
-  [ErrorCode.INVALID_PARAM]: '参数错误',
-  [ErrorCode.DATA_QUERY_FAILED]: '未找到该花卉的养护指南',
-};
+// GardenService 自身的业务错误码（非标准 ErrorCode 枚举）
+const GARDEN_ERROR = {
+  USER_NOT_INIT: 4002,
+  DUPLICATE_ENTRY: 4003,
+} as const;
 
 // ━━━━━ 导出类型 ━━━━━
 
@@ -77,7 +78,7 @@ export class GardenService {
 
     const userId = this.userService.getUserId();
     if (!userId) {
-      return {code: 4002, message: '用户未初始化', data: null};
+      return {code: GARDEN_ERROR.USER_NOT_INIT, message: '用户未初始化', data: null};
     }
 
     // 2. 去重检查
@@ -88,7 +89,7 @@ export class GardenService {
     );
     if (existing.length > 0) {
       return {
-        code: 4003,
+        code: GARDEN_ERROR.DUPLICATE_ENTRY,
         message: `你的花园已有「${params.customName || this.getDefaultName(params.flowerId)}」，请使用不同的名字`,
         data: null,
       };
@@ -200,7 +201,7 @@ export class GardenService {
   private error<T>(code: ErrorCode): ApiResponse<T> {
     return {
       code,
-      message: ERROR_MESSAGES[code] || '未知错误',
+      message: getErrorMessage(code),
       data: null,
     };
   }

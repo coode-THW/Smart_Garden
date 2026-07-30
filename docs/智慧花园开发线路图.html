@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智慧花园开发线路图 v1.0</title>
+<style>
+  :root {
+    --green-900:#14532d; --green-800:#166534; --green-700:#15803d; --green-600:#16a34a;
+    --green-500:#22c55e; --green-400:#4ade80; --green-300:#86efac; --green-200:#bbf7d0;
+    --green-100:#dcfce7; --green-50:#f0fdf4;
+    --amber-600:#d97706; --amber-100:#fef3c7; --amber-50:#fffbeb;
+    --purple-600:#7c3aed; --purple-100:#ede9fe; --purple-50:#f5f3ff;
+    --red-600:#dc2626; --red-100:#fee2e2;
+    --blue-600:#2563eb; --blue-100:#dbeafe; --blue-50:#eff6ff;
+    --slate-900:#0f172a; --slate-800:#1e293b; --slate-700:#334155;
+    --slate-600:#475569; --slate-500:#64748b; --slate-400:#94a3b8;
+    --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9; --slate-50:#f8fafc;
+    --white:#fff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--slate-800);background:var(--slate-50);line-height:1.75;display:flex}
+  nav{width:260px;min-width:260px;height:100vh;position:sticky;top:0;background:linear-gradient(180deg,var(--green-900)0%,var(--green-800)100%);color:var(--white);overflow-y:auto;padding:24px 0;box-shadow:2px 0 16px rgba(0,0,0,.12)}
+  nav .logo{padding:0 24px 20px;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:8px}
+  nav .logo h1{font-size:1.1rem;font-weight:700}
+  nav .logo .ver{font-size:.75rem;opacity:.7;margin-top:2px}
+  nav a{display:block;padding:5px 24px;color:rgba(255,255,255,.78);text-decoration:none;font-size:.82rem;transition:all .15s;border-left:3px solid transparent}
+  nav a:hover,nav a.active{color:#fff;background:rgba(255,255,255,.08);border-left-color:var(--green-400)}
+  nav a.chap{font-weight:700;color:#fff;margin-top:10px;font-size:.88rem;padding-top:8px}
+  nav a.sub{padding-left:40px;font-size:.78rem}
+  main{flex:1;max-width:1060px;padding:40px 48px 80px}
+  h1{font-size:1.9rem;color:var(--green-900);margin-bottom:4px;font-weight:800}
+  .subtitle{color:var(--slate-500);font-size:.9rem;margin-bottom:32px}
+  h2{font-size:1.4rem;color:var(--green-800);margin-top:48px;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--green-200);font-weight:700}
+  h3{font-size:1.1rem;color:var(--slate-800);margin-top:28px;margin-bottom:10px;font-weight:700}
+  p{margin-bottom:10px}
+  .meta-table{width:100%;border-collapse:collapse;margin:16px 0;background:var(--white);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .meta-table td,.meta-table th{padding:10px 16px;border-bottom:1px solid var(--slate-100)}
+  .meta-table tr:last-child td{border-bottom:none}
+  .meta-table td:first-child{font-weight:600;color:var(--slate-600);width:130px;background:var(--slate-50)}
+  .table-wrap{overflow-x:auto;margin:16px 0}
+  table{width:100%;border-collapse:collapse;background:var(--white);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);font-size:.85rem}
+  thead th{background:var(--green-700);color:#fff;padding:9px 12px;text-align:left;font-weight:600;white-space:nowrap}
+  thead th:first-child{border-radius:8px 0 0 0}
+  thead th:last-child{border-radius:0 8px 0 0}
+  tbody td{padding:8px 12px;border-bottom:1px solid var(--slate-100);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--green-50)}
+  tbody td:first-child{font-weight:600;color:var(--slate-700);white-space:nowrap}
+  .callout{padding:12px 18px;margin:16px 0;border-radius:8px;font-size:.88rem;border-left:4px solid}
+  .callout.info{background:var(--blue-50);border-color:var(--blue-600)}
+  .callout.warn{background:var(--amber-50);border-color:var(--amber-600)}
+  .callout.tip{background:var(--green-50);border-color:var(--green-600)}
+  .callout.purple{background:var(--purple-50);border-color:var(--purple-600)}
+  .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+  .badge.a{background:#dbeafe;color:#1d4ed8}
+  .badge.b{background:#fce7f3;color:#be185d}
+  .badge.c{background:#fef3c7;color:#b45309}
+  .badge.m{background:#dcfce7;color:#15803d}
+  .unit-header{background:var(--green-700);color:#fff;padding:8px 16px;border-radius:8px 8px 0 0;font-weight:700;font-size:.95rem;margin-top:20px}
+  .unit-table{border-radius:0 0 8px 8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .unit-table table{margin:0;border-radius:0;box-shadow:none}
+  .unit-table thead th{background:var(--green-800);border-radius:0}
+  .role-col{width:30%}
+  .day-col{font-weight:600;color:var(--green-800);white-space:nowrap;width:100px}
+  .deliverable{background:var(--green-50);border-left:3px solid var(--green-500);padding:10px 16px;margin:8px 0;border-radius:0 6px 6px 0;font-size:.85rem}
+  .deliverable strong{color:var(--green-800)}
+  .timeline-bar{display:flex;margin:24px 0;font-size:.82rem;background:var(--white);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .tl-phase{flex:1;text-align:center;padding:16px 8px;position:relative}
+  .tl-phase.p1{background:linear-gradient(135deg,var(--green-600),var(--green-500));color:#fff}
+  .tl-phase.p2{background:linear-gradient(135deg,var(--amber-600),#f59e0b);color:#fff}
+  .tl-phase.p3{background:linear-gradient(135deg,var(--purple-600),#8b5cf6);color:#fff}
+  .tl-phase .tl-title{font-weight:700;font-size:1rem}
+  .tl-phase .tl-desc{font-size:.78rem;opacity:.9;margin-top:4px}
+  .role-card{display:inline-block;width:30%;vertical-align:top;padding:16px;margin:8px 1%;background:var(--white);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center}
+  .role-card .icon{font-size:2rem;margin-bottom:8px}
+  .role-card .name{font-weight:700;font-size:1rem;color:var(--slate-800)}
+  .role-card .role{font-size:.8rem;color:var(--slate-500);margin:4px 0}
+  .role-card .tech{font-size:.78rem;color:var(--green-700);margin-top:6px}
+  .risk-table td:first-child{width:200px}
+  .milestone{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+  .ms-item{flex:1;min-width:160px;padding:14px;background:var(--white);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center}
+  .ms-item .ms-day{font-size:.75rem;color:var(--slate-500)}
+  .ms-item .ms-emoji{font-size:1.5rem;margin:4px 0}
+  .ms-item .ms-name{font-weight:700;font-size:.85rem}
+  code{font-family:"SF Mono","Fira Code","Consolas",monospace;background:var(--slate-100);padding:2px 6px;border-radius:4px;font-size:.82rem;color:var(--green-800)}
+  blockquote{border-left:4px solid var(--green-300);background:var(--green-50);padding:10px 16px;margin:12px 0;border-radius:0 8px 8px 0;font-size:.87rem}
+  hr{border:none;border-top:1px solid var(--slate-200);margin:28px 0}
+  @media(max-width:860px){nav{display:none}main{padding:24px 16px}.role-card{width:100%;margin:6px 0}}
+  @media print{nav{display:none}main{max-width:100%;padding:0}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><h1>🌿 开发线路图</h1><div class="ver">v1.0 · 2026-06-12</div></div>
+  <a href="#overview" class="chap">项目概况</a>
+  <a href="#roles" class="chap">人员角色分配</a>
+  <a href="#p1" class="chap">Phase 1：核心识别（Day 1-40）</a>
+  <a href="#u1" class="sub">第 1 单元：环境搭建</a>
+  <a href="#u2" class="sub">第 2 单元：识别闭环</a>
+  <a href="#u3" class="sub">第 3 单元：用户系统</a>
+  <a href="#u4" class="sub">第 4 单元：打磨收尾</a>
+  <a href="#p2" class="chap">Phase 2：提醒优化（Day 41-60）</a>
+  <a href="#u5" class="sub">第 5 单元：提醒系统</a>
+  <a href="#u6" class="sub">第 6 单元：体验打磨</a>
+  <a href="#p3" class="chap">Phase 3：服务器发布（Day 61-80）</a>
+  <a href="#u7" class="sub">第 7 单元：服务器搭建</a>
+  <a href="#u8" class="sub">第 8 单元：测试发布</a>
+  <a href="#timeline" class="chap">总览时间线</a>
+  <a href="#workload" class="chap">工作量分布</a>
+  <a href="#risks" class="chap">风险与应对</a>
+  <a href="#milestones" class="chap">里程碑节点</a>
+</nav>
+
+<main>
+
+<h1>🌿 智慧花园开发线路图</h1>
+<p class="subtitle">React Native + ONNX Runtime 本地推理 + 大模型云端增强 · 3人团队 · 80天 · 8个单元</p>
+
+<!-- ===== OVERVIEW ===== -->
+<h2 id="overview">项目概况</h2>
+<table class="meta-table">
+  <tr><td>项目名称</td><td>智慧花园（Smart Garden）</td></tr>
+  <tr><td>技术架构</td><td><strong>React Native + ONNX Runtime 本地推理 + 大模型云端增强</strong></td></tr>
+  <tr><td>目标平台</td><td>Android / iOS</td></tr>
+  <tr><td>团队规模</td><td><strong>3 人</strong>（学生）</td></tr>
+  <tr><td>时间单位</td><td>10 天 / 单元，共 8 个单元</td></tr>
+  <tr><td>总周期</td><td><strong>80 天</strong>（约 2.5 个月）</td></tr>
+  <tr><td>日均投入</td><td>约 3-4 小时 / 人</td></tr>
+</table>
+
+<!-- ===== ROLES ===== -->
+<h2 id="roles">人员角色分配</h2>
+
+<div style="text-align:center">
+  <div class="role-card">
+    <div class="icon">🤖</div>
+    <div class="name">A · AI 工程师</div>
+    <div class="role">Python / ONNX / LLM</div>
+    <div class="tech">YOLO 模型 · 推理封装 · 预处理 · LLM 调用</div>
+  </div>
+  <div class="role-card">
+    <div class="icon">🎨</div>
+    <div class="name">B · 前端工程师</div>
+    <div class="role">React Native / UI</div>
+    <div class="tech">页面开发 · 导航 · 相机 · 状态管理 · 交互</div>
+  </div>
+  <div class="role-card">
+    <div class="icon">⚙️</div>
+    <div class="name">C · 全栈工程师</div>
+    <div class="role">数据 / 服务 / 测试</div>
+    <div class="tech">SQLite · JSON 知识库 · Nginx · 测试 · 文档</div>
+  </div>
+</div>
+
+<pre style="background:var(--slate-800);color:#e2e8f0;padding:16px;border-radius:8px;font-size:.72rem;line-height:1.3;text-align:center">
+        <span style="color:#93c5fd">A (AI/模型)</span>          <span style="color:#f9a8d4">B (前端/UI)</span>           <span style="color:#fcd34d">C (数据/服务)</span>
+        ┌─────────┐         ┌─────────┐           ┌─────────┐
+Phase 1 │ YOLO    │ ←──────→│ 识别页   │←────────→│ SQLite  │
+        │ ONNX    │   接口   │ 相机    │   数据    │ JSON    │
+        │ LLM     │   协议   │ 状态    │   模型    │ 测试    │
+        └─────────┘         └─────────┘           └─────────┘
+              │                   │                     │
+Phase 2       │ 图片预处理优化     │ 提醒UI+通知          │ 提醒数据层
+              │                   │                     │
+Phase 3       │ 纠错数据格式       │ 推送SDK集成          │ Nginx+推送
+</pre>
+
+<!-- ===== PHASE 1 ===== -->
+<h2 id="p1">Phase 1：核心识别与基础功能（第 1-40 天）</h2>
+<blockquote><strong>目标</strong>：用户能拍照识花、查看养护指南、管理花园。零注册可用。</blockquote>
+
+<!-- Unit 1 -->
+<h3 id="u1">第 1 单元：环境搭建与技术验证（第 1-10 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 1-2</td><td>搭建 Python 训练环境；导出 ONNX 模型</td><td>搭建 RN 开发环境；<code>npx react-native init</code></td><td>阅读文档；搭建 Git 仓库；准备知识库 JSON 模板</td></tr>
+    <tr><td>Day 3-4</td><td>验证 ONNX 模型 Python 端推理（10 张测试图）</td><td>安装依赖：onnxruntime-react-native、paper、zustand</td><td>设计 SQLite 表结构；编写建表 SQL</td></tr>
+    <tr><td>Day 5-6</td><td>编写 ONNX 推理最小示例；真机跑通 InferenceSession</td><td>搭建导航框架；创建首页+识别页+花园页</td><td>实现 SQLite 初始化模块 + CRUD 基础函数</td></tr>
+    <tr><td>Day 7-8</td><td>编写图片预处理（resize→归一化→Tensor）</td><td>集成相机组件；拍照→保存本地路径</td><td>实现 JSON 读取模块；创建首份月季.json</td></tr>
+    <tr><td>Day 9-10</td><td colspan="2" style="background:var(--green-50);text-align:center"><strong>🔗 集成测试：A+B 联调拍照→YOLO推理→返回结果</strong></td><td style="background:var(--green-50)">验证 SQLite 读写+JSON 读取；首个单元测试</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="deliverable"><strong>📦 交付物：</strong>ONNX 模型真机推理成功 · RN 项目骨架搭建完成 · 3 张数据库表就绪 · 首份养护 JSON 验证通过 · A+B 联调跑通</div>
+
+<!-- Unit 2 -->
+<h3 id="u2">第 2 单元：识别核心闭环（第 11-20 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 11-12</td><td>实现三级置信度判断逻辑</td><td>识别结果页 UI——花名、置信度、学名、科属</td><td>编写 10 份养护知识 JSON</td></tr>
+    <tr><td>Day 13-14</td><td>实现 LlmService——Base64、Prompt、API</td><td>结果页底部按钮：一键提醒+纠错</td><td>编写 10 份养护知识 JSON</td></tr>
+    <tr><td>Day 15-16</td><td>LLM 响应解析+模型路由（主备切换）</td><td>相册选择识别；UI 状态提示</td><td>编写 10 份养护知识 JSON</td></tr>
+    <tr><td>Day 17-18</td><td>编写编排器——串联预处理→YOLO→决策→LLM</td><td>启动预加载策略——加载画面+按钮状态</td><td>编写剩余 20 份 JSON；总量达 50+ 品种</td></tr>
+    <tr><td>Day 19-20</td><td colspan="3" style="background:var(--green-50);text-align:center"><strong>🔗 联调测试：</strong>完整识别流程（正常/低置信度/非花卉/离线四种场景）+ 50 张测试图验证</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="deliverable"><strong>📦 交付物：</strong>完整识别闭环（YOLO+LLM）· 识别结果页完整 UI · 50+ 品种养护 JSON · 相册识别可用</div>
+
+<!-- Unit 3 -->
+<h3 id="u3">第 3 单元：用户系统与花园管理（第 21-30 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 21-22</td><td>优化图片预处理性能；推理结果缓存</td><td>匿名用户初始化流程——自动生成 UUID</td><td>实现 UserService——UUID 生成+可选绑定</td></tr>
+    <tr><td>Day 23-24</td><td>非花卉过滤优化+测试集</td><td>「我的花园」列表页——展示+删除</td><td>实现 GardenService——添加/查询/删除</td></tr>
+    <tr><td>Day 25-26</td><td>纠错反馈模块——记录到本地 SQLite</td><td>添加花卉弹窗——自定义名称+位置+日期</td><td>实现去重检查——SELECT flowerId 是否存在</td></tr>
+    <tr><td>Day 27-28</td><td>性能测试——统计各机型推理耗时</td><td>花园详情页——花卉信息+养护指南入口</td><td>用户数据导出功能（SQLite→JSON）</td></tr>
+    <tr><td>Day 29-30</td><td colspan="3" style="background:var(--green-50);text-align:center"><strong>🔗 全链路联调：</strong>拍照→识别→添加到花园→查看养护指南 + 回归测试</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="deliverable"><strong>📦 交付物：</strong>匿名用户体系完成 · 花园管理完整（添加/去重/查看/删除）· 纠错反馈数据记录 · Phase 1 集成测试通过</div>
+
+<!-- Unit 4 -->
+<h3 id="u4">第 4 单元：打磨与 Phase 1 收尾（第 31-40 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 31-32</td><td>优化 LLM Prompt——提高养护建议质量</td><td>首页 UI 优化——功能入口+最近识别</td><td>知识库 JSON 内容校对——逐份检查准确性</td></tr>
+    <tr><td>Day 33-34</td><td>模型量化 FP16→INT8 对比测试</td><td>离线状态提示——网络检测+降级 UI</td><td>错误码处理——所有错误 UI 提示文案</td></tr>
+    <tr><td>Day 35-36</td><td>启动预加载完整逻辑——loading+超时处理</td><td>欢迎页/启动页——品牌+模型加载进度</td><td>日志系统——分级+本地文件滚动存储</td></tr>
+    <tr><td>Day 37-38</td><td>Bug 修复+性能优化</td><td>Bug 修复+UI 微调</td><td>全功能回归测试；Phase 1 测试报告</td></tr>
+    <tr><td>Day 39-40</td><td colspan="3" style="background:var(--amber-50);text-align:center"><strong>📱 真机测试：</strong>Android 中端+低端 / iPhone 多机型兼容性验证</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout tip"><strong>✅ Phase 1 交付物汇总：</strong>拍照识别花卉（≥50 种，准确率≥90%）· 三级置信度阈值 · 养护指南查询 · 免注册使用 · 花园管理 · 纠错反馈 · 启动预加载 · 离线可用 · 可演示版本</div>
+
+<!-- ===== PHASE 2 ===== -->
+<h2 id="p2">Phase 2：养护提醒与体验优化（第 41-60 天）</h2>
+<blockquote><strong>目标</strong>：用户能收到养护提醒、一键设置提醒、APP 体验完整。</blockquote>
+
+<!-- Unit 5 -->
+<h3 id="u5">第 5 单元：提醒系统（第 41-50 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 41-42</td><td>设计「文本→提醒规则」解析算法</td><td>「一键设置提醒」按钮交互——跳转预览页</td><td>设计 reminders 表；实现 ReminderService</td></tr>
+    <tr><td>Day 43-44</td><td>预填规则解析——"每周2-3次"→二/四/六</td><td>提醒预览页 UI——浇水/施肥/检查预填+可改</td><td>批量创建 reminder 记录</td></tr>
+    <tr><td>Day 45-46</td><td>—（协助 B 调试通知）</td><td>集成 react-native-push-notification</td><td>提醒调度——根据 frequency 计算下次时间</td></tr>
+    <tr><td>Day 47-48</td><td>—</td><td>手动设置提醒页面——类型/频率/时间选择器</td><td>提醒启用/停用/删除；提醒列表 API</td></tr>
+    <tr><td>Day 49-50</td><td colspan="3" style="background:var(--green-50);text-align:center"><strong>🔗 联调：</strong>一键设置→提醒创建→本地通知触发全流程 + 20 条提醒验证</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="deliverable"><strong>📦 交付物：</strong>一键设置提醒 · 手动设置提醒 · 本地系统通知准时触发 · 提醒管理（列表/编辑/删除）</div>
+
+<!-- Unit 6 -->
+<h3 id="u6">第 6 单元：体验打磨与 Phase 2 收尾（第 51-60 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 51-52</td><td>优化 ONNX 内存占用；验证低端机</td><td>养护指南标签切换动画</td><td>知识库在线更新——启动时检查 version.json</td></tr>
+    <tr><td>Day 53-54</td><td>图片压缩逻辑——LLM 前压至 ≤500KB</td><td>病虫害知识展示页——列表+详情</td><td>搭建 Nginx——HTTPS+静态文件+version.json</td></tr>
+    <tr><td>Day 55-56</td><td>准备 10 个病虫害识别 prompt 模板</td><td>养护记录功能——浇水/施肥后拍照存档</td><td>增量下载逻辑——对比版本号，仅下载变更</td></tr>
+    <tr><td>Day 57-58</td><td>Bug 修复</td><td>全页面 UI 走查——统一间距/颜色/字体</td><td>Phase 2 全功能回归测试</td></tr>
+    <tr><td>Day 59-60</td><td colspan="3" style="background:var(--amber-50);text-align:center"><strong>📱 真机测试：</strong>多机型通知+知识更新+UI 体验汇总</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout tip"><strong>✅ Phase 2 交付物汇总：</strong>一键设置+手动提醒 · 本地通知准时触发 · 知识库在线增量更新 · 养护记录 · 病虫害知识展示 · 内部测试版本可用</div>
+
+<!-- ===== PHASE 3 ===== -->
+<h2 id="p3">Phase 3：服务器补充与发布（第 61-80 天）</h2>
+<blockquote><strong>目标</strong>：远程推送、纠错数据收集、发布上线。</blockquote>
+
+<!-- Unit 7 -->
+<h3 id="u7">第 7 单元：轻量服务器搭建（第 61-70 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 61-62</td><td>定义纠错上传格式；批量上传逻辑</td><td>集成个推/极光推送 SDK</td><td>搭建 Node.js+Express+better-sqlite3</td></tr>
+    <tr><td>Day 63-64</td><td>纠错数据导出工具（SQLite→JSON）</td><td>推送注册页面——用户可选开启</td><td>实现 POST /api/push/register</td></tr>
+    <tr><td>Day 65-66</td><td>—</td><td>测试推送——前台/后台/杀死三种状态</td><td>定时任务——每分钟检查提醒+触发推送</td></tr>
+    <tr><td>Day 67-68</td><td>—</td><td>推送点击跳转——直达花卉详情</td><td>实现 POST /api/feedback/upload</td></tr>
+    <tr><td>Day 69-70</td><td colspan="3" style="background:var(--green-50);text-align:center"><strong>🔗 联调：</strong>纠错上传+远程推送完整流程 + 模拟 1000 设备压测</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="deliverable"><strong>📦 交付物：</strong>轻量服务器搭建完成 · 远程推送注册与触发 · 纠错数据收集 API · 服务器定时任务运行</div>
+
+<!-- Unit 8 -->
+<h3 id="u8">第 8 单元：测试、发布与文档（第 71-80 天）</h3>
+<div class="table-wrap unit-table">
+<table>
+  <thead><tr><th class="day-col">天数</th><th class="role-col"><span class="badge a">A · AI 工程师</span></th><th class="role-col"><span class="badge b">B · 前端工程师</span></th><th class="role-col"><span class="badge c">C · 全栈工程师</span></th></tr></thead>
+  <tbody>
+    <tr><td>Day 71-72</td><td>准备最终模型——FP16+INT8；模型更新说明</td><td>Android 打包——签名 APK/AAB</td><td>iOS 打包——证书+IPA+TestFlight</td></tr>
+    <tr><td>Day 73-74</td><td>AI 模块技术文档</td><td>应用商店截图准备（3 组核心场景）</td><td>部署文档——服务器+Nginx+环境变量</td></tr>
+    <tr><td>Day 75-76</td><td>全功能回归（重点：准确率+LLM 降级）</td><td>UI 终版走查——暗黑+大字体适配</td><td>全功能回归（重点：推送+知识更新+上传）</td></tr>
+    <tr><td>Day 77-78</td><td>Bug 修复</td><td>Bug 修复</td><td>Bug 修复+性能优化</td></tr>
+    <tr><td>Day 79-80</td><td colspan="3" style="background:var(--amber-50);text-align:center"><strong>🚀 发布：</strong>代码审查→文档终稿→提交应用商店审核→服务器上线→监控配置</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout purple"><strong>✅ Phase 3 交付物汇总：</strong>远程推送可用（杀进程仍送达）· 纠错数据收集系统运行 · APK/AAB+IPA 就绪 · 应用商店审核提交 · 完整技术文档</div>
+
+<!-- ===== TIMELINE ===== -->
+<h2 id="timeline">总览时间线</h2>
+
+<div class="timeline-bar">
+  <div class="tl-phase p1">
+    <div class="tl-title">Phase 1</div>
+    <div class="tl-desc">核心识别+基础功能<br>40 天 · 4 单元</div>
+  </div>
+  <div class="tl-phase p2">
+    <div class="tl-title">Phase 2</div>
+    <div class="tl-desc">提醒系统+体验优化<br>20 天 · 2 单元</div>
+  </div>
+  <div class="tl-phase p3">
+    <div class="tl-title">Phase 3</div>
+    <div class="tl-desc">服务器+发布<br>20 天 · 2 单元</div>
+  </div>
+</div>
+
+<div style="display:flex;justify-content:space-between;font-size:.82rem;margin-top:8px;color:var(--slate-500)">
+  <span>Day 1</span><span>Day 10<br>🔥 首次推理</span><span>Day 20<br>🎯 识别闭环</span><span>Day 30<br>🏠 花园管理</span><span>Day 40<br>📱 可演示版本</span><span>Day 50<br>🔔 提醒上线</span><span>Day 60<br>✨ 体验版本</span><span>Day 70<br>🖥 服务器上线</span><span>Day 80<br>🚀 正式发布</span>
+</div>
+
+<!-- Phase deliverables table -->
+<div class="table-wrap" style="margin-top:24px">
+<table>
+  <thead><tr><th>Phase</th><th>天数</th><th>核心交付</th><th>可演示功能</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Phase 1</strong></td><td>1-40</td>
+      <td>拍照识花 · 养护指南 · 花园管理 · 免注册 · 纠错反馈</td>
+      <td>✅ 完整可演示版本</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2</strong></td><td>41-60</td>
+      <td>一键提醒 · 本地通知 · 知识在线更新 · 养护记录</td>
+      <td>✅ 内部测试版本</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3</strong></td><td>61-80</td>
+      <td>远程推送 · 纠错收集 · 应用商店发布 · 技术文档</td>
+      <td>🚀 正式发布版本</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ===== WORKLOAD ===== -->
+<h2 id="workload">各角色工作量分布</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>阶段</th><th style="text-align:center">A（AI）</th><th style="text-align:center">B（前端）</th><th style="text-align:center">C（全栈）</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>第 1 单元</td><td style="text-align:center">████████</td><td style="text-align:center">████████</td><td style="text-align:center">████████</td><td>三人并重，搭建环境</td></tr>
+    <tr><td>第 2 单元</td><td style="text-align:center">████████</td><td style="text-align:center">████████</td><td style="text-align:center">██████░░</td><td>C 侧重知识库编写</td></tr>
+    <tr><td>第 3 单元</td><td style="text-align:center">██████░░</td><td style="text-align:center">████████</td><td style="text-align:center">████████</td><td>B/C 侧重用户系统</td></tr>
+    <tr><td>第 4 单元</td><td style="text-align:center">█████░░░</td><td style="text-align:center">██████░░</td><td style="text-align:center">██████░░</td><td>打磨阶段，整体较轻</td></tr>
+    <tr><td>第 5 单元</td><td style="text-align:center">████░░░░</td><td style="text-align:center">████████</td><td style="text-align:center">████████</td><td>A 较轻松，B/C 主力</td></tr>
+    <tr><td>第 6 单元</td><td style="text-align:center">██████░░</td><td style="text-align:center">██████░░</td><td style="text-align:center">██████░░</td><td>体验打磨，三人均衡</td></tr>
+    <tr><td>第 7 单元</td><td style="text-align:center">████░░░░</td><td style="text-align:center">██████░░</td><td style="text-align:center">████████</td><td>C 主力服务器，B 推送</td></tr>
+    <tr><td>第 8 单元</td><td style="text-align:center">████░░░░</td><td style="text-align:center">██████░░</td><td style="text-align:center">██████░░</td><td>测试发布，三人均衡</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ===== RISKS ===== -->
+<h2 id="risks">关键风险与应对</h2>
+<div class="table-wrap risk-table">
+<table>
+  <thead><tr><th>风险</th><th>影响</th><th>应对措施</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ONNX Runtime 在低端机加载失败</strong></td><td style="color:var(--red-600);font-weight:700">高</td><td>第 1 单元尽早真机验证；准备 INT8 备选模型</td></tr>
+    <tr><td><strong>模型识别准确率不达标</strong></td><td style="color:var(--red-600);font-weight:700">高</td><td>第 1 单元即验证；准备增量训练数据</td></tr>
+    <tr><td>LLM API 调用超频或额度不足</td><td style="color:var(--amber-600)">中</td><td>三级阈值过滤减少调用；充值备用金</td></tr>
+    <tr><td>Android 厂商后台杀进程→本地通知失效</td><td style="color:var(--amber-600)">中</td><td>引导用户开启自启动；Phase 3 远程推送兜底</td></tr>
+    <tr><td>应用商店审核不通过</td><td style="color:var(--amber-600)">中</td><td>提前阅读审核指南；准备隐私政策</td></tr>
+    <tr><td>三人时间协调困难</td><td style="color:var(--slate-500)">低</td><td>以接口协议为契约；各人独立开发，每 5 天对齐</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ===== MILESTONES ===== -->
+<h2 id="milestones">里程碑节点</h2>
+<div class="milestone">
+  <div class="ms-item"><div class="ms-day">Day 10</div><div class="ms-emoji">🔥</div><div class="ms-name">首次真机推理成功</div></div>
+  <div class="ms-item"><div class="ms-day">Day 20</div><div class="ms-emoji">🎯</div><div class="ms-name">识别闭环完成</div></div>
+  <div class="ms-item"><div class="ms-day">Day 30</div><div class="ms-emoji">🏠</div><div class="ms-name">花园管理完成</div></div>
+  <div class="ms-item"><div class="ms-day">Day 40</div><div class="ms-emoji">📱</div><div class="ms-name">Phase 1 可演示</div></div>
+  <div class="ms-item"><div class="ms-day">Day 50</div><div class="ms-emoji">🔔</div><div class="ms-name">提醒系统上线</div></div>
+  <div class="ms-item"><div class="ms-day">Day 60</div><div class="ms-emoji">✨</div><div class="ms-name">Phase 2 体验版</div></div>
+  <div class="ms-item"><div class="ms-day">Day 70</div><div class="ms-emoji">🖥</div><div class="ms-name">服务器上线</div></div>
+  <div class="ms-item"><div class="ms-day">Day 80</div><div class="ms-emoji">🚀</div><div class="ms-name">正式发布</div></div>
+</div>
+
+<hr>
+<footer style="color:var(--slate-400);font-size:.82rem;text-align:center;padding:20px 0">
+  <p><strong>智慧花园开发线路图</strong> · v1.0 · 2026-06-12</p>
+  <p>React Native + ONNX Runtime + 大模型云端增强 · 3 人团队 · 80 天</p>
+  <p style="margin-top:6px">技术团队</p>
+</footer>
+
+</main>
+</body>
+</html>

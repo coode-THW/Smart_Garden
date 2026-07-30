@@ -85,3 +85,6 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Gradle daemon JVM configuration (local)
+android/gradle/gradle-daemon-jvm.properties

@@ -303,3 +303,17 @@ export const getModelAssetInt8 = (): any => {
   }
 };
 export const MODEL_BENCHMARK_ENABLED = true;
+
+// ━━━ 天气服务配置 ━━━
+/** Open-Meteo API 基础 URL（免费，无需 API Key） */
+export const WEATHER_API_URL = 'https://api.open-meteo.com/v1/forecast';
+/** 天气 API 请求超时 (ms) */
+export const WEATHER_API_TIMEOUT_MS = 10000;
+/** 天气数据 TTL：1 小时（毫秒） */
+export const WEATHER_DATA_TTL = 3600000;
+/** 养护建议 TTL：6 小时（毫秒） */
+export const WEATHER_ADVICE_TTL = 21600000;
+/** 天气数据时区（Asia/Shanghai） */
+export const WEATHER_TIMEZONE = 'Asia/Shanghai';
+/** 天气预报天数 */
+export const WEATHER_FORECAST_DAYS = 3;

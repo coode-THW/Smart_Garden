@@ -88,3 +88,28 @@ yarn-error.log
 
 # Gradle daemon JVM configuration (local)
 android/gradle/gradle-daemon-jvm.properties
+
+# CMake build cache
+.cxx/
+
+# Model files (large binary)
+*.pt
+*.pth
+
+# Log files
+*.log
+
+# OS generated files
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Windows file generated
+wsLocal.zip
+wsUpload*.zip

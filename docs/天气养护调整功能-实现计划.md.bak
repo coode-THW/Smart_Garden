@@ -1,0 +1,349 @@
+# 天气养护调整功能 — 实现计划
+
+> 分工依据：`docs/智慧花园开发线路图.md`  
+> A=AI（LLM/Prompt）B=前端（UI/组件）C=全栈（状态管理/缓存/测试）
+
+---
+
+## 一、应实现的功能
+
+1. **城市选择** — 手动从 30 个城市列表中选择，支持搜索过滤，记录到全局状态
+2. **实时天气获取** — 根据所选城市经纬度调用 Open-Meteo API，获取当前温度/湿度/天气状况/近 3 天预报
+3. **首页天气卡片** — 展示城市、温度、湿度、天气状况、AI 生成的每日养护小贴士
+4. **花园天气养护调整** — 在花园每株植物详情页展示针对当前天气的养护调整建议（浇水/温度/湿度/光照）
+5. **LLM 智能建议** — 将天气数据 + 植物养护指南发送给 Qwen，生成结构化养护调整
+6. **离线规则兜底** — 无网络时根据温度/降水/湿度阈值生成基础建议
+7. **TTL 缓存** — 天气数据 1h 过期，养护建议 6h 过期，过期后重新获取
+
+---
+
+## 二、接口定义
+
+### 2.1 类型接口 — `src/types/weather.ts`（A 负责）
+
+```typescript
+// 天气状况枚举
+export type WeatherCondition =
+  | 'clear' | 'cloudy' | 'overcast'
+  | 'rain' | 'drizzle' | 'thunderstorm'
+  | 'snow' | 'fog' | 'windy';
+
+// 城市信息
+export interface CityInfo {
+  name: string;        // "北京"
+  latitude: number;    // 39.9042
+  longitude: number;   // 116.4074
+}
+
+// Open-Meteo 返回的天气数据（经 WeatherService 解析后）
+export interface WeatherData {
+  city: string;
+  temperature: number;      // 当前温度 °C
+  tempMax: number;          // 今日最高
+  tempMin: number;          // 今日最低
+  humidity: number;         // 湿度 %
+  condition: WeatherCondition;
+  windSpeed: number;        // 风速 km/h
+  precipitation: number;    // 今日降水量 mm
+  forecast3Day: Array<{     // 未来3天
+    date: string;
+    tempMax: number;
+    tempMin: number;
+    precipitation: number;
+    condition: WeatherCondition;
+  }>;
+  updatedAt: string;        // ISO 时间戳
+}
+
+// LLM 生成的养护调整建议
+export interface WeatherAdvice {
+  dailyTip: string;                     // 首页小贴士（≤25字）
+  adjustments: WeatherAdjustment[];     // 养护调整列表
+  generatedAt: string;
+}
+
+export interface WeatherAdjustment {
+  category: 'water' | 'temperature' | 'humidity' | 'light' | 'fertilize' | 'wind';
+  icon: string;          // Material Design 图标名，如 "water" "thermometer"
+  title: string;         // 四字标题，如 "高温预警" "浇水调整"
+  advice: string;        // 详细建议，≤50字
+  severity: 'warning' | 'info' | 'success';
+}
+```
+
+### 2.2 数据文件 — `src/data/chineseCities.ts`（B 负责）
+
+```typescript
+import type { CityInfo } from '../types/weather';
+
+export const CHINESE_CITIES: CityInfo[] = [
+  { name: '北京',   latitude: 39.9042,  longitude: 116.4074 },
+  { name: '上海',   latitude: 31.2304,  longitude: 121.4737 },
+  // ... 约30个主要城市，覆盖全国气候区
+  { name: '乌鲁木齐', latitude: 43.8256, longitude: 87.6168 },
+];
+```
+
+### 2.3 WeatherService 接口 — `src/services/WeatherService.ts`（A 负责）
+
+```typescript
+class WeatherService {
+  static getInstance(): WeatherService;
+
+  // 核心方法：获取城市天气
+  // 调用 Open-Meteo GET https://api.open-meteo.com/v1/forecast
+  //   ?latitude={lat}&longitude={lon}
+  //   &current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m
+  //   &daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code
+  //   &forecast_days=3&timezone=Asia/Shanghai
+  // 返回 null 表示网络错误/API 异常
+  async fetchWeather(city: CityInfo): Promise<WeatherData | null>;
+
+  // WMO 天气码 → WeatherCondition（私有方法）
+  private mapWMOCode(code: number): WeatherCondition;
+  // 0→clear, 1-3→cloudy, 45-48→fog, 51-57→drizzle, 61-67→rain,
+  // 71-77→snow, 80-82→rain, 95-99→thunderstorm, 其他→cloudy
+}
+```
+
+#### 调用示例
+
+```typescript
+const weatherService = WeatherService.getInstance();
+const weather = await weatherService.fetchWeather(
+  { name: '北京', latitude: 39.9042, longitude: 116.4074 }
+);
+// weather.temperature → 32
+// weather.condition → 'clear'
+// weather.humidity → 45
+```
+
+### 2.4 WeatherCareService 接口 — `src/services/WeatherCareService.ts`（A 负责）
+
+```typescript
+class WeatherCareService {
+  static getInstance(): WeatherCareService;
+
+  // 核心方法：获取某植物在当前天气下的养护调整建议
+  // 流程：检查缓存 → 无缓存则调 LLM → LLM 失败则规则兜底
+  async getAdviceForPlant(
+    city: CityInfo,
+    flowerId: number,
+    weather: WeatherData,
+  ): Promise<WeatherAdvice>;
+
+  // 首页每日小贴士（不需要植物信息，仅天气 → LLM）
+  async getDailyTip(city: CityInfo, weather: WeatherData): Promise<string>;
+
+  // 调用 Qwen LLM（复用现有 LlmService 的 API Key 和 fetch 模式）
+  private async callLLMForAdvice(
+    weather: WeatherData,
+    guide: CareGuide,       // 来自 KnowledgeService.getCareGuide()
+  ): Promise<WeatherAdvice>;
+
+  // 离线规则兜底（无网络/LLM超时时使用）
+  private generateFallbackAdvice(
+    weather: WeatherData,
+    guide: CareGuide,
+  ): WeatherAdvice;
+}
+```
+
+#### LLM Prompt 模板
+
+```
+你是一个专业园艺养护专家。根据天气和植物养护指南，给出调整建议。
+
+【天气】城市：{city} | 当前{temp}°C (最高{max}°C/最低{min}°C)
+湿度{humidity}% | 天气{condition} | 近3天降水{precip}mm
+未来3天：{forecast}
+
+【植物】{flowerName} ({scientificName})
+浇水：{watering.frequency} | {watering.amount}
+施肥：{fertilizing.period} | {fertilizing.amount}
+光照：{lighting.requirement}
+环境：温度{env.temperature} | 湿度{env.humidity} | 通风{env.ventilation}
+
+返回JSON（不要Markdown）：
+{"dailyTip":"≤25字小贴士","adjustments":[{"category":"water|temperature|humidity|light|fertilize|wind","icon":"water|thermometer|water-percent|white-balance-sunny|sprout|weather-windy","title":"四字标题","advice":"≤50字建议","severity":"warning|info|success"}]}
+
+规则：有雨→减水防烂根 | >30°C→遮阴 | <5°C→防冻 | 湿度>70%→通风防病 | 湿度<30%→加湿 | 大风→避风 | 给2-4条即可
+```
+
+#### 离线规则兜底逻辑
+
+| 条件 | category | title | advice |
+|------|----------|-------|--------|
+| 近3天降水 > 0 | water | 浇水调整 | 近期有降雨，建议减少浇水频率，注意盆土排水 |
+| 温度 > 30 | temperature | 高温预警 | 当前温度较高，请注意遮阴降温，避免阳光直射 |
+| 温度 < 5 | temperature | 防冻提醒 | 温度偏低，建议将植物移至室内或采取保温措施 |
+| 湿度 > 70 | humidity | 病害风险 | 湿度过高易引发病害，请加强通风 |
+| 湿度 < 30 | humidity | 干燥提醒 | 空气干燥，建议向叶面喷水增加湿度 |
+| 风速 > 30 | wind | 防风提醒 | 风力较大，建议将植物移至避风处 |
+
+### 2.5 useWeatherStore 接口 — `src/store/useWeatherStore.ts`（C 负责）
+
+```typescript
+interface WeatherState {
+  selectedCity: CityInfo | null;      // 当前选中城市
+  weatherData: WeatherData | null;    // 最新天气数据
+  dailyTip: string;                   // 今日小贴士
+  adviceMap: Record<string, WeatherAdvice>;  // key: "北京:6" (城市:flowerId)
+  isLoading: boolean;
+  lastFetchAt: number | null;         // Date.now()
+
+  // Actions
+  selectCity: (city: CityInfo) => void;
+  fetchWeather: () => Promise<void>;                    // 调 WeatherService
+  getAdvice: (flowerId: number, flowerName: string) => Promise<WeatherAdvice | null>;  // 调 WeatherCareService
+  clearCache: () => void;
+}
+```
+
+#### 调用示例（组件中使用）
+
+```typescript
+// 在 WeatherCard 中
+const { selectedCity, weatherData, dailyTip, isLoading, fetchWeather } = useWeatherStore();
+
+// 首次渲染时自动获取天气
+useEffect(() => {
+  if (selectedCity) fetchWeather();
+}, [selectedCity]);
+
+// 渲染
+<DesignCard>
+  <Text>{weatherData?.temperature}°C</Text>
+  <Text>{dailyTip}</Text>
+</DesignCard>
+
+// 在 WeatherAdvisedCare 中
+const { selectedCity, getAdvice } = useWeatherStore();
+const [advice, setAdvice] = useState<WeatherAdvice | null>(null);
+
+useEffect(() => {
+  if (selectedCity && flowerId) {
+    getAdvice(flowerId, flowerName).then(setAdvice);
+  }
+}, [selectedCity, flowerId]);
+
+// 渲染调整项
+{advice?.adjustments.map(a => (
+  <View key={a.category}>
+    <Icon source={a.icon} />
+    <Text>{a.title}</Text>
+    <Text>{a.advice}</Text>
+  </View>
+))}
+```
+
+---
+
+## 三、组件接口
+
+### 3.1 WeatherCard — `src/components/WeatherCard.tsx`（B 负责）
+
+```typescript
+// 无 Props，直接从 useWeatherStore 读状态
+// 四种状态自动切换：
+// 1. noCity  — 未选城市：显示 "选择城市以查看天气养护建议"
+// 2. loading — 获取中：骨架屏占位
+// 3. loaded  — 有数据：温度+湿度+天气+每日小贴士+城市名
+// 4. error   — 获取失败：显示错误信息+重试按钮
+```
+
+### 3.2 CityPickerModal — `src/components/CityPickerModal.tsx`（B 负责）
+
+```typescript
+interface CityPickerModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+// 从 useWeatherStore 读 selectedCity 和 selectCity
+// FlatList 渲染 CHINESE_CITIES
+// 顶部 TextInput 实时过滤
+// 当前城市显示 ✓ 标记
+```
+
+### 3.3 WeatherAdvisedCare — `src/components/WeatherAdvisedCare.tsx`（B 负责）
+
+```typescript
+interface WeatherAdvisedCareProps {
+  flowerId: number;
+  flowerName: string;
+}
+// 从 useWeatherStore 读 selectedCity 和 getAdvice
+// 五种状态：
+// 1. noCity      — "请先在首页设置城市"
+// 2. loading     — 骨架屏
+// 3. loaded      — 调整建议列表（severity 左侧色条+icon+title+advice）
+// 4. noAdvice    — "当前天气适宜，无需额外调整" + 绿色 success 标记
+// 5. offline     — 显示缓存数据 + "缓存于 XX分钟前"
+```
+
+---
+
+## 四、新增/修改文件清单
+
+| # | 文件 | 负责 | 说明 |
+|---|------|:--:|------|
+| 1 | `src/types/weather.ts` | A | 类型定义 |
+| 2 | `src/data/chineseCities.ts` | B | 城市数据 |
+| 3 | `src/services/WeatherService.ts` | A | Open-Meteo fetch |
+| 4 | `src/services/WeatherCareService.ts` | A | LLM 建议 + 规则兜底 |
+| 5 | `src/store/useWeatherStore.ts` | C | Zustand 状态管理 |
+| 6 | `src/components/WeatherCard.tsx` | B | 首页天气卡片 |
+| 7 | `src/components/CityPickerModal.tsx` | B | 城市选择弹窗 |
+| 8 | `src/components/WeatherAdvisedCare.tsx` | B | 花园天气建议 |
+| 9 | `src/constants.ts` | A | 修改：添加 3 个天气常量 |
+| 10 | `src/screens/HomeScreen.tsx` | B | 修改：Hero 下方插入 WeatherCard |
+| 11 | `src/screens/GardenScreen.tsx` | B | 修改：养护 Tab 插入 WeatherAdvisedCare |
+
+---
+
+## 五、数据流总览
+
+```
+用户选城市（CityPickerModal）
+  → useWeatherStore.selectCity(city)
+    → WeatherService.fetchWeather(city)
+      → GET https://api.open-meteo.com/v1/forecast?...
+        → 解析为 WeatherData → 存入 useWeatherStore
+
+首页 WeatherCard
+  → useWeatherStore.weatherData + dailyTip
+    → WeatherCareService.getDailyTip(city, weather)
+      → Qwen LLM Prompt（仅天气）
+        → 返回 dailyTip 字符串 → 存入 useWeatherStore
+
+花园详情 WeatherAdvisedCare
+  → useWeatherStore.getAdvice(flowerId, flowerName)
+    → 检查 adviceMap 缓存（key: "北京:6"）
+      → 命中 + 未过期 → 返回缓存
+      → 未命中 / 过期 →
+        → WeatherCareService.getAdviceForPlant(city, flowerId, weather)
+          → KnowledgeService.getCareGuide(flowerId) → CareGuide
+          → callLLMForAdvice(weather, guide)
+            → fetch Qwen API（POST JSON）
+              → 解析 JSON → WeatherAdvice
+                → 存入 adviceMap["北京:6"] → 返回
+          → LLM 失败（超时/网络/解析错）→ generateFallbackAdvice()
+```
+
+---
+
+## 六、分工总览
+
+| 天数 | A（AI 工程师） | B（前端工程师） | C（全栈工程师） |
+|------|--------------|--------------|--------------|
+| **Day 1** | 定义 weather 类型 + 实现 WeatherService | 创建城市数据 `chineseCities.ts` | 阅读接口文档，准备测试用例 |
+| **Day 2** | 实现 WeatherCareService（Prompt+LLM调用+JSON解析） | CityPickerModal + WeatherCard 组件 | 创建 useWeatherStore |
+| **Day 3** | 离线规则兜底 + constants 常量 | WeatherCard 集成到 HomeScreen + WeatherAdvisedCare 组件 | 离线 UI 状态实现 |
+| **Day 4** | 配合 B 联调，优化 Prompt 输出质量 | WeatherAdvisedCare 集成到 GardenScreen + 暗色模式 | 单元测试 + 缓存逻辑测试 |
+| **Day 5** | Prompt 终版调优 | 比赛 UI 走查 + 提醒按钮替换 | 全流程回归测试 + APK 构建 |
+
+## 七、验证标准
+
+- `npx tsc --noEmit` 零错误
+- 真机：选城市 → 首页出天气卡片+小贴士 → 花园详情出调整建议 → 飞行模式出离线建议
+- `./gradlew assembleRelease` 构建成功

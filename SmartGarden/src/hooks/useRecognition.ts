@@ -2,7 +2,6 @@
  * useRecognition — 识别流程 Hook
  *
  * 从 RecognizeScreen 抽取：拍照/选图 → 推理 → 结果
- * 供 RecognizeScreen 使用，隔离业务逻辑
  */
 
 import {useCallback, useState} from 'react';
@@ -36,9 +35,7 @@ export function useRecognition() {
     async function run() {
       try {
         setState({phase: 'inferring', imageUri: localUri});
-        const result = await RecognitionOrchestrator.getInstance().recognize(
-          localUri,
-        );
+        const result = await RecognitionOrchestrator.getInstance().recognize(localUri);
         setState({phase: 'result', imageUri: localUri, result});
       } catch (e: any) {
         const info = getErrorInfoFromError(e);
@@ -63,13 +60,8 @@ export function useRecognition() {
       }
 
       setState({phase: 'inferring', imageUri: asset.uri});
-      const inferenceResult =
-        await RecognitionOrchestrator.getInstance().recognize(asset.uri);
-      setState({
-        phase: 'result',
-        imageUri: asset.uri,
-        result: inferenceResult,
-      });
+      const inferenceResult = await RecognitionOrchestrator.getInstance().recognize(asset.uri);
+      setState({phase: 'result', imageUri: asset.uri, result: inferenceResult});
     } catch (e: any) {
       const info = getErrorInfoFromError(e);
       setState({phase: 'error', message: info.fullMessage});

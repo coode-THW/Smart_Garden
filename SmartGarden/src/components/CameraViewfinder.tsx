@@ -71,8 +71,7 @@ function CameraViewfinder({
 
       await RNFS.copyFile(photo.path, destPath);
 
-      const fileUri =
-        Platform.OS === 'android' ? `file://${destPath}` : destPath;
+      const fileUri = destPath;
 
       // 先停用 Camera，等待 native 层停止推送帧数据
       // 防止组件卸载时 BufferQueue 和 ImageReader 被废弃导致的错误

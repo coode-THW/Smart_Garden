@@ -26,6 +26,7 @@ import FlowerAvatar from '../components/FlowerAvatar';
 import StatusBadge from '../components/StatusBadge';
 import ActionButton from '../components/ActionButton';
 import ButtonGroup from '../components/ButtonGroup';
+import WeatherAdvisedCare from '../components/WeatherAdvisedCare';
 import {GardenService, type GardenEntry} from '../services/GardenService';
 import {COLORS, RADIUS, SPACING} from '../constants';
 
@@ -346,7 +347,8 @@ function GardenDetail({
             </View>
 
             {detailTab === 'care' ? (
-              <DesignCard shadow="card" padding={SPACING.lg} bg={cardBg}>
+              <>
+                <DesignCard shadow="card" padding={SPACING.lg} bg={cardBg}>
                 <View style={styles.careGrid}>
                   <View style={[styles.careCell, {borderBottomColor: borderColor}]}>
                     <Icon source="water" size={20} color={COLORS.forest} />
@@ -396,6 +398,13 @@ function GardenDetail({
                   </View>
                 </View>
               </DesignCard>
+
+              {/* ━━ 天气养护调整 ━━ */}
+              <WeatherAdvisedCare
+                flowerId={guide.flowerId}
+                flowerName={guide.flowerName}
+              />
+              </>
             ) : (
               <DesignCard shadow="card" padding={SPACING.lg} bg={cardBg}>
                 <View style={styles.grid}>

@@ -6,7 +6,7 @@
  */
 import {QWEN_API_KEY, DOUBAO_API_KEY} from '@env';
 
-const g = globalThis as Record<string, string | undefined>;
+const g = globalThis as unknown as Record<string, string | undefined>;
 g.QWEN_API_KEY = QWEN_API_KEY;
 g.DOUBAO_API_KEY = DOUBAO_API_KEY;
 

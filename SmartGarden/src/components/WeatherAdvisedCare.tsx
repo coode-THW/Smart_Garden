@@ -8,10 +8,10 @@
 
 import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, Text, View, useColorScheme} from 'react-native';
-import {useWeatherStore} from '../store/useWeatherStore';
-import {COLORS, RADIUS, SHADOWS, SPACING, TYPOGRAPHY} from '../constants';
+import {Icon} from 'react-native-paper';
+import {useWeatherStore, formatTimeAgo} from '../store/useWeatherStore';
+import {COLORS, RADIUS, SPACING, TYPOGRAPHY} from '../constants';
 import DesignCard from './DesignCard';
-import Icon from './Icon';
 import type {WeatherAdvice, WeatherAdjustment} from '../types/weather';
 
 interface Props {
@@ -31,7 +31,8 @@ const SEVERITY_COLORS: Record<
 
 function WeatherAdvisedCare({flowerId, flowerName}: Props): React.JSX.Element {
   const isDark = useColorScheme() === 'dark';
-  const {selectedCity, getAdvice, weatherData} = useWeatherStore();
+  const {selectedCity, getAdvice, weatherData, isOffline, lastFetchAt} =
+    useWeatherStore();
   const [advice, setAdvice] = useState<WeatherAdvice | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +163,7 @@ function WeatherAdvisedCare({flowerId, flowerName}: Props): React.JSX.Element {
             borderBottomColor: borderColor,
           }}
         >
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+          <View style={{flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap'}}>
             <Text style={{fontSize: 18, marginRight: SPACING.sm}}>🌤️</Text>
             <Text style={{...TYPOGRAPHY.h3, color: textColor}}>
               天气养护调整
@@ -179,6 +180,19 @@ function WeatherAdvisedCare({flowerId, flowerName}: Props): React.JSX.Element {
               </Text>
             )}
           </View>
+
+          {/* 离线缓存标记 */}
+          {isOffline && (
+            <Text
+              style={{
+                ...TYPOGRAPHY.bodySmall,
+                color: COLORS.warning,
+                marginTop: SPACING.xs,
+              }}
+            >
+              离线模式 · 缓存于 {formatTimeAgo(lastFetchAt)}
+            </Text>
+          )}
         </View>
 
         {/* Adjustment items */}

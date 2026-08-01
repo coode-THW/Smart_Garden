@@ -325,7 +325,7 @@ class YoloService {
     if (Platform.OS === 'android') {
       const RNFS = require('react-native-fs').default || require('react-native-fs');
       const modelFileName =
-        MODEL_QUANTIZATION === 'int8'
+        (MODEL_QUANTIZATION as string) === 'int8'
           ? 'yolov11n-flower-int8.onnx'
           : 'yolov11n-flower.onnx';
       const destPath = `${RNFS.DocumentDirectoryPath}/${modelFileName}`;
@@ -343,8 +343,8 @@ class YoloService {
 
     // iOS：通过 Image.resolveAssetSource 获取路径（可直接从 bundle 读取）
     const asset =
-      MODEL_QUANTIZATION === 'int8' ? getModelAssetInt8() : MODEL_ASSET;
-    if (!asset && MODEL_QUANTIZATION === 'int8') {
+      (MODEL_QUANTIZATION as string) === 'int8' ? getModelAssetInt8() : MODEL_ASSET;
+    if (!asset && (MODEL_QUANTIZATION as string) === 'int8') {
       throw new Error('INT8 模型文件不存在，请检查 assets 目录');
     }
     const resolved = Image.resolveAssetSource(asset);
@@ -362,7 +362,7 @@ class YoloService {
     logger.debug('YoloService', 'Debug 模式，fetch 模型:', resolved.uri);
     const RNFS = require('react-native-fs').default || require('react-native-fs');
     const modelFileName =
-      MODEL_QUANTIZATION === 'int8'
+      (MODEL_QUANTIZATION as string) === 'int8'
         ? 'yolov11n-flower-int8.onnx'
         : 'yolov11n-flower.onnx';
     const destPath = `${RNFS.DocumentDirectoryPath}/${modelFileName}`;

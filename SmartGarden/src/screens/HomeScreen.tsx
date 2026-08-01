@@ -23,6 +23,7 @@ import DesignCard from '../components/DesignCard';
 import SectionHeader from '../components/SectionHeader';
 import FlowerAvatar from '../components/FlowerAvatar';
 import StatusBadge from '../components/StatusBadge';
+import WeatherCard from '../components/WeatherCard';
 import ActionButton from '../components/ActionButton';
 import ButtonGroup from '../components/ButtonGroup';
 import {KnowledgeService} from '../services/KnowledgeService';
@@ -97,6 +98,9 @@ function HomeScreen(): React.JSX.Element {
           <Icon source="leaf" size={40} color={COLORS.sage} />
         </View>
       </View>
+
+      {/* ━━ 天气卡片 ━━ */}
+      <WeatherCard />
 
       {/* ━━ 功能卡片 ━━ */}
       <View style={styles.cardList}>

@@ -37,6 +37,7 @@ interface Props {
   iconPosition?: 'left' | 'right';
   disabled?: boolean;
   fullWidth?: boolean;
+  flex?: boolean;
   style?: ViewStyle;
   onPress: () => void;
 }

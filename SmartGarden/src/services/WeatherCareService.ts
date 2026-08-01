@@ -319,23 +319,37 @@ class WeatherCareService {
       )
       .join('\n');
 
-    return `你是一个专业园艺养护专家。根据天气和植物养护指南，给出调整建议。
+    const precipTotal =
+      weather.precipitation +
+      weather.forecast3Day.reduce((s, f) => s + f.precipitation, 0);
 
-【天气】城市：${weather.city} | 当前${weather.temperature}°C (最高${weather.tempMax}°C/最低${weather.tempMin}°C)
-湿度${weather.humidity}% | 天气${conditionText} | 近3天降水${weather.precipitation}mm
+    return `你是住在${weather.city}的园艺养护专家。请根据当地实际天气，对"${guide.flowerName}"给出自然贴心的养护调整建议。
+
+【${weather.city}天气】当前${weather.temperature}°C（${weather.tempMin}~${weather.tempMax}°C），${conditionText}
+湿度${weather.humidity}%，风速${weather.windSpeed}km/h
+今日降水${weather.precipitation}mm，近3天累计降水${precipTotal}mm
 未来3天预报：
 ${forecastText}
 
-【植物】${guide.flowerName} (${guide.scientificName})
+【${guide.flowerName}常规养护】
 浇水：${guide.watering.frequency} | ${guide.watering.amount}
 施肥：${guide.fertilizing.period} | ${guide.fertilizing.amount}
-光照：${guide.lighting.requirement}
-环境：温度${guide.environment.temperature} | 湿度${guide.environment.humidity} | 通风${guide.environment.ventilation}
+光照：${guide.lighting.requirement} | 宜放：${guide.lighting.bestLocation}
+环境：${guide.environment.temperature} | 湿度${guide.environment.humidity} | ${guide.environment.ventilation}
 
-返回 JSON（不要 Markdown，使用双引号）：
-{"dailyTip":"≤25字中文小贴士","adjustments":[{"category":"water|temperature|humidity|light|fertilize|wind","icon":"water|thermometer|water-percent|white-balance-sunny|sprout|weather-windy","title":"四字中文标题","advice":"≤50字中文建议","severity":"warning|info|success"}]}
+请以口语化、自然的语气给出建议，像朋友提醒一样。每条建议用具体数字（温度、降水量）说明原因。
 
-规则：有雨→减水防烂根 | >30°C→遮阴 | <5°C→防冻 | 湿度>70%→通风防病 | 湿度<30%→加湿 | 风速>30→避风 | 给出2-4条调整建议。`;
+返回JSON（不要Markdown，双引号）：
+{"dailyTip":"≤25字，如"今天降雨5mm，建议跳过浇水"","adjustments":[{"category":"water|temperature|humidity|light|fertilize|wind","icon":"water|thermometer|water-percent|white-balance-sunny|sprout|weather-windy","title":"四字标题","advice":"用具体数字的自然语言建议，如"近3天累计降水15mm，本周可减少浇水至1次，注意盆底排水避免烂根"，≤80字","severity":"warning|info|success"}]}
+
+判断规则：
+- 近3天降水>0 → "最近降水Xmm，可适当减少浇水量" / "未来有雨，建议雨后排水防涝"
+- 温度>30°C → "当前X°C超过适宜温度，建议遮阴或移至半阴处"
+- 温度<5°C → "当前X°C偏低，建议入室保暖"
+- 湿度>70% → "湿度偏高X%，加强通风预防白粉病"
+- 湿度<30% → "空气干燥X%，可向叶面喷雾增湿"
+- 风速>30km/h → "风力较大，移至避风处"
+- 给出2-4条即可，无问题则返回空数组，dailyTip写"天气适宜，按常规养护"`;
   }
 
   /**
@@ -443,7 +457,7 @@ ${forecastText}
       category: adj.category,
       icon: adj.icon || this.getDefaultIcon(adj.category),
       title: adj.title || this.getDefaultTitle(adj.category),
-      advice: (adj.advice || '').slice(0, 50),
+      advice: (adj.advice || '').slice(0, 80),
       severity: adj.severity || 'info',
     };
   }
@@ -484,18 +498,30 @@ ${forecastText}
   ): WeatherAdvice {
     const adjustments: WeatherAdjustment[] = [];
 
+    // 计算未来3天累计降水
+    const forecastPrecip = weather.forecast3Day.reduce(
+      (s, f) => s + f.precipitation,
+      0,
+    );
+    const totalPrecip = weather.precipitation + forecastPrecip;
+
     // 规则 1：近3天有降水 → 减少浇水
     if (
       weather.precipitation > 0 ||
+      forecastPrecip > 0 ||
       weather.condition === 'rain' ||
       weather.condition === 'drizzle' ||
       weather.condition === 'thunderstorm'
     ) {
+      const precipRef = totalPrecip > 0 ? `近3天累计降水${totalPrecip}mm` : '';
+      const action = forecastPrecip > 0
+        ? '未来有降雨预报，建议减少浇水频率，注意雨后及时排水'
+        : '最近有降雨，可适当减少浇水量，注意盆土排水防烂根';
       adjustments.push({
         category: 'water',
         icon: 'water',
         title: '浇水调整',
-        advice: '近期有降雨，建议减少浇水频率，注意盆土排水',
+        advice: [precipRef, action].filter(Boolean).join('，'),
         severity: 'warning',
       });
     }
@@ -506,8 +532,16 @@ ${forecastText}
         category: 'temperature',
         icon: 'thermometer',
         title: '高温预警',
-        advice: '当前温度较高，请注意遮阴降温，避免阳光直射',
+        advice: `当前${weather.temperature}°C，建议将盆栽移至半阴处或室内，避免正午阳光直射，适当增加浇水量`,
         severity: 'warning',
+      });
+    } else if (weather.tempMax > 33) {
+      adjustments.push({
+        category: 'temperature',
+        icon: 'thermometer',
+        title: '防暑提醒',
+        advice: `今日最高${weather.tempMax}°C，中午时段注意遮阴，避免暴晒导致叶片灼伤`,
+        severity: 'info',
       });
     }
 
@@ -517,8 +551,16 @@ ${forecastText}
         category: 'temperature',
         icon: 'thermometer',
         title: '防冻提醒',
-        advice: '温度偏低，建议将植物移至室内或采取保温措施',
+        advice: `当前仅${weather.temperature}°C，建议将植物移至室内温暖处，避免室外受冻`,
         severity: 'warning',
+      });
+    } else if (weather.tempMin < 8 && weather.temperature < 10) {
+      adjustments.push({
+        category: 'temperature',
+        icon: 'thermometer',
+        title: '降温预警',
+        advice: `近期最低温度${weather.tempMin}°C，昼夜温差大，晚间注意关窗防寒`,
+        severity: 'info',
       });
     }
 
@@ -527,8 +569,8 @@ ${forecastText}
       adjustments.push({
         category: 'humidity',
         icon: 'water-percent',
-        title: '病害风险',
-        advice: '湿度过高易引发病害，请加强通风',
+        title: '防病提醒',
+        advice: `当前湿度${weather.humidity}%，易引发白粉病和根腐，请加强通风，避免叶片积水`,
         severity: 'warning',
       });
     }
@@ -539,7 +581,7 @@ ${forecastText}
         category: 'humidity',
         icon: 'water-percent',
         title: '干燥提醒',
-        advice: '空气干燥，建议向叶面喷水增加湿度',
+        advice: `空气湿度仅${weather.humidity}%，可向叶面喷雾增加湿度，或放置水盘在盆栽旁`,
         severity: 'info',
       });
     }
@@ -550,18 +592,34 @@ ${forecastText}
         category: 'wind',
         icon: 'weather-windy',
         title: '防风提醒',
-        advice: '风力较大，建议将植物移至避风处',
+        advice: `当前风速${weather.windSpeed}km/h，建议将室外盆栽移至避风处，防止倒伏`,
         severity: 'warning',
       });
     }
 
-    // 如果没有触发任何规则，添加一条"适宜生长"的提示
+    // 规则 7：晴朗干燥 + 高温 → 增加浇水
+    if (
+      weather.condition === 'clear' &&
+      weather.temperature > 20 &&
+      weather.precipitation === 0 &&
+      forecastPrecip === 0
+    ) {
+      adjustments.push({
+        category: 'water',
+        icon: 'water',
+        title: '补水提醒',
+        advice: `近期无降雨，温度${weather.temperature}°C蒸发较快，请按时浇水保持土壤湿润`,
+        severity: 'info',
+      });
+    }
+
+    // 如果没有触发任何规则
     if (adjustments.length === 0) {
       adjustments.push({
         category: 'light',
         icon: 'white-balance-sunny',
         title: '适宜生长',
-        advice: '当前天气条件适宜植物生长，请按常规养护即可',
+        advice: `当前${weather.temperature}°C，${CONDITION_MAP[weather.condition]}，天气条件适宜植物生长`,
         severity: 'success',
       });
     }
@@ -580,14 +638,24 @@ ${forecastText}
    * 生成兜底小贴士。
    */
   private generateFallbackTip(weather: WeatherData): string {
+    const precip3Day =
+      weather.precipitation +
+      weather.forecast3Day.reduce((s, f) => s + f.precipitation, 0);
+
+    if (precip3Day > 10) {
+      return `近3天降雨${precip3Day}mm，可减少浇水`;
+    }
+    if (weather.temperature > 33) {
+      return `${weather.temperature}°C高温，注意遮阴降温`;
+    }
     if (weather.temperature > 30) {
       return '天气炎热，注意遮阴降温';
     }
     if (weather.temperature < 5) {
-      return '气温偏低，注意保暖防寒';
+      return `仅${weather.temperature}°C，注意防寒保暖`;
     }
     if (weather.humidity > 70) {
-      return '湿度较高，记得通风防病';
+      return '湿度偏高，注意通风防病';
     }
     if (weather.humidity < 30) {
       return '空气干燥，适当增加湿度';
@@ -595,13 +663,10 @@ ${forecastText}
     if (weather.condition === 'rain' || weather.condition === 'drizzle') {
       return '有雨天气，减少浇水注意排水';
     }
-    if (weather.condition === 'snow') {
-      return '雪天注意保暖，减少户外活动';
-    }
     if (weather.windSpeed > 30) {
       return '风力较大，注意防风保护';
     }
-    return '天气适宜，植物生长良好';
+    return '天气适宜，按常规养护即可';
   }
 
   // ━━━━━ API 配置辅助 ━━━━━

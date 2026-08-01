@@ -26,6 +26,7 @@ import { UserService } from './src/services/UserService';
 import ModelUpdateService from './src/services/ModelUpdateService';
 import { COLORS } from './src/constants';
 import logger from './src/services/LoggerService';
+import { useWeatherStore } from './src/store/useWeatherStore';
 
 const paperTheme = {
   ...DefaultTheme,
@@ -112,6 +113,13 @@ function App(): React.JSX.Element {
       clearTimeout(timeoutId);
     };
   }, []);
+
+  // ━━ GPS 自动定位（不阻塞启动流程） ━━
+  const autoLocate = useWeatherStore(s => s.autoLocate);
+
+  useEffect(() => {
+    autoLocate();
+  }, [autoLocate]);
 
   const handleEnterApp = () => {
     setShowWelcome(false);

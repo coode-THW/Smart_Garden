@@ -25,8 +25,10 @@
  *   - 离线时：始终返回缓存数据，不做网络请求
  */
 
-import { create } from 'zustand';
-import type { CityInfo, WeatherData, WeatherAdvice } from '../types/weather';
+import {create} from 'zustand';
+import Geolocation from '@react-native-community/geolocation';
+import type {CityInfo, WeatherData, WeatherAdvice} from '../types/weather';
+import {CHINESE_CITIES} from '../data/chineseCities';
 import WeatherService from '../services/WeatherService';
 import WeatherCareService from '../services/WeatherCareService';
 import NetworkService from '../services/NetworkService';
@@ -78,6 +80,8 @@ export interface WeatherState {
   clearCache: () => void;
   /** 初始化网络监控（App 启动时调用一次） */
   initNetworkMonitoring: () => () => void;
+  /** GPS 自动定位，匹配最近城市并自动选中 */
+  autoLocate: () => Promise<void>;
 }
 
 // ━━━━━ 初始状态 ━━━━━
@@ -89,6 +93,7 @@ const initialState: Omit<
   | 'getAdvice'
   | 'clearCache'
   | 'initNetworkMonitoring'
+  | 'autoLocate'
 > = {
   selectedCity: null,
   weatherData: null,
@@ -322,5 +327,47 @@ export const useWeatherStore = create<WeatherState>()((set, get) => ({
     }
 
     return unsubscribe;
+  },
+
+  // ─── GPS 自动定位 ───
+
+  autoLocate: async () => {
+    const { selectedCity } = get();
+    if (selectedCity) return; // 已有手动选择，不覆盖
+
+    try {
+      const position = await new Promise<{coords: {latitude: number; longitude: number}}>(
+        (resolve, reject) => {
+          Geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 3600000, // 1h 缓存
+          });
+        },
+      );
+
+      const { latitude, longitude } = position.coords;
+      logger.info('WeatherStore', `GPS 定位成功: ${latitude}, ${longitude}`);
+
+      // 找最近城市
+      let nearest: CityInfo | null = null;
+      let minDist = Infinity;
+      for (const city of CHINESE_CITIES) {
+        const dist =
+          (city.latitude - latitude) ** 2 + (city.longitude - longitude) ** 2;
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = city;
+        }
+      }
+
+      if (nearest) {
+        logger.info('WeatherStore', `自动定位选中: ${nearest.name}`);
+        get().selectCity(nearest);
+        get().fetchWeather();
+      }
+    } catch (err) {
+      logger.info('WeatherStore', 'GPS 定位失败，等待手动选择城市');
+    }
   },
 }));

@@ -673,8 +673,8 @@ ${forecastText}
 
   private getApiKey(keyName: string): string {
     const envKeys: Record<string, string | undefined> = {
-      [QWEN_API_KEY]: QWEN_API_KEY,
-      [DOUBAO_API_KEY]: DOUBAO_API_KEY,
+      QWEN_API_KEY,
+      DOUBAO_API_KEY,
     };
 
     const result = envKeys[keyName] || '';

@@ -96,6 +96,9 @@ function WelcomeScreen({
   /* 进度动画 */
   useEffect(() => {
     const target = Math.min(progress / 100, 1);
+
+    // 启动新动画前先停止旧的，避免 native 动画节点堆积并发动画
+    animProgress.stopAnimation();
     Animated.timing(animProgress, {
       toValue: target,
       duration: 400,
@@ -103,6 +106,7 @@ function WelcomeScreen({
       useNativeDriver: true,
     }).start();
 
+    leafScale.stopAnimation();
     Animated.timing(leafScale, {
       toValue: 0.3 + target * 0.7,
       duration: 600,
@@ -110,12 +114,23 @@ function WelcomeScreen({
       useNativeDriver: true,
     }).start();
 
+    leafOpacity.stopAnimation();
     Animated.timing(leafOpacity, {
       toValue: 0.3 + target * 0.7,
       duration: 500,
       useNativeDriver: true,
     }).start();
   }, [progress]);
+
+  /* 卸载时停止进度/页面动画，避免 native 节点残留报错 */
+  useEffect(() => {
+    return () => {
+      animProgress.stopAnimation();
+      leafScale.stopAnimation();
+      leafOpacity.stopAnimation();
+      pageAnims.forEach(anim => anim.stopAnimation());
+    };
+  }, []);
 
   /* 环形水波纹持续旋转 */
   useEffect(() => {
@@ -156,6 +171,7 @@ function WelcomeScreen({
   /* 页面入场动画 */
   useEffect(() => {
     pageAnims.forEach((anim, idx) => {
+      anim.stopAnimation();
       Animated.timing(anim, {
         toValue: idx === currentPage ? 1 : 0,
         duration: 600,

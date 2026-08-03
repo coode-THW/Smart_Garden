@@ -192,16 +192,15 @@ function RecognizeScreen(): React.JSX.Element {
           disabled={!modelReady}
           onPress={handleEnterCamera}
         />
-        <View style={{marginTop: SPACING.md}}>
-          <ActionButton
-            title="从相册选择"
-            variant="outline"
-            size="lg"
-            icon="image-multiple"
-            fullWidth
-            onPress={handlePickImage}
-          />
-        </View>
+        <ActionButton
+          title="从相册选择"
+          variant="outline"
+          size="lg"
+          icon="image-multiple"
+          fullWidth
+          style={{marginTop: SPACING.md}}
+          onPress={handlePickImage}
+        />
       </View>
     </View>
   );

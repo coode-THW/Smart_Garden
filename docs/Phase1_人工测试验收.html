@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧花园 Smart Garden - Phase 1 人工测试验收</title>
+  <style>
+    :root {
+      --primary: #2D5A3D;
+      --primary-light: #E8F2EA;
+      --primary-dark: #1F3D2A;
+      --sage: #A3B899;
+      --success: #16a34a;
+      --success-light: #dcfce7;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --cream: #F7F5F0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--gray-900);
+      background: var(--cream);
+      line-height: 1.7;
+    }
+    .top-bar {
+      background: linear-gradient(135deg, var(--primary), #5A7A5A);
+      color: #fff;
+      padding: 32px 48px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,.15);
+    }
+    .top-bar h1 { font-size: 26px; font-weight: 700; }
+    .top-bar .meta { font-size: 13px; opacity: .85; margin-top: 6px; }
+    .top-bar .meta span { margin-right: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+
+    /* Stats */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: #fff; border: 1px solid var(--gray-200); border-radius: 12px; padding: 20px; text-align: center; }
+    .stat-card .stat-num { font-size: 32px; font-weight: 800; color: var(--primary); }
+    .stat-card .stat-num.green { color: var(--success); }
+    .stat-card .stat-num.red { color: var(--danger); }
+    .stat-card .stat-num.gray { color: var(--gray-500); }
+    .stat-card .stat-label { font-size: 13px; color: var(--gray-500); margin-top: 4px; }
+
+    /* Tester form */
+    .tester-form {
+      background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+      padding: 24px 32px; margin-bottom: 32px;
+    }
+    .tester-form h2 { font-size: 18px; color: var(--primary); margin-bottom: 16px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+    .form-group input, .form-group select {
+      padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: 8px;
+      font-size: 14px; outline: none; transition: border .2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+    /* Flow card */
+    .flow-card {
+      border: 2px solid var(--primary); border-radius: 16px;
+      margin: 28px 0; overflow: hidden; background: #fff;
+      box-shadow: 0 4px 16px rgba(45,90,61,.08);
+    }
+    .flow-header {
+      background: linear-gradient(90deg, var(--primary), #5A7A5A);
+      color: #fff; padding: 20px 28px;
+      font-size: 18px; font-weight: 700;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .flow-header .flow-icon { font-size: 28px; }
+    .flow-header .flow-badge {
+      margin-left: auto; background: rgba(255,255,255,.2);
+      padding: 4px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    }
+    .flow-body { padding: 24px 28px; }
+    .flow-desc {
+      background: var(--primary-light); border-left: 4px solid var(--primary);
+      padding: 14px 18px; margin-bottom: 20px; border-radius: 0 10px 10px 0;
+      font-size: 14px; color: var(--gray-700);
+    }
+    .flow-desc strong { color: var(--primary-dark); }
+
+    /* Flow status bar */
+    .flow-status-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px; background: var(--gray-50); border-radius: 8px;
+      margin-bottom: 16px; font-size: 13px; color: var(--gray-700);
+    }
+    .flow-status-bar .status-tag {
+      padding: 2px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    }
+    .status-tag.pending { background: var(--gray-200); color: var(--gray-500); }
+    .status-tag.pass { background: var(--success-light); color: #166534; }
+    .status-tag.fail { background: var(--danger-light); color: #991b1b; }
+    .status-tag.partial { background: var(--warning-light); color: #92400e; }
+
+    /* TC card */
+    .tc-card {
+      border: 1px solid var(--gray-200); border-radius: 10px;
+      margin: 14px 0; overflow: hidden; transition: box-shadow .2s;
+    }
+    .tc-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .tc-card.tc-pass { border-left: 4px solid var(--success); }
+    .tc-card.tc-fail { border-left: 4px solid var(--danger); }
+    .tc-header {
+      background: linear-gradient(90deg, var(--primary-light), #f5f3ff);
+      padding: 14px 20px; font-size: 15px; font-weight: 700;
+      color: var(--primary); border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      user-select: none;
+    }
+    .tc-header .tc-tag {
+      font-size: 11px; background: var(--primary); color: #fff;
+      padding: 2px 10px; border-radius: 999px; flex-shrink: 0;
+    }
+    .tc-header .tc-status {
+      margin-left: auto; font-size: 12px; padding: 2px 12px;
+      border-radius: 999px; font-weight: 600;
+    }
+    .tc-header .tc-status.pending { background: var(--gray-200); color: var(--gray-500); }
+    .tc-header .tc-status.pass { background: var(--success-light); color: #166534; }
+    .tc-header .tc-status.fail { background: var(--danger-light); color: #991b1b; }
+    .tc-header .toggle-arrow { transition: transform .2s; font-size: 14px; color: var(--gray-500); }
+    .tc-header .toggle-arrow.open { transform: rotate(90deg); }
+    .tc-body { padding: 16px 20px; display: none; }
+    .tc-body.open { display: block; }
+
+    /* Step */
+    .step {
+      margin: 10px 0; padding: 14px 16px;
+      background: var(--gray-50); border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+    }
+    .step-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .step-title { font-weight: 700; font-size: 13px; color: var(--primary); }
+    .step-radio { display: flex; gap: 8px; }
+    .step-radio label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; cursor: pointer; padding: 4px 12px;
+      border: 1px solid var(--gray-300); border-radius: 6px;
+      transition: all .2s;
+    }
+    .step-radio label:has(input:checked).pass-label { background: var(--success-light); border-color: var(--success); color: #166534; }
+    .step-radio label:has(input:checked).fail-label { background: var(--danger-light); border-color: var(--danger); color: #991b1b; }
+    .step-radio input { display: none; }
+    .step-op { font-size: 13px; color: var(--gray-700); margin-bottom: 4px; }
+    .step-op::before { content: "操作："; font-weight: 600; color: var(--primary-dark); }
+    .step-expect { font-size: 13px; color: var(--success); }
+    .step-expect::before { content: "预期："; font-weight: 600; }
+    .step-reason {
+      margin-top: 8px; display: none;
+    }
+    .step-reason.show { display: block; }
+    .step-reason textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300);
+      border-radius: 8px; font-size: 13px; resize: vertical; min-height: 60px;
+      font-family: inherit;
+    }
+    .step-reason textarea:focus { border-color: var(--primary); outline: none; }
+
+    /* Overall */
+    .case-overall {
+      background: #fff7e6; border: 2px solid #ffd591; border-radius: 8px;
+      padding: 16px 20px; margin-top: 16px;
+    }
+    .case-overall h5 { font-size: 14px; color: #d46b08; margin-bottom: 10px; }
+    .overall-radio { display: flex; gap: 10px; margin-bottom: 8px; }
+    .overall-radio label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 13px; cursor: pointer; padding: 6px 16px;
+      border: 1px solid var(--gray-300); border-radius: 8px; transition: all .2s;
+    }
+    .overall-radio label:has(input:checked).pass-label { background: var(--success-light); border-color: var(--success); color: #166534; }
+    .overall-radio label:has(input:checked).fail-label { background: var(--danger-light); border-color: var(--danger); color: #991b1b; }
+    .overall-radio input { display: none; }
+    .overall-reason { margin-top: 10px; display: none; }
+    .overall-reason.show { display: block; }
+    .overall-reason textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300);
+      border-radius: 8px; font-size: 13px; resize: vertical; min-height: 80px;
+      font-family: inherit;
+    }
+
+    /* Submit */
+    .submit-section {
+      text-align: center; margin: 40px 0;
+      background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+      padding: 32px;
+    }
+    .submit-btn {
+      background: linear-gradient(135deg, var(--primary), #5A7A5A);
+      color: #fff; border: none; padding: 14px 48px; font-size: 16px;
+      font-weight: 700; border-radius: 12px; cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(45,90,61,.3); }
+    .submit-hint { margin-top: 12px; color: var(--gray-500); font-size: 14px; }
+
+    /* Progress */
+    .progress-section {
+      background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+      padding: 24px 32px; margin-bottom: 32px;
+    }
+    .progress-section h2 { font-size: 18px; color: var(--primary); margin-bottom: 16px; }
+    .progress-bar { background: var(--gray-200); border-radius: 999px; height: 24px; overflow: hidden; position: relative; }
+    .progress-fill { background: linear-gradient(90deg, var(--primary), #5A7A5A); height: 100%; border-radius: 999px; transition: width .3s; min-width: 0; }
+    .progress-label { position: absolute; right: 12px; top: 3px; font-size: 12px; font-weight: 700; color: var(--gray-700); }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 80px; right: 24px; z-index: 999;
+      padding: 14px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,.15); transform: translateX(120%);
+      transition: transform .3s;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success { background: var(--success-light); color: #166534; border: 1px solid var(--success); }
+    .toast.error { background: var(--danger-light); color: #991b1b; border: 1px solid var(--danger); }
+    .toast.warning { background: var(--warning-light); color: #92400e; border: 1px solid var(--warning); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .top-bar { padding: 20px; }
+      .container { padding: 16px 8px; }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+      .flow-body { padding: 16px; }
+      .step-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+    @media print {
+      .top-bar { position: static; }
+      .flow-card, .tc-card { break-inside: avoid; }
+      .tc-body { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>🌿 智慧花园 Smart Garden - Phase 1 人工测试验收</h1>
+  <div class="meta">
+    <span>版本 1.0</span>
+    <span>5个验收流程 · 27个测试用例</span>
+    <span>依据：docs/Phase1_Unit1_验收大纲.md</span>
+    <span id="topStatus">测试状态：待执行</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="statTotal">27</div><div class="stat-label">总用例数</div></div>
+    <div class="stat-card"><div class="stat-num green" id="statPass">0</div><div class="stat-label">已通过</div></div>
+    <div class="stat-card"><div class="stat-num red" id="statFail">0</div><div class="stat-label">未通过</div></div>
+    <div class="stat-card"><div class="stat-num gray" id="statPending">27</div><div class="stat-label">待测试</div></div>
+  </div>
+
+  <!-- Tester form -->
+  <div class="tester-form">
+    <h2>👤 测试人员信息</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>测试人员姓名 *</label>
+        <input type="text" id="testerName" placeholder="请输入姓名">
+      </div>
+      <div class="form-group">
+        <label>测试日期 *</label>
+        <input type="date" id="testerDate">
+      </div>
+      <div class="form-group">
+        <label>测试设备</label>
+        <select id="testerEnv">
+          <option value="emulator-x86">Android 模拟器 (x86_64)</option>
+          <option value="device-arm">Android 真机 (ARM64)</option>
+          <option value="ios-sim">iOS 模拟器</option>
+          <option value="ios-device">iOS 真机</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>测试方式</label>
+        <select id="testerBrowser">
+          <option value="debug">Debug 构建（Metro 联调）</option>
+          <option value="release">Release 构建（独立 APK）</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section">
+    <h2>📊 测试进度</h2>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      <span class="progress-label" id="progressLabel">0%</span>
+    </div>
+  </div>
+
+  <!-- Flows container -->
+  <div id="flowsContainer"></div>
+
+  <!-- Submit -->
+  <div class="submit-section">
+    <button class="submit-btn" onclick="submitResults()">📤 提交测试结果</button>
+    <p class="submit-hint">提交后，测试结果将导出为JSON文件并保存到浏览器本地</p>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 测试数据（依据 docs/Phase1_Unit1_验收大纲.md）──
+const testFlows = [
+  {
+    id: 'flow1', name: '流程一：环境搭建与技术验证（Unit 1）', icon: '🔧',
+    description: '验证 ONNX 模型加载、RN 项目骨架、数据库初始化等基础能力，为后续识别闭环打基础。',
+    testCases: [
+      { id: 'TC-001', title: '启动预加载与模型就绪', steps: [
+        { title: '步骤1：冷启动 APP', op: '点击 APP 图标启动，停留在欢迎页观察', expect: '欢迎页正常显示（品牌页 + 加载页），无红屏无闪退' },
+        { title: '步骤2：模型加载进度', op: '观察加载页的进度条与状态文案（"初始化用户…" → "检查模型更新…" → "加载AI模型…"）', expect: '进度条平滑推进至 100%，状态文案依次更新' },
+        { title: '步骤3：模型就绪时间', op: '记录从启动到 "准备就绪" 的耗时', expect: '模型在 2 秒内就绪（启动预加载策略），显示"准备就绪"提示' },
+        { title: '步骤4：进入主界面', op: '点击"进入应用"按钮（或等待自动进入）', expect: '欢迎页消失，进入首页，底部显示"首页/识别/花园"三个标签' }
+      ]},
+      { id: 'TC-002', title: '底部导航框架', steps: [
+        { title: '步骤1：切换三个标签页', op: '依次点击底部"首页 / 识别 / 花园"', expect: '三个页面正常切换，激活标签高亮为森林绿，页面内容分别显示对应界面' },
+        { title: '步骤2：验证导航状态保留', op: '在识别页滑动后切到首页再切回', expect: '识别页状态保留（不会重置）' }
+      ]},
+      { id: 'TC-003', title: '数据库初始化（三张表）', steps: [
+        { title: '步骤1：首次启动数据库创建', op: '全新安装后启动 APP，通过 adb logcat 查看日志', expect: '日志出现 "[DB] 已初始化: smart_garden.db"，无 SQL 报错' },
+        { title: '步骤2：验证三表结构', op: 'adb shell 进入 SQLite（/data/data/com.smartgarden/files/smart_garden.db）执行 .tables', expect: '包含 user / garden / feedback 三张表，字段与架构文档一致' },
+        { title: '步骤3：匿名用户创建', op: '查看日志中的用户初始化', expect: '日志出现 "[UserService] 用户就绪: <UUID>"，自动生成匿名 UUID（免注册）' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow2', name: '流程二：识别核心闭环（Unit 2）', icon: '🔍',
+    description: '验证拍照/相册 → 预处理 → ONNX 本地推理 → LLM 降级的完整识别链路，以及三级置信度决策与结果页 UI。',
+    testCases: [
+      { id: 'TC-004', title: '拍照识别完整流程', steps: [
+        { title: '步骤1：进入识别页', op: '点击底部"识别"标签，点击"拍照识别"按钮', expect: '进入相机全屏取景界面，按钮状态为可用（模型就绪）' },
+        { title: '步骤2：拍摄花卉', op: '对准一盆花卉（如玫瑰/向日葵）点击快门', expect: '拍照成功，进入"正在识别..."状态（含预览图 + 加载动画）' },
+        { title: '步骤3：查看识别结果', op: '等待推理完成（通常 <1s）', expect: '跳转结果页：显示花名、置信度百分比、识别引擎来源' }
+      ]},
+      { id: 'TC-005', title: '相册选图识别', steps: [
+        { title: '步骤1：从相册选择图片', op: '在识别页点击"从相册选择"，在系统相册中选择一张花卉照片', expect: '系统相册打开，选图后进入"正在识别..."状态' },
+        { title: '步骤2：查看结果', op: '等待推理完成', expect: '正确显示识别结果（花名 + 置信度）' },
+        { title: '步骤3：取消选择', op: '再次打开相册，点击返回/取消', expect: '取消后停留在识别页，状态无异常' }
+      ]},
+      { id: 'TC-006', title: '高置信度直接返回（≥85%）', steps: [
+        { title: '步骤1：识别清晰标准花卉照', op: '选择一张非常清晰、主体明确的花卉照片进行识别', expect: '置信度 ≥85% 时直接返回本地模型结果（识别来源显示"本地模型"），无需联网等待' },
+        { title: '步骤2：验证识别来源标识', op: '查看结果页的识别来源', expect: '显示"本地模型"，无 LLM 调用标记（响应迅速）' }
+      ]},
+      { id: 'TC-007', title: '识别中状态 UI', steps: [
+        { title: '步骤1：触发识别并观察中间状态', op: '拍照后立即观察界面', expect: '显示"正在识别..."文案 + ActivityIndicator 加载动画 + 图片预览' },
+        { title: '步骤2：验证状态不卡顿', op: '识别期间观察是否可正常交互', expect: '无卡顿、无白屏、无红屏，约 1 秒内出结果' }
+      ]},
+      { id: 'TC-008', title: '非花卉过滤（7 重判断）', steps: [
+        { title: '步骤1：识别非花卉物体', op: '拍摄一张墙壁/天空/书本等非花卉照片进行识别', expect: '结果页显示"未识别到花卉"，提示原因（如绿色占比/饱和度/置信度低）' },
+        { title: '步骤2：验证拒绝逻辑', op: '查看拒绝文案是否具体', expect: '显示具体拒绝原因（非笼统报错），如"图片中未检测到花卉，或图片质量过差"' }
+      ]},
+      { id: 'TC-009', title: '识别结果页 UI 完整性', steps: [
+        { title: '步骤1：查看结果页信息', op: '识别成功后查看结果页', expect: '显示：花卉头像、花名、置信度徽章、AI 增强标识（如有）' },
+        { title: '步骤2：切换"养护指南"Tab', op: '点击"养护指南"Tab', expect: '显示浇水/施肥/光照/环境 4 项养护信息卡片' },
+        { title: '步骤3：切换"详细信息"Tab', op: '点击"详细信息"Tab', expect: '显示学名/科属/产地/花期 4 项档案信息（2 列网格）' },
+        { title: '步骤4：验证操作按钮', op: '查看结果页底部按钮', expect: '包含"提醒 / 纠错 / 添加到花园 / 重新识别"四个按钮，布局自动换行不溢出' }
+      ]},
+      { id: 'TC-010', title: '低置信度 LLM 降级（30%-85%）', steps: [
+        { title: '步骤1：识别模糊/侧拍花卉', op: '选择一张不太清晰或角度刁钻的花卉照片识别', expect: '置信度 <85% 时调用 LLM 增强识别，结果页显示"AI 增强识别"标记' },
+        { title: '步骤2：断网触发降级', op: '打开飞行模式，再识别低置信度照片', expect: 'LLM 失败后降级显示本地结果 + "识别结果不确定" + 本地模型置信度详情（兜底不崩溃）' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow3', name: '流程三：用户系统与花园管理（Unit 3）', icon: '🌷',
+    description: '验证免注册匿名用户体系、花园管理的增删查去重、识别纠错反馈与结果缓存。',
+    testCases: [
+      { id: 'TC-011', title: '免注册匿名用户体系', steps: [
+        { title: '步骤1：首次启动免注册', op: '全新安装启动 APP，观察是否有注册/登录引导', expect: '无注册流程，直接可用；后台自动生成匿名 UUID 用户' },
+        { title: '步骤2：用户持久化', op: '杀掉 APP 进程后重新打开', expect: '用户 ID 不变（从 SQLite 读取），功能正常' }
+      ]},
+      { id: 'TC-012', title: '添加花卉到花园', steps: [
+        { title: '步骤1：识别后点击"添加到花园"', op: '完成一次识别，点击"添加到花园"按钮', expect: '弹出弹窗：默认填充花卉名称，可填写自定义名称与摆放位置（选填）' },
+        { title: '步骤2：确认添加', op: '输入自定义名称如"阳台玫瑰"，点击"确认添加"', expect: '提示"添加成功"，花卉进入我的花园' }
+      ]},
+      { id: 'TC-013', title: '花园列表查看', steps: [
+        { title: '步骤1：进入"花园"标签', op: '点击底部"花园"标签', expect: '显示已添加的花卉列表（名称/自定义名称/添加日期）' },
+        { title: '步骤2：查看空状态', op: '清空花园后重新进入', expect: '显示空状态引导 + 去识别 CTA 按钮' }
+      ]},
+      { id: 'TC-014', title: '重复添加去重', steps: [
+        { title: '步骤1：重复添加同一种花', op: '对同一花卉（同一 flowerId）执行两次"添加到花园"', expect: '数据库唯一索引（userId+flowerId+customName）生效，不产生重复记录' }
+      ]},
+      { id: 'TC-015', title: '删除花园花卉', steps: [
+        { title: '步骤1：删除一条记录', op: '在花园列表对某花卉执行删除（长按或删除按钮）', expect: '确认后记录从列表移除，数据库同步删除' }
+      ]},
+      { id: 'TC-016', title: '识别纠错反馈', steps: [
+        { title: '步骤1：打开纠错弹窗', op: '识别结果页点击"纠错"按钮', expect: '弹出纠错弹窗，显示当前识别结果' },
+        { title: '步骤2：提交纠错', op: '输入正确花名（如"玫瑰"），点击"提交反馈"', expect: '提示"反馈成功"；feedback 表新增记录（imageHash + yoloResult + userCorrection）' },
+        { title: '步骤3：空输入拦截', op: '不输入内容直接点"提交反馈"', expect: '按钮禁用，无法提交空纠错' }
+      ]},
+      { id: 'TC-017', title: '识别结果缓存', steps: [
+        { title: '步骤1：重复识别同一张图', op: '从相册选择同一张图片连续识别两次', expect: '第二次识别命中缓存（识别缓存图片哈希→结果），响应明显更快' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow4', name: '流程四：打磨与收尾（Unit 4）', icon: '✨',
+    description: '验证首页 UI、天气养护、离线降级、暗色模式、日志系统等体验优化项。',
+    testCases: [
+      { id: 'TC-018', title: '首页 UI 与功能入口', steps: [
+        { title: '步骤1：查看首页布局', op: '进入首页', expect: '显示 Hero 区域 + 功能卡片（拍照识别/我的花园/养护百科）+ 天气卡片（如有定位权限）' },
+        { title: '步骤2：功能入口跳转', op: '点击"拍照识别"卡片', expect: '跳转到识别页；点击"我的花园"卡片跳转到花园页' }
+      ]},
+      { id: 'TC-019', title: '养护百科查询', steps: [
+        { title: '步骤1：打开养护百科', op: '首页点击"养护百科"功能卡片', expect: '弹出养护百科弹窗，显示 50+ 品种列表' },
+        { title: '步骤2：查看养护档案', op: '选择一种花卉查看', expect: '显示该品种的完整养护指南（浇水/施肥/光照/环境/病虫害）' }
+      ]},
+      { id: 'TC-020', title: '天气养护建议', steps: [
+        { title: '步骤1：授权定位后查看天气', op: '允许定位权限，首页查看天气卡片', expect: '天气卡片显示当前城市/温度/天气状况（数据来自 Open-Meteo 免费 API）' },
+        { title: '步骤2：查看养护调整建议', op: '在有天气数据的条件下，查看某花卉的养护建议', expect: '生成养护调整建议（浇水/温度/湿度等分类，含具体数字说明）' },
+        { title: '步骤3：断网规则兜底', op: '飞行模式下查看建议', expect: '降级为离线规则兜底建议（按降水/温度/湿度/风速规则），不崩溃不白屏' }
+      ]},
+      { id: 'TC-021', title: '离线状态提示', steps: [
+        { title: '步骤1：断网识别', op: '打开飞行模式后执行拍照识别', expect: '本地 YOLO 推理照常工作（核心识别不依赖网络），识别结果正常' },
+        { title: '步骤2：离线状态提示', op: '观察界面提示', expect: '无网络时 UI 有降级提示（网络检测 + 无网络降级），不无限转圈' }
+      ]},
+      { id: 'TC-022', title: '暗色模式适配', steps: [
+        { title: '步骤1：切换系统深色模式', op: '在系统设置中开启深色模式，回到 APP', expect: '全 APP 切换为暗色主题（背景 #1A1A1A，文字亮色，卡片深灰）' },
+        { title: '步骤2：验证暗色下核心页面', op: '依次查看首页/识别页/花园页/结果页', expect: '各页面暗色适配正常，无刺眼白块、无文字不可见' },
+        { title: '步骤3：切回浅色', op: '关闭深色模式', expect: '恢复浅色主题（暖米白 #F7F5F0）' }
+      ]},
+      { id: 'TC-023', title: '日志系统', steps: [
+        { title: '步骤1：验证日志输出', op: '运行 APP 后执行 adb logcat | grep ReactNativeJS', expect: '输出分级日志（[DEBUG]/[INFO]/[WARN]/[ERROR] + [模块名] + 内容），格式统一' },
+        { title: '步骤2：验证日志文件', op: '检查 /data/data/com.smartgarden/files/logs/ 目录', expect: '存在按日期命名的 app.YYYY-MM-DD.log 文件，内容与 logcat 一致' }
+      ]},
+      { id: 'TC-024', title: '启动预加载与超时处理', steps: [
+        { title: '步骤1：慢网环境启动', op: '在网络较差（或断网）环境下冷启动', expect: '预加载任务 20s 超时兜底，不无限卡在欢迎页，仍可进入主界面' },
+        { title: '步骤2：拍照按钮状态', op: '模型未就绪时查看识别页', expect: '拍照按钮灰色禁用显示"模型加载中…"，模型就绪后变为可用' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow5', name: '流程五：Phase 1 总体交付物验收', icon: '🏁',
+    description: '对照大纲"总体交付物"表逐项验收：准确率、离线可用、启动速度、性能统计。',
+    testCases: [
+      { id: 'TC-025', title: '拍照识别准确率抽查', steps: [
+        { title: '步骤1：准备 10 张花卉样本', op: '准备覆盖 5 类（雏菊/蒲公英/玫瑰/向日葵/郁金香）的清晰照片各 2 张', expect: '样本图片可正常加载' },
+        { title: '步骤2：逐张识别统计', op: '依次识别 10 张样本，记录每张的识别结果与置信度', expect: '≥9 张识别正确（准确率 ≥90%），记录每张置信度' }
+      ]},
+      { id: 'TC-026', title: '离线可用性验证', steps: [
+        { title: '步骤1：完全离线状态核心功能', op: '飞行模式 + 关闭网络，执行：启动 → 拍照识别 → 查看结果', expect: '全部可用：启动正常、YOLO 本地推理正常、结果页完整展示（离线优先架构）' },
+        { title: '步骤2：离线 LLM 功能降级', op: '离线状态下尝试触发 LLM 增强', expect: 'LLM 功能优雅降级（规则兜底），无报错弹窗' }
+      ]},
+      { id: 'TC-027', title: '推理性能与启动速度', steps: [
+        { title: '步骤1：记录模型加载耗时', op: '冷启动，从点击图标到"准备就绪"计时', expect: '<2 秒（启动预加载 <2s 模型就绪的验收标准）' },
+        { title: '步骤2：记录单次推理耗时', op: '识别 3 张不同图片，记录每次推理时间', expect: '单次推理 <1 秒（XNNPACK 本地推理），记录机型与耗时用于性能统计' }
+      ]}
+    ]
+  }
+];
+
+// ── 状态存储 ──
+const tcResults = {}; // { 'TC-001': { steps: [{status:'',reason:''},...], overall:'', overallReason:'' } }
+
+// ── 初始化 ──
+document.getElementById('testerDate').value = new Date().toISOString().split('T')[0];
+
+testFlows.forEach(flow => {
+  flow.testCases.forEach(tc => {
+    tcResults[tc.id] = {
+      steps: tc.steps.map(() => ({ status: '', reason: '' })),
+      overall: '',
+      overallReason: ''
+    };
+  });
+});
+
+// ── 渲染 ──
+function renderFlows() {
+  const container = document.getElementById('flowsContainer');
+  container.innerHTML = '';
+
+  testFlows.forEach(flow => {
+    const flowEl = document.createElement('div');
+    flowEl.className = 'flow-card';
+    flowEl.innerHTML = `
+      <div class="flow-header">
+        <span class="flow-icon">${flow.icon}</span>
+        <span>${flow.name}</span>
+        <span class="flow-badge">${flow.testCases.length} 个用例</span>
+      </div>
+      <div class="flow-body">
+        <div class="flow-desc"><strong>流程描述：</strong>${flow.description}</div>
+        <div class="flow-status-bar" id="flowStatus_${flow.id}">
+          <span>流程状态：</span>
+          <span class="status-tag pending" id="flowTag_${flow.id}">待测试</span>
+          <span id="flowProgress_${flow.id}" style="margin-left:auto;font-weight:600">0 / ${flow.testCases.length} 已测</span>
+        </div>
+        <div id="tcContainer_${flow.id}"></div>
+      </div>
+    `;
+    container.appendChild(flowEl);
+
+    const tcContainer = flowEl.querySelector(`#tcContainer_${flow.id}`);
+    flow.testCases.forEach(tc => {
+      const tcEl = document.createElement('div');
+      tcEl.className = 'tc-card';
+      tcEl.id = `tcCard_${tc.id}`;
+
+      let stepsHtml = '';
+      tc.steps.forEach((step, si) => {
+        stepsHtml += `
+          <div class="step" id="step_${tc.id}_${si}">
+            <div class="step-top">
+              <div class="step-title">${step.title}</div>
+              <div class="step-radio">
+                <label class="pass-label"><input type="radio" name="step_${tc.id}_${si}" value="pass" onchange="onStepChange('${tc.id}',${si},'pass')"> ✅ 通过</label>
+                <label class="fail-label"><input type="radio" name="step_${tc.id}_${si}" value="fail" onchange="onStepChange('${tc.id}',${si},'fail')"> ❌ 不通过</label>
+              </div>
+            </div>
+            <div class="step-op">${step.op}</div>
+            <div class="step-expect">${step.expect}</div>
+            <div class="step-reason" id="stepReason_${tc.id}_${si}">
+              <textarea placeholder="请详细描述不通过的原因..." oninput="onStepReasonChange('${tc.id}',${si},this.value)"></textarea>
+            </div>
+          </div>
+        `;
+      });
+
+      tcEl.innerHTML = `
+        <div class="tc-header" onclick="toggleTc('${tc.id}')">
+          <span class="tc-tag">${tc.id}</span>
+          <span>${tc.title}</span>
+          <span class="tc-status pending" id="tcStatus_${tc.id}">待测试</span>
+          <span class="toggle-arrow" id="tcArrow_${tc.id}">▶</span>
+        </div>
+        <div class="tc-body" id="tcBody_${tc.id}">
+          ${stepsHtml}
+          <div class="case-overall">
+            <h5>📊 用例整体状态</h5>
+            <div class="overall-radio">
+              <label class="pass-label"><input type="radio" name="overall_${tc.id}" value="pass" onchange="onOverallChange('${tc.id}','pass')"> ✅ 整体通过</label>
+              <label class="fail-label"><input type="radio" name="overall_${tc.id}" value="fail" onchange="onOverallChange('${tc.id}','fail')"> ❌ 整体不通过</label>
+            </div>
+            <div class="overall-reason" id="overallReason_${tc.id}">
+              <textarea placeholder="请详细描述整体不通过的原因..." oninput="onOverallReasonChange('${tc.id}',this.value)"></textarea>
+            </div>
+          </div>
+        </div>
+      `;
+      tcContainer.appendChild(tcEl);
+    });
+  });
+}
+
+// ── 交互 ──
+function toggleTc(tcId) {
+  const body = document.getElementById(`tcBody_${tcId}`);
+  const arrow = document.getElementById(`tcArrow_${tcId}`);
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function onStepChange(tcId, stepIdx, value) {
+  tcResults[tcId].steps[stepIdx].status = value;
+  const reasonEl = document.getElementById(`stepReason_${tcId}_${stepIdx}`);
+  if (value === 'fail') {
+    reasonEl.classList.add('show');
+  } else {
+    reasonEl.classList.remove('show');
+    tcResults[tcId].steps[stepIdx].reason = '';
+  }
+  updateTcStatus(tcId);
+  updateFlowStatus(tcId);
+  updateStats();
+}
+
+function onStepReasonChange(tcId, stepIdx, value) {
+  tcResults[tcId].steps[stepIdx].reason = value;
+}
+
+function onOverallChange(tcId, value) {
+  tcResults[tcId].overall = value;
+  const reasonEl = document.getElementById(`overallReason_${tcId}`);
+  if (value === 'fail') {
+    reasonEl.classList.add('show');
+  } else {
+    reasonEl.classList.remove('show');
+    tcResults[tcId].overallReason = '';
+  }
+  updateTcStatus(tcId);
+  updateFlowStatus(tcId);
+  updateStats();
+}
+
+function onOverallReasonChange(tcId, value) {
+  tcResults[tcId].overallReason = value;
+}
+
+function updateTcStatus(tcId) {
+  const r = tcResults[tcId];
+  const statusEl = document.getElementById(`tcStatus_${tcId}`);
+  const cardEl = document.getElementById(`tcCard_${tcId}`);
+  const allPass = r.steps.every(s => s.status === 'pass');
+  const anyFail = r.steps.some(s => s.status === 'fail');
+  const allDone = r.steps.every(s => s.status !== '');
+
+  cardEl.classList.remove('tc-pass', 'tc-fail');
+
+  if (r.overall === 'pass' || (allDone && allPass && !r.overall)) {
+    statusEl.textContent = '通过';
+    statusEl.className = 'tc-status pass';
+    cardEl.classList.add('tc-pass');
+  } else if (r.overall === 'fail' || anyFail) {
+    statusEl.textContent = '不通过';
+    statusEl.className = 'tc-status fail';
+    cardEl.classList.add('tc-fail');
+  } else {
+    statusEl.textContent = '待测试';
+    statusEl.className = 'tc-status pending';
+  }
+}
+
+function updateFlowStatus(tcId) {
+  // find which flow this tc belongs to
+  for (const flow of testFlows) {
+    const tcIds = flow.testCases.map(t => t.id);
+    if (tcIds.includes(tcId)) {
+      const flowId = flow.id;
+      let passCount = 0, failCount = 0, testedCount = 0;
+      flow.testCases.forEach(tc => {
+        const r = tcResults[tc.id];
+        const allPass = r.steps.every(s => s.status === 'pass');
+        const anyFail = r.steps.some(s => s.status === 'fail');
+        const allDone = r.steps.every(s => s.status !== '');
+        if (r.overall === 'pass' || (allDone && allPass)) { passCount++; testedCount++; }
+        else if (r.overall === 'fail' || anyFail) { failCount++; testedCount++; }
+        else if (r.steps.some(s => s.status !== '')) { testedCount++; }
+      });
+
+      const tagEl = document.getElementById(`flowTag_${flowId}`);
+      const progressEl = document.getElementById(`flowProgress_${flowId}`);
+      const total = flow.testCases.length;
+      progressEl.textContent = `${testedCount} / ${total} 已测`;
+
+      tagEl.className = 'status-tag';
+      if (passCount === total) { tagEl.textContent = '全部通过'; tagEl.classList.add('pass'); }
+      else if (failCount > 0) { tagEl.textContent = `${failCount} 个不通过`; tagEl.classList.add('fail'); }
+      else if (passCount > 0) { tagEl.textContent = `${passCount}/${total} 通过`; tagEl.classList.add('partial'); }
+      else { tagEl.textContent = '待测试'; tagEl.classList.add('pending'); }
+      break;
+    }
+  }
+}
+
+function updateStats() {
+  let pass = 0, fail = 0, pending = 0;
+  const total = Object.keys(tcResults).length;
+
+  Object.entries(tcResults).forEach(([tcId, r]) => {
+    const allPass = r.steps.every(s => s.status === 'pass');
+    const anyFail = r.steps.some(s => s.status === 'fail');
+    const allDone = r.steps.every(s => s.status !== '');
+
+    if (r.overall === 'pass' || (allDone && allPass)) pass++;
+    else if (r.overall === 'fail' || anyFail) fail++;
+    else pending++;
+  });
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPass').textContent = pass;
+  document.getElementById('statFail').textContent = fail;
+  document.getElementById('statPending').textContent = pending;
+
+  const tested = pass + fail;
+  const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '%';
+
+  const topStatus = document.getElementById('topStatus');
+  if (pending === 0) topStatus.textContent = '测试状态：全部完成';
+  else if (tested > 0) topStatus.textContent = `测试状态：进行中 (${tested}/${total})`;
+  else topStatus.textContent = '测试状态：待执行';
+}
+
+// ── 提交 ──
+function submitResults() {
+  const name = document.getElementById('testerName').value.trim();
+  const date = document.getElementById('testerDate').value;
+  if (!name) { showToast('请填写测试人员姓名', 'warning'); return; }
+  if (!date) { showToast('请选择测试日期', 'warning'); return; }
+
+  const pending = Object.values(tcResults).filter(r => r.overall === '' && !r.steps.some(s => s.status !== '')).length;
+  if (pending > 0) {
+    if (!confirm(`还有 ${pending} 个用例未测试，确定要提交吗？`)) return;
+  }
+
+  const result = {
+    project: '智慧花园 Smart Garden',
+    phase: 'Phase 1 人工测试验收',
+    tester_name: name,
+    test_date: date,
+    test_env: document.getElementById('testerEnv').value,
+    build_type: document.getElementById('testerBrowser').value,
+    test_cases: tcResults,
+    submit_time: new Date().toISOString()
+  };
+
+  // 保存到本地
+  const key = `smartgarden_phase1_${date}_${name}`;
+  localStorage.setItem(key, JSON.stringify(result));
+
+  // 导出JSON文件
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `智慧花园Phase1验收_${name}_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('测试结果已导出！', 'success');
+}
+
+// ── Toast ──
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── 启动 ──
+renderFlows();
+</script>
+
+</body>
+</html>

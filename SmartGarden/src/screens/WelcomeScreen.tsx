@@ -93,33 +93,37 @@ function WelcomeScreen({
   const textColor = isDark ? COLORS.textDark : COLORS.text;
   const mutedColor = isDark ? COLORS.textMutedDark : COLORS.textMuted;
 
-  /* 进度动画 */
+  /* 进度动画（推迟一帧启动，确保 Fabric 节点注册完成后动画可用） */
   useEffect(() => {
-    const target = Math.min(progress / 100, 1);
+    const raf = requestAnimationFrame(() => {
+      const target = Math.min(progress / 100, 1);
 
-    // 启动新动画前先停止旧的，避免 native 动画节点堆积并发动画
-    animProgress.stopAnimation();
-    Animated.timing(animProgress, {
-      toValue: target,
-      duration: 400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+      // 启动新动画前先停止旧的，避免 native 动画节点堆积并发动画
+      animProgress.stopAnimation();
+      Animated.timing(animProgress, {
+        toValue: target,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
 
-    leafScale.stopAnimation();
-    Animated.timing(leafScale, {
-      toValue: 0.3 + target * 0.7,
-      duration: 600,
-      easing: Easing.out(Easing.back(1.7)),
-      useNativeDriver: true,
-    }).start();
+      leafScale.stopAnimation();
+      Animated.timing(leafScale, {
+        toValue: 0.3 + target * 0.7,
+        duration: 600,
+        easing: Easing.out(Easing.back(1.7)),
+        useNativeDriver: true,
+      }).start();
 
-    leafOpacity.stopAnimation();
-    Animated.timing(leafOpacity, {
-      toValue: 0.3 + target * 0.7,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+      leafOpacity.stopAnimation();
+      Animated.timing(leafOpacity, {
+        toValue: 0.3 + target * 0.7,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => cancelAnimationFrame(raf);
   }, [progress]);
 
   /* 卸载时停止进度/页面动画，避免 native 节点残留报错 */
@@ -132,7 +136,7 @@ function WelcomeScreen({
     };
   }, []);
 
-  /* 环形水波纹持续旋转 */
+  /* 环形水波纹持续旋转（推迟一帧启动，避免 Fabric 首帧节点未注册） */
   useEffect(() => {
     const spin = Animated.loop(
       Animated.timing(ringRotate, {
@@ -142,11 +146,14 @@ function WelcomeScreen({
         useNativeDriver: true,
       }),
     );
-    spin.start();
-    return () => spin.stop();
+    const raf = requestAnimationFrame(() => spin.start());
+    return () => {
+      cancelAnimationFrame(raf);
+      spin.stop();
+    };
   }, []);
 
-  /* 背景装饰浮动动画 */
+  /* 背景装饰浮动动画（推迟一帧启动） */
   useEffect(() => {
     const float = Animated.loop(
       Animated.sequence([
@@ -164,21 +171,27 @@ function WelcomeScreen({
         }),
       ]),
     );
-    float.start();
-    return () => float.stop();
+    const raf = requestAnimationFrame(() => float.start());
+    return () => {
+      cancelAnimationFrame(raf);
+      float.stop();
+    };
   }, []);
 
-  /* 页面入场动画 */
+  /* 页面入场动画（推迟一帧启动） */
   useEffect(() => {
-    pageAnims.forEach((anim, idx) => {
-      anim.stopAnimation();
-      Animated.timing(anim, {
-        toValue: idx === currentPage ? 1 : 0,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
+    const raf = requestAnimationFrame(() => {
+      pageAnims.forEach((anim, idx) => {
+        anim.stopAnimation();
+        Animated.timing(anim, {
+          toValue: idx === currentPage ? 1 : 0,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      });
     });
+    return () => cancelAnimationFrame(raf);
   }, [currentPage]);
 
   /* 自动进入首页 */

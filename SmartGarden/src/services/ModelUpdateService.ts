@@ -1,6 +1,7 @@
 import {Platform} from 'react-native';
 import RNFS from 'react-native-fs';
 import NetInfo from '@react-native-community/netinfo';
+import {MODEL_VERSION_URL} from '@env';
 import logger from './LoggerService';
 import {MODEL_ASSET} from '../constants';
 
@@ -25,7 +26,8 @@ const MODEL_CACHE_DIR = Platform.OS === 'ios'
   ? `${RNFS.DocumentDirectoryPath}/model`
   : `${RNFS.CachesDirectoryPath}/model`;
 
-const REMOTE_VERSION_URL = 'https://your-server.com/model/version.json';
+// 模型版本检查地址：未在 .env 配置（MODEL_VERSION_URL）时为空，跳过检查
+const REMOTE_VERSION_URL = MODEL_VERSION_URL || '';
 
 class ModelUpdateService {
   private static instance: ModelUpdateService;
@@ -67,6 +69,12 @@ class ModelUpdateService {
   }
 
   async checkForUpdate(): Promise<ModelVersionInfo | null> {
+    // 未配置版本服务器（无后端）时跳过检查，避免误报网络错误
+    if (!REMOTE_VERSION_URL) {
+      logger.debug('ModelUpdateService', '未配置模型版本服务器，跳过版本检查');
+      return null;
+    }
+
     try {
       const state = await NetInfo.fetch();
       if (!(state.isConnected ?? false)) {

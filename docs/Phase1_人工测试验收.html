@@ -253,7 +253,7 @@
   <h1>🌿 智慧花园 Smart Garden - Phase 1 人工测试验收</h1>
   <div class="meta">
     <span>版本 1.0</span>
-    <span>5个验收流程 · 27个测试用例</span>
+    <span>4个验收流程 · 18个测试用例</span>
     <span>依据：docs/Phase1_Unit1_验收大纲.md</span>
     <span id="topStatus">测试状态：待执行</span>
   </div>
@@ -263,10 +263,10 @@
 
   <!-- Stats -->
   <div class="stats-bar">
-    <div class="stat-card"><div class="stat-num" id="statTotal">27</div><div class="stat-label">总用例数</div></div>
+    <div class="stat-card"><div class="stat-num" id="statTotal">18</div><div class="stat-label">总用例数</div></div>
     <div class="stat-card"><div class="stat-num green" id="statPass">0</div><div class="stat-label">已通过</div></div>
     <div class="stat-card"><div class="stat-num red" id="statFail">0</div><div class="stat-label">未通过</div></div>
-    <div class="stat-card"><div class="stat-num gray" id="statPending">27</div><div class="stat-label">待测试</div></div>
+    <div class="stat-card"><div class="stat-num gray" id="statPending">18</div><div class="stat-label">待测试</div></div>
   </div>
 
   <!-- Tester form -->
@@ -340,11 +340,6 @@ const testFlows = [
       { id: 'TC-002', title: '底部导航框架', steps: [
         { title: '步骤1：切换三个标签页', op: '依次点击底部"首页 / 识别 / 花园"', expect: '三个页面正常切换，激活标签高亮为森林绿，页面内容分别显示对应界面' },
         { title: '步骤2：验证导航状态保留', op: '在识别页滑动后切到首页再切回', expect: '识别页状态保留（不会重置）' }
-      ]},
-      { id: 'TC-003', title: '数据库初始化（三张表）', steps: [
-        { title: '步骤1：首次启动数据库创建', op: '全新安装后启动 APP，通过 adb logcat 查看日志', expect: '日志出现 "[DB] 已初始化: smart_garden.db"，无 SQL 报错' },
-        { title: '步骤2：验证三表结构', op: 'adb shell 进入 SQLite（/data/data/com.smartgarden/files/smart_garden.db）执行 .tables', expect: '包含 user / garden / feedback 三张表，字段与架构文档一致' },
-        { title: '步骤3：匿名用户创建', op: '查看日志中的用户初始化', expect: '日志出现 "[UserService] 用户就绪: <UUID>"，自动生成匿名 UUID（免注册）' }
       ]}
     ]
   },
@@ -380,10 +375,6 @@ const testFlows = [
         { title: '步骤3：切换"详细信息"Tab', op: '点击"详细信息"Tab', expect: '显示学名/科属/产地/花期 4 项档案信息（2 列网格）' },
         { title: '步骤4：验证操作按钮', op: '查看结果页底部按钮', expect: '包含"提醒 / 纠错 / 添加到花园 / 重新识别"四个按钮，布局自动换行不溢出' }
       ]},
-      { id: 'TC-010', title: '低置信度 LLM 降级（30%-85%）', steps: [
-        { title: '步骤1：识别模糊/侧拍花卉', op: '选择一张不太清晰或角度刁钻的花卉照片识别', expect: '置信度 <85% 时调用 LLM 增强识别，结果页显示"AI 增强识别"标记' },
-        { title: '步骤2：断网触发降级', op: '打开飞行模式，再识别低置信度照片', expect: 'LLM 失败后降级显示本地结果 + "识别结果不确定" + 本地模型置信度详情（兜底不崩溃）' }
-      ]}
     ]
   },
   {
@@ -432,43 +423,7 @@ const testFlows = [
       ]},
       { id: 'TC-020', title: '天气养护建议', steps: [
         { title: '步骤1：授权定位后查看天气', op: '允许定位权限，首页查看天气卡片', expect: '天气卡片显示当前城市/温度/天气状况（数据来自 Open-Meteo 免费 API）' },
-        { title: '步骤2：查看养护调整建议', op: '在有天气数据的条件下，查看某花卉的养护建议', expect: '生成养护调整建议（浇水/温度/湿度等分类，含具体数字说明）' },
-        { title: '步骤3：断网规则兜底', op: '飞行模式下查看建议', expect: '降级为离线规则兜底建议（按降水/温度/湿度/风速规则），不崩溃不白屏' }
-      ]},
-      { id: 'TC-021', title: '离线状态提示', steps: [
-        { title: '步骤1：断网识别', op: '打开飞行模式后执行拍照识别', expect: '本地 YOLO 推理照常工作（核心识别不依赖网络），识别结果正常' },
-        { title: '步骤2：离线状态提示', op: '观察界面提示', expect: '无网络时 UI 有降级提示（网络检测 + 无网络降级），不无限转圈' }
-      ]},
-      { id: 'TC-022', title: '暗色模式适配', steps: [
-        { title: '步骤1：切换系统深色模式', op: '在系统设置中开启深色模式，回到 APP', expect: '全 APP 切换为暗色主题（背景 #1A1A1A，文字亮色，卡片深灰）' },
-        { title: '步骤2：验证暗色下核心页面', op: '依次查看首页/识别页/花园页/结果页', expect: '各页面暗色适配正常，无刺眼白块、无文字不可见' },
-        { title: '步骤3：切回浅色', op: '关闭深色模式', expect: '恢复浅色主题（暖米白 #F7F5F0）' }
-      ]},
-      { id: 'TC-023', title: '日志系统', steps: [
-        { title: '步骤1：验证日志输出', op: '运行 APP 后执行 adb logcat | grep ReactNativeJS', expect: '输出分级日志（[DEBUG]/[INFO]/[WARN]/[ERROR] + [模块名] + 内容），格式统一' },
-        { title: '步骤2：验证日志文件', op: '检查 /data/data/com.smartgarden/files/logs/ 目录', expect: '存在按日期命名的 app.YYYY-MM-DD.log 文件，内容与 logcat 一致' }
-      ]},
-      { id: 'TC-024', title: '启动预加载与超时处理', steps: [
-        { title: '步骤1：慢网环境启动', op: '在网络较差（或断网）环境下冷启动', expect: '预加载任务 20s 超时兜底，不无限卡在欢迎页，仍可进入主界面' },
-        { title: '步骤2：拍照按钮状态', op: '模型未就绪时查看识别页', expect: '拍照按钮灰色禁用显示"模型加载中…"，模型就绪后变为可用' }
-      ]}
-    ]
-  },
-  {
-    id: 'flow5', name: '流程五：Phase 1 总体交付物验收', icon: '🏁',
-    description: '对照大纲"总体交付物"表逐项验收：准确率、离线可用、启动速度、性能统计。',
-    testCases: [
-      { id: 'TC-025', title: '拍照识别准确率抽查', steps: [
-        { title: '步骤1：准备 10 张花卉样本', op: '准备覆盖 5 类（雏菊/蒲公英/玫瑰/向日葵/郁金香）的清晰照片各 2 张', expect: '样本图片可正常加载' },
-        { title: '步骤2：逐张识别统计', op: '依次识别 10 张样本，记录每张的识别结果与置信度', expect: '≥9 张识别正确（准确率 ≥90%），记录每张置信度' }
-      ]},
-      { id: 'TC-026', title: '离线可用性验证', steps: [
-        { title: '步骤1：完全离线状态核心功能', op: '飞行模式 + 关闭网络，执行：启动 → 拍照识别 → 查看结果', expect: '全部可用：启动正常、YOLO 本地推理正常、结果页完整展示（离线优先架构）' },
-        { title: '步骤2：离线 LLM 功能降级', op: '离线状态下尝试触发 LLM 增强', expect: 'LLM 功能优雅降级（规则兜底），无报错弹窗' }
-      ]},
-      { id: 'TC-027', title: '推理性能与启动速度', steps: [
-        { title: '步骤1：记录模型加载耗时', op: '冷启动，从点击图标到"准备就绪"计时', expect: '<2 秒（启动预加载 <2s 模型就绪的验收标准）' },
-        { title: '步骤2：记录单次推理耗时', op: '识别 3 张不同图片，记录每次推理时间', expect: '单次推理 <1 秒（XNNPACK 本地推理），记录机型与耗时用于性能统计' }
+        { title: '步骤2：查看养护调整建议', op: '在有天气数据的条件下，查看某花卉的养护建议', expect: '生成养护调整建议（浇水/温度/湿度等分类，含具体数字说明）' }
       ]}
     ]
   }

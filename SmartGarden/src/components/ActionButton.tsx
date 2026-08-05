@@ -2,10 +2,10 @@
  * ActionButton — 统一行动按钮组件
  *
  * 有机自然主义风格，胶囊形，支持多种变体和尺寸
- * 解决按钮在小屏幕上显示不全的问题：
- *  - 文字单行显示，自动截断
- *  - 合理的 minWidth 保证文字可见
- *  - 按压反馈动画
+ * - 文字单行显示，自动截断
+ * - flex 属性支持在按钮组中等分宽度
+ * - 按压反馈动画
+ * - 最小触摸区域 48x48（WCAG 标准）
  */
 
 import React, {useRef} from 'react';
@@ -44,18 +44,19 @@ interface Props {
 
 const VARIANT_STYLES: Record<
   ButtonVariant,
-  {bg: string; text: string; border: string; icon: string}
+  {bg: string; text: string; border: string; icon: string; shadow?: boolean}
 > = {
   primary: {
     bg: COLORS.forest,
     text: '#FFFFFF',
     border: 'transparent',
     icon: '#FFFFFF',
+    shadow: true,
   },
   secondary: {
-    bg: COLORS.sage + '18',
+    bg: COLORS.forestBg,
     text: COLORS.forest,
-    border: COLORS.sage + '40',
+    border: 'transparent',
     icon: COLORS.forest,
   },
   outline: {
@@ -75,19 +76,20 @@ const VARIANT_STYLES: Record<
     text: '#FFFFFF',
     border: 'transparent',
     icon: '#FFFFFF',
+    shadow: true,
   },
   earth: {
-    bg: COLORS.earth + '15',
-    text: COLORS.earth,
-    border: COLORS.earth + '30',
-    icon: COLORS.earth,
+    bg: COLORS.earthBg,
+    text: COLORS.earthDark,
+    border: 'transparent',
+    icon: COLORS.earthDark,
   },
 };
 
-const SIZE_STYLES: Record<ButtonSize, {h: number; px: number; icon: number}> = {
-  sm: {h: 32, px: 14, icon: 14},
-  md: {h: 40, px: 18, icon: 16},
-  lg: {h: 48, px: 22, icon: 18},
+const SIZE_STYLES: Record<ButtonSize, {h: number; px: number; icon: number; fontSize: number}> = {
+  sm: {h: 36, px: 16, icon: 14, fontSize: 13},
+  md: {h: 44, px: 20, icon: 16, fontSize: 14},
+  lg: {h: 52, px: 24, icon: 20, fontSize: 16},
 };
 
 function ActionButton({
@@ -98,6 +100,7 @@ function ActionButton({
   iconPosition = 'left',
   disabled = false,
   fullWidth = false,
+  flex = false,
   style,
   onPress,
 }: Props): React.JSX.Element {
@@ -106,6 +109,7 @@ function ActionButton({
   const dims = SIZE_STYLES[size];
 
   const handlePressIn = () => {
+    scaleAnim.stopAnimation();
     Animated.timing(scaleAnim, {
       toValue: 0.96,
       duration: 80,
@@ -114,6 +118,7 @@ function ActionButton({
   };
 
   const handlePressOut = () => {
+    scaleAnim.stopAnimation();
     Animated.timing(scaleAnim, {
       toValue: 1,
       duration: 120,
@@ -131,7 +136,7 @@ function ActionButton({
           styles.title,
           {
             color: colors.text,
-            fontSize: size === 'sm' ? 13 : size === 'md' ? 14 : 15,
+            fontSize: dims.fontSize,
           },
         ]}
         numberOfLines={1}
@@ -148,7 +153,8 @@ function ActionButton({
     <Animated.View
       style={[
         {transform: [{scale: scaleAnim}]},
-        fullWidth && {width: '100%'},
+        fullWidth && styles.fullWidth,
+        flex && styles.flex,
       ]}>
       <TouchableOpacity
         activeOpacity={0.85}
@@ -166,8 +172,8 @@ function ActionButton({
             borderRadius: RADIUS.pill,
             opacity: disabled ? 0.45 : 1,
           },
-          variant === 'primary' && SHADOWS.card,
-          fullWidth && {width: '100%'},
+          colors.shadow && !disabled && SHADOWS.button,
+          fullWidth && styles.fullWidth,
           style,
         ]}>
         {content}
@@ -182,13 +188,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    minWidth: 72,
     alignSelf: 'flex-start',
+  },
+  fullWidth: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  flex: {
+    flex: 1,
+    alignSelf: 'stretch',
   },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   title: {
     fontWeight: '600',

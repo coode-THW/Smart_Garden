@@ -3,6 +3,14 @@
  * 与 YOLOv11n 分类模型训练参数保持一致
  */
 
+// ━━━ LLM 环境变量（可在 .env 覆盖，支持中转站） ━━━
+import {
+  LLM_PRIMARY_URL as ENV_LLM_PRIMARY_URL,
+  LLM_SECONDARY_URL as ENV_LLM_SECONDARY_URL,
+  LLM_MODEL_NAME as ENV_LLM_MODEL_NAME,
+  LLM_SECONDARY_MODEL as ENV_LLM_SECONDARY_MODEL,
+} from '@env';
+
 // ━━━ 模型配置 ━━━
 /** 模型输入宽度 */
 export const MODEL_INPUT_WIDTH = 224;
@@ -60,19 +68,40 @@ export const SATURATION_MIN = 20;
 // 深森林绿 + 温暖泥土色 + 大量留白，杂志编辑感层次
 
 // ━━━ LLM 配置 ━━━
-/** 主 LLM API 基础 URL（阿里云通义千问） */
-export const LLM_PRIMARY_URL =
-  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-/** 备用 LLM API 基础 URL（字节跳动豆包，国内可用） */
-export const LLM_SECONDARY_URL = 'https://api.doubao.com/v1/chat/completions';
+
+/**
+ * 规范化 LLM API URL：自动补全 /chat/completions 路径
+ * 兼容两种填写方式：
+ *   - "https://xxx.com/v1"            → "https://xxx.com/v1/chat/completions"
+ *   - "https://xxx.com/v1/chat/completions"（不变）
+ */
+function ensureChatCompletionsPath(url: string): string {
+  if (url.endsWith('/chat/completions')) {
+    return url;
+  }
+  return url.replace(/\/+$/, '') + '/chat/completions';
+}
+
+/**
+ * 主 LLM API 完整 URL（OpenAI 兼容格式 /chat/completions）
+ * 默认阿里云通义千问，可在 .env 配置 LLM_PRIMARY_URL 覆盖（支持中转站）
+ */
+export const LLM_PRIMARY_URL = ensureChatCompletionsPath(
+  ENV_LLM_PRIMARY_URL ||
+    'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+);
+/** 备用 LLM API 完整 URL（默认字节跳动豆包，可在 .env 用 LLM_SECONDARY_URL 覆盖） */
+export const LLM_SECONDARY_URL = ensureChatCompletionsPath(
+  ENV_LLM_SECONDARY_URL || 'https://api.doubao.com/v1/chat/completions',
+);
 /** LLM 请求超时 (ms) */
 export const LLM_TIMEOUT_MS = 15000;
 /** LLM 最大重试次数 */
 export const LLM_MAX_RETRIES = 2;
-/** 主模型名称（千问视觉模型，支持图片识别） */
-export const LLM_MODEL_NAME = 'qwen-vl-plus';
-/** 备用模型名称（豆包视觉模型，支持图片识别） */
-export const LLM_SECONDARY_MODEL = 'doubao-vl-128k';
+/** 主模型名称（默认千问视觉模型，可在 .env 用 LLM_MODEL_NAME 覆盖） */
+export const LLM_MODEL_NAME = ENV_LLM_MODEL_NAME || 'qwen-vl-plus';
+/** 备用模型名称（默认豆包视觉模型，可在 .env 用 LLM_SECONDARY_MODEL 覆盖） */
+export const LLM_SECONDARY_MODEL = ENV_LLM_SECONDARY_MODEL || 'doubao-vl-128k';
 /** LLM 温度参数（0-1，越低越确定性） */
 export const LLM_TEMPERATURE = 0.1;
 
@@ -88,6 +117,8 @@ export const COLORS = {
   forest: '#2D5A3D',
   forestLight: '#3D7A52',
   forestDark: '#1F3D2A',
+  /** 森林绿极浅，用于背景装饰块 */
+  forestBg: '#E8F0E9',
 
   /** 鼠尾草绿 — 次要强调，用于标签、图标、装饰 */
   sage: '#A3B899',
@@ -98,14 +129,18 @@ export const COLORS = {
   earth: '#8B7355',
   earthLight: '#B8A082',
   earthDark: '#6B5A40',
+  earthBg: '#F5EFE6',
 
   // 功能色
   /** 朱砂红 — 错误/警告/危险操作 */
   error: '#CD5C5C',
   errorLight: '#F5D0D0',
-  warning: '#E6A817',
+  warning: '#D4930D',
+  warningLight: '#FFF8E1',
   info: '#3B7DD8',
-  success: '#5A9A6F',
+  infoLight: '#E3F2FD',
+  success: '#4A8B5C',
+  successLight: '#E8F5E9',
 
   // 背景色阶
   /** 页面底色 — 温暖奶油白 */
@@ -116,6 +151,9 @@ export const COLORS = {
   /** 卡片背景 — 纯白 */
   card: '#FFFFFF',
   cardDark: '#252524',
+  /** 表面色 — 卡片内的微隆起区域 */
+  surface: '#FAFAF7',
+  surfaceDark: '#2A2A28',
 
   // 文字色阶
   /** 主文字 — 墨黑 */
@@ -178,16 +216,16 @@ export const SPACING = {
 export const SHADOWS = {
   /** 轻阴影 — 卡片默认 */
   card: {
-    shadowColor: '#000',
+    shadowColor: '#2D5A3D',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 3,
   },
   /** 中阴影 — 卡片悬停/强调 */
   cardHover: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: '#2D5A3D',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 6,
@@ -200,7 +238,23 @@ export const SHADOWS = {
     shadowRadius: 24,
     elevation: 12,
   },
-  /** 顶部阴影 — 底部导航栏 */
+  /** 按钮阴影 — 主操作按钮 */
+  button: {
+    shadowColor: '#2D5A3D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  /** 浮动导航栏阴影 */
+  floating: {
+    shadowColor: '#2D5A3D',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  /** 顶部阴影 — 底部导航栏（旧） */
   top: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },

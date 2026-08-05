@@ -58,13 +58,7 @@ export interface InferenceResult {
 }
 
 // ━━━ 工具函数 ━━━
-
-function softmax(logits: Float32Array): Float32Array {
-  const max = Math.max(...Array.from(logits));
-  const exps = logits.map(v => Math.exp(v - max));
-  const sum = exps.reduce((a, b) => a + b, 0);
-  return exps.map(v => v / sum);
-}
+// 注意：ONNX 模型输出已内嵌 softmax，不要对输出再做 softmax
 
 function argmax(arr: Float32Array): number {
   let maxIdx = 0;
@@ -124,8 +118,9 @@ class YoloService {
 
     const startTime = Date.now();
 
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         reject(new Error(`模型加载超时（${timeoutMs}ms）`));
       }, timeoutMs);
     });
@@ -182,7 +177,11 @@ class YoloService {
       return this.modelInfo;
     })();
 
-    return Promise.race([loadPromise, timeoutPromise]);
+    try {
+      return await Promise.race([loadPromise, timeoutPromise]);
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   // ━━━ 推理 ━━━

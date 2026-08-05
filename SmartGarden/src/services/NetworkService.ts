@@ -177,20 +177,20 @@ class NetworkService {
    * 超时 5s 视为离线。
    */
   private async ping(): Promise<boolean> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.PING_TIMEOUT);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.PING_TIMEOUT);
-
       const response = await fetch(this.PING_URL, {
         method: 'HEAD',
         signal: controller.signal,
         cache: 'no-store',
       } as RequestInit);
 
-      clearTimeout(timeoutId);
       return response.ok || response.status === 204;
     } catch {
       return false;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

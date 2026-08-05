@@ -2,12 +2,11 @@
  * WeatherAdvisedCare — 花园详情中每株植物的天气养护调整
  *
  * Props: flowerId + flowerName
- * 从 useWeatherStore 读 selectedCity 和 getAdvice
- * 五种状态：noCity / loading / loaded / noAdvice / offline(缓存)
+ * 注意：本组件不自带外层 margin/padding，由父组件控制布局间距
  */
 
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, Text, View, useColorScheme} from 'react-native';
+import {ActivityIndicator, StyleSheet, Text, View, useColorScheme} from 'react-native';
 import {Icon} from 'react-native-paper';
 import {useWeatherStore, formatTimeAgo} from '../store/useWeatherStore';
 import {COLORS, RADIUS, SPACING, TYPOGRAPHY} from '../constants';
@@ -19,7 +18,6 @@ interface Props {
   flowerName: string;
 }
 
-/** severity → 左侧色条颜色 + 图标色 */
 const SEVERITY_COLORS: Record<
   WeatherAdjustment['severity'],
   {border: string; icon: string}
@@ -43,7 +41,7 @@ function WeatherAdvisedCare({flowerId, flowerName}: Props): React.JSX.Element {
   const borderColor = isDark ? COLORS.borderDark : COLORS.border;
 
   useEffect(() => {
-    if (!selectedCity || !flowerId) return;
+    if (!selectedCity || !flowerId) {return;}
 
     let cancelled = false;
     setLoading(true);
@@ -51,12 +49,12 @@ function WeatherAdvisedCare({flowerId, flowerName}: Props): React.JSX.Element {
 
     getAdvice(flowerId, flowerName)
       .then(result => {
-        if (cancelled) return;
+        if (cancelled) {return;}
         setAdvice(result);
         setLoading(false);
       })
       .catch(err => {
-        if (cancelled) return;
+        if (cancelled) {return;}
         setError(err?.message ?? '获取建议失败');
         setLoading(false);
       });
@@ -66,184 +64,121 @@ function WeatherAdvisedCare({flowerId, flowerName}: Props): React.JSX.Element {
     };
   }, [selectedCity, flowerId, flowerName, getAdvice]);
 
-  // ━━ 未选城市 ━━
+  // 未选城市
   if (!selectedCity) {
     return (
-      <View style={{paddingHorizontal: SPACING.lg, marginTop: SPACING.lg}}>
-        <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl}>
-          <Text
-            style={{
-              ...TYPOGRAPHY.bodySmall,
-              color: secondaryColor,
-              textAlign: 'center',
-            }}
-          >
-            请先在首页设置城市以获取天气养护建议
-          </Text>
-        </DesignCard>
-      </View>
+      <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl} bg={cardBg}>
+        <Text style={[styles.centerText, {color: secondaryColor}]}>
+          请先在首页设置城市以获取天气养护建议
+        </Text>
+      </DesignCard>
     );
   }
 
-  // ━━ 加载中 ━━
+  // 加载中
   if (loading) {
     return (
-      <View style={{paddingHorizontal: SPACING.lg, marginTop: SPACING.lg}}>
-        <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl}>
-          <View style={{alignItems: 'center', paddingVertical: SPACING.md}}>
-            <ActivityIndicator size="small" color={COLORS.forest} />
-            <Text
-              style={{
-                ...TYPOGRAPHY.bodySmall,
-                color: secondaryColor,
-                marginTop: SPACING.sm,
-              }}
-            >
-              正在生成养护调整建议...
-            </Text>
-          </View>
-        </DesignCard>
-      </View>
+      <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl} bg={cardBg}>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="small" color={COLORS.forest} />
+          <Text style={[styles.centerText, {color: secondaryColor, marginTop: SPACING.sm}]}>
+            正在生成养护调整建议...
+          </Text>
+        </View>
+      </DesignCard>
     );
   }
 
-  // ━━ 错误 ━━
+  // 错误
   if (error) {
     return (
-      <View style={{paddingHorizontal: SPACING.lg, marginTop: SPACING.lg}}>
-        <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl}>
-          <Text
-            style={{
-              ...TYPOGRAPHY.bodySmall,
-              color: COLORS.error,
-              textAlign: 'center',
-            }}
-          >
-            {error}
-          </Text>
-        </DesignCard>
-      </View>
+      <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl} bg={cardBg}>
+        <Text style={[styles.centerText, {color: COLORS.error}]}>{error}</Text>
+      </DesignCard>
     );
   }
 
-  // ━━ 数据就绪 ━━
+  // 无需调整
   if (!advice || advice.adjustments.length === 0) {
     return (
-      <View style={{paddingHorizontal: SPACING.lg, marginTop: SPACING.lg}}>
-        <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl}>
-          <View style={{alignItems: 'center', paddingVertical: SPACING.sm}}>
-            <Icon source="check-circle" size={28} color={COLORS.success} />
-            <Text
-              style={{
-                ...TYPOGRAPHY.body,
-                color: COLORS.success,
-                marginTop: SPACING.sm,
-                textAlign: 'center',
-              }}
-            >
-              当前天气适宜，无需额外调整
-            </Text>
-          </View>
-        </DesignCard>
-      </View>
+      <DesignCard shadow="card" padding={SPACING.lg} radius={RADIUS.xl} bg={cardBg}>
+        <View style={styles.centerContent}>
+          <Icon source="check-circle-outline" size={28} color={COLORS.success} />
+          <Text style={[styles.goodText, {color: COLORS.success}]}>
+            当前天气适宜，无需额外调整
+          </Text>
+        </View>
+      </DesignCard>
     );
   }
 
-  // ━━ 调整建议列表 ━━
+  // 调整建议列表
   return (
-    <View style={{paddingHorizontal: SPACING.lg, marginTop: SPACING.lg}}>
-      <DesignCard shadow="card" padding={0} radius={RADIUS.xl}>
-        {/* Header */}
-        <View
-          style={{
-            paddingHorizontal: SPACING.lg,
-            paddingTop: SPACING.lg,
-            paddingBottom: SPACING.md,
-            borderBottomWidth: 1,
-            borderBottomColor: borderColor,
-          }}
-        >
-          <View style={{flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap'}}>
-            <Text style={{fontSize: 18, marginRight: SPACING.sm}}>🌤️</Text>
-            <Text style={{...TYPOGRAPHY.h3, color: textColor}}>
-              天气养护调整
-            </Text>
-            {weatherData && (
-              <Text
-                style={{
-                  ...TYPOGRAPHY.bodySmall,
-                  color: secondaryColor,
-                  marginLeft: SPACING.sm,
-                }}
-              >
-                · {selectedCity.name} {weatherData.temperature}°C
-              </Text>
-            )}
-          </View>
-
-          {/* 离线缓存标记 */}
-          {isOffline && (
-            <Text
-              style={{
-                ...TYPOGRAPHY.bodySmall,
-                color: COLORS.warning,
-                marginTop: SPACING.xs,
-              }}
-            >
-              离线模式 · 缓存于 {formatTimeAgo(lastFetchAt)}
+    <DesignCard shadow="card" padding={0} radius={RADIUS.xl} bg={cardBg}>
+      <View style={[styles.cardHeader, {borderBottomColor: borderColor}]}>
+        <View style={styles.cardHeaderRow}>
+          <Icon source="weather-partly-cloudy" size={18} color={COLORS.forest} />
+          <Text style={[styles.cardTitle, {color: textColor}]}>天气养护调整</Text>
+          {weatherData && (
+            <Text style={[styles.cardSubtitle, {color: secondaryColor}]}>
+              {selectedCity.name} {weatherData.temperature}°C
             </Text>
           )}
         </View>
+        {isOffline && (
+          <Text style={[styles.offlineText, {color: COLORS.warning}]}>
+            离线模式 · 缓存于 {formatTimeAgo(lastFetchAt)}
+          </Text>
+        )}
+      </View>
 
-        {/* Adjustment items */}
-        {advice.adjustments.map((adj, i) => {
-          const sev = SEVERITY_COLORS[adj.severity] ?? SEVERITY_COLORS.info;
-          return (
-            <View
-              key={`${adj.category}-${i}`}
-              style={{
-                flexDirection: 'row',
-                borderLeftWidth: 4,
-                borderLeftColor: sev.border,
-                paddingVertical: SPACING.md,
-                paddingHorizontal: SPACING.lg,
-                borderBottomWidth:
-                  i < advice.adjustments.length - 1 ? 1 : 0,
-                borderBottomColor: borderColor,
-              }}
-            >
-              <Icon
-                source={adj.icon}
-                size={22}
-                color={sev.icon}
-              />
-              <View style={{flex: 1}}>
-                <Text
-                  style={{
-                    fontSize: TYPOGRAPHY.h3.fontSize,
-                    fontWeight: '600',
-                    color: textColor,
-                    marginBottom: 2,
-                  }}
-                >
-                  {adj.title}
-                </Text>
-                <Text
-                  style={{
-                    ...TYPOGRAPHY.bodySmall,
-                    color: secondaryColor,
-                    lineHeight: 20,
-                  }}
-                >
-                  {adj.advice}
-                </Text>
-              </View>
+      {advice.adjustments.map((adj, i) => {
+        const sev = SEVERITY_COLORS[adj.severity] ?? SEVERITY_COLORS.info;
+        return (
+          <View
+            key={`${adj.category}-${i}`}
+            style={[
+              styles.adjustmentItem,
+              {borderLeftColor: sev.border},
+              i < advice.adjustments.length - 1 && {borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth},
+            ]}>
+            <Icon source={adj.icon} size={20} color={sev.icon} />
+            <View style={styles.adjustmentText}>
+              <Text style={[styles.adjustmentTitle, {color: textColor}]}>{adj.title}</Text>
+              <Text style={[styles.adjustmentAdvice, {color: secondaryColor}]}>{adj.advice}</Text>
             </View>
-          );
-        })}
-      </DesignCard>
-    </View>
+          </View>
+        );
+      })}
+    </DesignCard>
   );
 }
+
+const styles = StyleSheet.create({
+  centerContent: {alignItems: 'center', paddingVertical: SPACING.sm},
+  centerText: {...TYPOGRAPHY.bodySmall, textAlign: 'center'},
+  goodText: {...TYPOGRAPHY.bodySmall, textAlign: 'center', marginTop: SPACING.sm, fontWeight: '500'},
+  cardHeader: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  cardHeaderRow: {flexDirection: 'row', alignItems: 'center', gap: SPACING.sm},
+  cardTitle: {...TYPOGRAPHY.h3, fontSize: 16},
+  cardSubtitle: {...TYPOGRAPHY.bodySmall, marginLeft: 'auto'},
+  offlineText: {...TYPOGRAPHY.bodySmall, marginTop: SPACING.xs, fontSize: 11},
+  adjustmentItem: {
+    flexDirection: 'row',
+    borderLeftWidth: 3,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.md,
+    alignItems: 'flex-start',
+  },
+  adjustmentText: {flex: 1},
+  adjustmentTitle: {fontSize: 14, fontWeight: '600', marginBottom: 2},
+  adjustmentAdvice: {...TYPOGRAPHY.bodySmall, fontSize: 12, lineHeight: 18},
+});
 
 export default WeatherAdvisedCare;

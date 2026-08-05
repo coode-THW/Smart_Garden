@@ -1,3 +1,15 @@
+// Mock geolocation（原生模块，Jest 环境无原生实现）
+jest.mock('@react-native-community/geolocation', () => ({
+  // 测试环境无定位：调用 error 回调，避免 autoLocate 的 Promise 永不 settle
+  getCurrentPosition: jest.fn((_success, error) =>
+    error && error({code: 2, message: 'Mock: no location in test environment'}),
+  ),
+  watchPosition: jest.fn(),
+  clearWatch: jest.fn(),
+  requestAuthorization: jest.fn(),
+  setRNConfiguration: jest.fn(),
+}));
+
 /**
  * useWeatherStore 状态管理测试 — Day 3 离线状态版
  * ==============================================
@@ -717,7 +729,7 @@ describe('useWeatherStore', () => {
 
       // 全部有结果
       expect(results).toHaveLength(5);
-      results.forEach((r, i) => {
+      results.forEach(r => {
         expect(r).not.toBeNull();
       });
 

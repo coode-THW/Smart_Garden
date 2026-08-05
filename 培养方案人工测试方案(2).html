@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>培养方案管理 - 人工测试方案</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #e0e7ff;
+      --primary-dark: #3730a3;
+      --success: #16a34a;
+      --success-light: #dcfce7;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      line-height: 1.7;
+    }
+    .top-bar {
+      background: linear-gradient(135deg, var(--primary), #7c3aed);
+      color: #fff;
+      padding: 32px 48px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,.15);
+    }
+    .top-bar h1 { font-size: 26px; font-weight: 700; }
+    .top-bar .meta { font-size: 13px; opacity: .85; margin-top: 6px; }
+    .top-bar .meta span { margin-right: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+
+    /* Stats */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: #fff; border: 1px solid var(--gray-200); border-radius: 12px; padding: 20px; text-align: center; }
+    .stat-card .stat-num { font-size: 32px; font-weight: 800; color: var(--primary); }
+    .stat-card .stat-num.green { color: var(--success); }
+    .stat-card .stat-num.red { color: var(--danger); }
+    .stat-card .stat-num.gray { color: var(--gray-500); }
+    .stat-card .stat-label { font-size: 13px; color: var(--gray-500); margin-top: 4px; }
+
+    /* Tester form */
+    .tester-form {
+      background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+      padding: 24px 32px; margin-bottom: 32px;
+    }
+    .tester-form h2 { font-size: 18px; color: var(--primary); margin-bottom: 16px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+    .form-group input, .form-group select {
+      padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: 8px;
+      font-size: 14px; outline: none; transition: border .2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+    /* Flow card */
+    .flow-card {
+      border: 2px solid var(--primary); border-radius: 16px;
+      margin: 28px 0; overflow: hidden; background: #fff;
+      box-shadow: 0 4px 16px rgba(79,70,229,.08);
+    }
+    .flow-header {
+      background: linear-gradient(90deg, var(--primary), #7c3aed);
+      color: #fff; padding: 20px 28px;
+      font-size: 18px; font-weight: 700;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .flow-header .flow-icon { font-size: 28px; }
+    .flow-header .flow-badge {
+      margin-left: auto; background: rgba(255,255,255,.2);
+      padding: 4px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    }
+    .flow-body { padding: 24px 28px; }
+    .flow-desc {
+      background: var(--primary-light); border-left: 4px solid var(--primary);
+      padding: 14px 18px; margin-bottom: 20px; border-radius: 0 10px 10px 0;
+      font-size: 14px; color: var(--gray-700);
+    }
+    .flow-desc strong { color: var(--primary-dark); }
+
+    /* Flow status bar */
+    .flow-status-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px; background: var(--gray-50); border-radius: 8px;
+      margin-bottom: 16px; font-size: 13px; color: var(--gray-700);
+    }
+    .flow-status-bar .status-tag {
+      padding: 2px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    }
+    .status-tag.pending { background: var(--gray-200); color: var(--gray-500); }
+    .status-tag.pass { background: var(--success-light); color: #166534; }
+    .status-tag.fail { background: var(--danger-light); color: #991b1b; }
+    .status-tag.partial { background: var(--warning-light); color: #92400e; }
+
+    /* TC card */
+    .tc-card {
+      border: 1px solid var(--gray-200); border-radius: 10px;
+      margin: 14px 0; overflow: hidden; transition: box-shadow .2s;
+    }
+    .tc-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .tc-card.tc-pass { border-left: 4px solid var(--success); }
+    .tc-card.tc-fail { border-left: 4px solid var(--danger); }
+    .tc-header {
+      background: linear-gradient(90deg, var(--primary-light), #f5f3ff);
+      padding: 14px 20px; font-size: 15px; font-weight: 700;
+      color: var(--primary); border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      user-select: none;
+    }
+    .tc-header .tc-tag {
+      font-size: 11px; background: var(--primary); color: #fff;
+      padding: 2px 10px; border-radius: 999px; flex-shrink: 0;
+    }
+    .tc-header .tc-status {
+      margin-left: auto; font-size: 12px; padding: 2px 12px;
+      border-radius: 999px; font-weight: 600;
+    }
+    .tc-header .tc-status.pending { background: var(--gray-200); color: var(--gray-500); }
+    .tc-header .tc-status.pass { background: var(--success-light); color: #166534; }
+    .tc-header .tc-status.fail { background: var(--danger-light); color: #991b1b; }
+    .tc-header .toggle-arrow { transition: transform .2s; font-size: 14px; color: var(--gray-500); }
+    .tc-header .toggle-arrow.open { transform: rotate(90deg); }
+    .tc-body { padding: 16px 20px; display: none; }
+    .tc-body.open { display: block; }
+
+    /* Step */
+    .step {
+      margin: 10px 0; padding: 14px 16px;
+      background: var(--gray-50); border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+    }
+    .step-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .step-title { font-weight: 700; font-size: 13px; color: var(--primary); }
+    .step-radio { display: flex; gap: 8px; }
+    .step-radio label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; cursor: pointer; padding: 4px 12px;
+      border: 1px solid var(--gray-300); border-radius: 6px;
+      transition: all .2s;
+    }
+    .step-radio label:has(input:checked).pass-label { background: var(--success-light); border-color: var(--success); color: #166534; }
+    .step-radio label:has(input:checked).fail-label { background: var(--danger-light); border-color: var(--danger); color: #991b1b; }
+    .step-radio input { display: none; }
+    .step-op { font-size: 13px; color: var(--gray-700); margin-bottom: 4px; }
+    .step-expect { font-size: 13px; color: var(--success); }
+    .step-expect::before { content: "预期："; font-weight: 600; }
+    .step-reason {
+      margin-top: 8px; display: none;
+    }
+    .step-reason.show { display: block; }
+    .step-reason textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300);
+      border-radius: 8px; font-size: 13px; resize: vertical; min-height: 60px;
+      font-family: inherit;
+    }
+    .step-reason textarea:focus { border-color: var(--primary); outline: none; }
+
+    /* Overall */
+    .case-overall {
+      background: #fff7e6; border: 2px solid #ffd591; border-radius: 8px;
+      padding: 16px 20px; margin-top: 16px;
+    }
+    .case-overall h5 { font-size: 14px; color: #d46b08; margin-bottom: 10px; }
+    .overall-radio { display: flex; gap: 10px; margin-bottom: 8px; }
+    .overall-radio label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 13px; cursor: pointer; padding: 6px 16px;
+      border: 1px solid var(--gray-300); border-radius: 8px; transition: all .2s;
+    }
+    .overall-radio label:has(input:checked).pass-label { background: var(--success-light); border-color: var(--success); color: #166534; }
+    .overall-radio label:has(input:checked).fail-label { background: var(--danger-light); border-color: var(--danger); color: #991b1b; }
+    .overall-radio input { display: none; }
+    .overall-reason { margin-top: 10px; display: none; }
+    .overall-reason.show { display: block; }
+    .overall-reason textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300);
+      border-radius: 8px; font-size: 13px; resize: vertical; min-height: 80px;
+      font-family: inherit;
+    }
+
+    /* Submit */
+    .submit-section {
+      text-align: center; margin: 40px 0;
+      background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+      padding: 32px;
+    }
+    .submit-btn {
+      background: linear-gradient(135deg, var(--primary), #7c3aed);
+      color: #fff; border: none; padding: 14px 48px; font-size: 16px;
+      font-weight: 700; border-radius: 12px; cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(79,70,229,.3); }
+    .submit-hint { margin-top: 12px; color: var(--gray-500); font-size: 14px; }
+
+    /* Progress */
+    .progress-section {
+      background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+      padding: 24px 32px; margin-bottom: 32px;
+    }
+    .progress-section h2 { font-size: 18px; color: var(--primary); margin-bottom: 16px; }
+    .progress-bar { background: var(--gray-200); border-radius: 999px; height: 24px; overflow: hidden; position: relative; }
+    .progress-fill { background: linear-gradient(90deg, var(--primary), #7c3aed); height: 100%; border-radius: 999px; transition: width .3s; min-width: 0; }
+    .progress-label { position: absolute; right: 12px; top: 3px; font-size: 12px; font-weight: 700; color: var(--gray-700); }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 80px; right: 24px; z-index: 999;
+      padding: 14px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,.15); transform: translateX(120%);
+      transition: transform .3s;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success { background: var(--success-light); color: #166534; border: 1px solid var(--success); }
+    .toast.error { background: var(--danger-light); color: #991b1b; border: 1px solid var(--danger); }
+    .toast.warning { background: var(--warning-light); color: #92400e; border: 1px solid var(--warning); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .top-bar { padding: 20px; }
+      .container { padding: 16px 8px; }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+      .flow-body { padding: 16px; }
+      .step-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+    @media print {
+      .top-bar { position: static; }
+      .flow-card, .tc-card { break-inside: avoid; }
+      .tc-body { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>培养方案管理 - 人工测试方案</h1>
+  <div class="meta">
+    <span>版本 2.0</span>
+    <span>7个业务流程 · 26个测试用例</span>
+    <span id="topStatus">测试状态：待执行</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="statTotal">26</div><div class="stat-label">总用例数</div></div>
+    <div class="stat-card"><div class="stat-num green" id="statPass">0</div><div class="stat-label">已通过</div></div>
+    <div class="stat-card"><div class="stat-num red" id="statFail">0</div><div class="stat-label">未通过</div></div>
+    <div class="stat-card"><div class="stat-num gray" id="statPending">26</div><div class="stat-label">待测试</div></div>
+  </div>
+
+  <!-- Tester form -->
+  <div class="tester-form">
+    <h2>👤 测试人员信息</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>测试人员姓名 *</label>
+        <input type="text" id="testerName" placeholder="请输入姓名">
+      </div>
+      <div class="form-group">
+        <label>测试日期 *</label>
+        <input type="date" id="testerDate">
+      </div>
+      <div class="form-group">
+        <label>测试环境</label>
+        <select id="testerEnv">
+          <option value="development">开发环境</option>
+          <option value="testing">测试环境</option>
+          <option value="production">生产环境</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>浏览器</label>
+        <select id="testerBrowser">
+          <option value="chrome">Chrome</option>
+          <option value="firefox">Firefox</option>
+          <option value="edge">Edge</option>
+          <option value="safari">Safari</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section">
+    <h2>📊 测试进度</h2>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      <span class="progress-label" id="progressLabel">0%</span>
+    </div>
+  </div>
+
+  <!-- Flows container -->
+  <div id="flowsContainer"></div>
+
+  <!-- Submit -->
+  <div class="submit-section">
+    <button class="submit-btn" onclick="submitResults()">📤 提交测试结果</button>
+    <p class="submit-hint">提交后，测试结果将导出为JSON文件并保存到浏览器本地</p>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 测试数据 ──
+const testFlows = [
+  {
+    id: 'flow1', name: '流程一：培养方案创建流程', icon: '📝',
+    description: '系主任登录系统，创建新的培养方案。包括登录、导航、填写表单、确认创建等完整流程。',
+    testCases: [
+      { id: 'TC-001', title: '页面加载验证（登录 + 导航）', steps: [
+        { title: '步骤1：登录系统', op: '访问 http://localhost:9001/login，输入用户名 test_hod，密码 123456，点击"登录"', expect: '登录成功，跳转到系主任首页，右上角显示"测试系主任"' },
+        { title: '步骤2：导航到培养方案管理页面', op: '点击左侧边栏"教学课程管理"菜单项', expect: '页面跳转到 /course-input，显示"培养方案管理"标题' },
+        { title: '步骤3：验证页面元素', op: '查看页面左上角标题和右侧方案编号标签', expect: '标题"培养方案管理"可见；如有当前方案则显示方案编号标签' }
+      ]},
+      { id: 'TC-002', title: '新增培养方案 - 打开对话框', steps: [
+        { title: '步骤1：点击"新增培养方案"按钮', op: '点击页面右上角的 primary 按钮"新增培养方案"', expect: '弹出"新增培养方案"对话框，包含学年选择、计划名称、专业选择、复制源、取消/确认按钮' }
+      ]},
+      { id: 'TC-003', title: '新增培养方案 - 填写表单', steps: [
+        { title: '步骤1：选择学年', op: '点击"学年"下拉框，选择"2026"', expect: '学年字段显示"2026"，计划名称自动生成"2026版培养方案"' },
+        { title: '步骤2：选择专业', op: '点击"专业"下拉框，选择"计算机科学与技术"', expect: '专业字段显示"计算机科学与技术"' }
+      ]},
+      { id: 'TC-004', title: '新增培养方案 - 从已有方案复制', steps: [
+        { title: '步骤1：选择复制源方案', op: '点击"搜索并选择源培养方案"下拉框，搜索并选择一个已有方案', expect: '选择器显示选中的方案名称' }
+      ]},
+      { id: 'TC-005', title: '新增培养方案 - 取消创建', steps: [
+        { title: '步骤1：点击"取消"按钮', op: '点击对话框底部"取消"按钮', expect: '对话框关闭，返回培养方案管理页面，未创建新方案' }
+      ]},
+      { id: 'TC-006', title: '新增培养方案 - 确认创建', steps: [
+        { title: '步骤1：填写完整表单并确认创建', op: '按TC-003填写学年、专业，点击"确认创建"按钮', expect: '按钮loading → POST /api/v1/plans → 对话框关闭 → "创建成功" → 列表刷新' },
+        { title: '步骤2：验证新方案状态', op: '查看新创建的培养方案', expect: '方案状态为"草稿"，学年、专业正确' }
+      ]},
+      { id: 'TC-007', title: '新增培养方案 - 异常场景', steps: [
+        { title: '步骤1：不填必填字段，点击"确认创建"', op: '清空表单，点击"确认创建"', expect: '显示表单验证错误（如"请选择学年"）' },
+        { title: '步骤2：填写重复方案', op: '填写已存在的学年+专业组合，点击"确认创建"', expect: '显示错误提示（如"该学年该专业已存在培养方案"）' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow2', name: '流程二：培养方案管理流程', icon: '📋',
+    description: '系主任对已创建的培养方案进行日常管理操作，包括编辑方案信息、删除方案、按年度筛选、切换版本等。',
+    testCases: [
+      { id: 'TC-008', title: '编辑培养方案', steps: [
+        { title: '步骤1：选择草稿方案', op: '在方案列表中选择一个草稿状态的方案', expect: '方案被选中，显示方案详情' },
+        { title: '步骤2：点击编辑 → 修改信息 → 保存', op: '点击"编辑"按钮，修改方案名称或其他字段，点击"保存"', expect: 'PUT /api/v1/plans/{id} → "保存成功" → 方案信息更新' }
+      ]},
+      { id: 'TC-009', title: '删除培养方案', steps: [
+        { title: '步骤1：点击"删除培养方案" → 取消', op: '点击 danger 按钮"删除培养方案"，在确认对话框中点击"取消"', expect: '对话框关闭，方案未被删除' },
+        { title: '步骤2：再次点击"删除培养方案" → 确认', op: '再次点击"删除培养方案"，点击"确定"', expect: 'DELETE /api/v1/plans/{id} → "删除成功" → 方案从列表移除' }
+      ]},
+      { id: 'TC-015', title: '年度筛选', steps: [
+        { title: '步骤1：选择年度筛选 → 清除', op: '点击"选择年度"下拉框，选择"2025"，验证列表筛选；点击清除按钮，验证恢复全部', expect: '选择后只显示2025年方案；清除后显示所有方案' }
+      ]},
+      { id: 'TC-016', title: '版本切换', steps: [
+        { title: '步骤1：切换版本', op: '点击"选择版本"下拉框，选择一个历史版本', expect: '方案详情切换到该版本，页面显示对应版本信息' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow3', name: '流程三：课程管理流程', icon: '📚',
+    description: '系主任在培养方案中添加、编辑和删除课程。包括手动填写课程信息、使用AI一键生成、管理课程列表等完整课程管理链路。',
+    testCases: [
+      { id: 'TC-010', title: '新增课程 - 打开对话框', steps: [
+        { title: '步骤1：选择方案 → 点击"新增课程"', op: '选择一个培养方案，点击课程列表上方的"新增课程"按钮', expect: '弹出"新增课程"对话框，包含课程名称、一键生成、平台/性质/代码等字段' }
+      ]},
+      { id: 'TC-011', title: '新增课程 - 填写表单', steps: [
+        { title: '步骤1：输入课程名称', op: '在"课程名称"输入框中输入"数据结构"，从自动完成建议中选择', expect: '显示自动完成建议列表，选择后填充完整信息' },
+        { title: '步骤2：点击"一键生成"（可选）', op: '点击"一键生成"按钮', expect: '调用AI生成课程信息，自动填充其他字段' },
+        { title: '步骤3：填写其余字段', op: '选择课程平台"专业教育"、课程性质"必修"、课程代码"CS101"、英文名称"Data Structures"、学分"3"、开课学期"第2学期"、理论学时"48"、其余学时"0"、选择课程负责人、备注"核心专业课程"', expect: '各字段显示正确，总学时自动计算为"48"' }
+      ]},
+      { id: 'TC-012', title: '新增课程 - 确认创建', steps: [
+        { title: '步骤1：确认创建 → 验证', op: '点击"确认"按钮，查看课程列表中的新课程', expect: 'POST课程API → 对话框关闭 → "创建成功" → 课程列表刷新 → 新课程信息正确' }
+      ]},
+      { id: 'TC-013', title: '编辑课程', steps: [
+        { title: '步骤1：点击"编辑" → 修改学分 → 确认', op: '在课程列表操作列点击"编辑"，修改课程学分为"4"，点击"确认"', expect: 'PUT课程API → "更新成功" → 学分显示为"4"，总学时自动重算' }
+      ]},
+      { id: 'TC-014', title: '删除课程', steps: [
+        { title: '步骤1：点击"删除" → 确认', op: '在课程列表操作列点击"删除"，在确认对话框中点击"确定"', expect: 'DELETE课程API → "删除成功" → 课程从列表移除' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow4', name: '流程四：视图切换流程', icon: '👁️',
+    description: '用户在培养方案管理页面中切换不同的视图模式，查看课程列表、学期分布和课程结构三种视图。',
+    testCases: [
+      { id: 'TC-017', title: '切换到"课程列表"视图', steps: [
+        { title: '步骤1：点击"课程列表"标签', op: '点击筛选区的"课程列表"标签', expect: '标签被选中，页面显示课程表格视图' }
+      ]},
+      { id: 'TC-018', title: '切换到"课程学期分布"视图', steps: [
+        { title: '步骤1：点击"课程学期分布"标签', op: '点击筛选区的"课程学期分布"标签', expect: '标签被选中，页面显示学期分布视图' }
+      ]},
+      { id: 'TC-019', title: '切换到"课程结构"视图', steps: [
+        { title: '步骤1：点击"课程结构"标签', op: '点击筛选区的"课程结构"标签', expect: '标签被选中，页面显示课程结构视图' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow5', name: '流程五：权限控制验证', icon: '🔒',
+    description: '验证不同角色的权限控制。教师登录后只能查看不能编辑，编辑类按钮被禁用或隐藏。',
+    testCases: [
+      { id: 'TC-020', title: '教师只读模式验证', steps: [
+        { title: '步骤1：教师登录 → 导航到方案页', op: '使用 test_teacher 登录，点击"教学课程管理"菜单', expect: '进入 /course-input 页面' },
+        { title: '步骤2：验证只读模式标签', op: '查看页面标题右侧', expect: '显示"只读模式"标签' },
+        { title: '步骤3：验证编辑按钮禁用', op: '查看"新增培养方案""删除培养方案"按钮', expect: '按钮处于禁用状态（灰色不可点击）' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow6', name: '流程六：审核审批流程', icon: '✅',
+    description: '系主任提交培养方案审核，院长从统一审批入口 /my-approvals 进入审批页面，进行审批通过或驳回操作（含批注），并查看审核历史。',
+    testCases: [
+      { id: 'TC-021', title: '系主任提交审核', steps: [
+        { title: '步骤1：选择草稿方案 → 点击"提交审核"', op: '系主任登录，选择草稿方案，点击"提交审核"按钮，在确认对话框中点击"确认"', expect: '方案状态变为"待审批"，状态标签更新' }
+      ]},
+      { id: 'TC-022', title: '查看方案状态标签', steps: [
+        { title: '步骤1：验证不同状态样式', op: '分别查看草稿、待审批、已通过、已驳回状态的方案', expect: '各状态标签样式不同（颜色区分），状态文字正确' }
+      ]},
+      { id: 'TC-023', title: '院长审批通过', steps: [
+        { title: '步骤1：院长登录 → 进入审批', op: '使用 test_dean 登录，导航到 /my-approvals，找到培养方案审批记录，点击"审核"', expect: '跳转到 /course-input 详情页，显示审核操作按钮' },
+        { title: '步骤2：点击"通过" → 确认', op: '点击"通过"按钮，在确认对话框中点击"确认通过"', expect: '方案状态变为"已通过"，返回 /my-approvals 页面' }
+      ]},
+      { id: 'TC-024', title: '院长驳回 + 批注', steps: [
+        { title: '步骤1：从 /my-approvals 进入审批', op: '院长登录，在 /my-approvals 找到待审批方案，点击"审核"', expect: '跳转到详情页，显示审核操作按钮' },
+        { title: '步骤2：点击"驳回" → 填写批注 → 确认', op: '点击"驳回"，在批注输入框输入"课程结构不完整，请补充实践环节课程"，点击"确认驳回"', expect: '方案状态变为"已驳回"，批注保存成功' }
+      ]},
+      { id: 'TC-025', title: '查看审核历史与批注', steps: [
+        { title: '步骤1：查看审核历史面板', op: '在已驳回/已通过的方案中打开"审核历史"面板', expect: '显示审核历史时间线，包含审核人、时间、结果、批注内容' },
+        { title: '步骤2：系主任查看驳回批注', op: '系主任登录，查看已驳回方案的批注', expect: '可以看到驳回批注"课程结构不完整，请补充实践环节课程"' }
+      ]}
+    ]
+  },
+  {
+    id: 'flow7', name: '流程七：审批批注功能', icon: '✏️',
+    description: '院长在审批过程中使用 ApprovalMode 组件进行文档批注。包括涂鸦模式（画笔、高亮、文字批注）、编辑模式（高亮文字、下划线、删除线）、批注管理（编辑、删除、撤销、清除）和导出PDF。',
+    testCases: [
+      { id: 'TC-026', title: 'ApprovalMode 审批批注功能全测试', steps: [
+        { title: '步骤1：进入批注模式', op: '院长从 /my-approvals 点击培养方案审批的"审核"按钮，进入审批批注页面', expect: '显示 ApprovalMode 组件，包含工具栏、模式切换、文档内容区、批注面板' },
+        { title: '步骤2：切换到涂鸦模式', op: '点击"涂鸦模式"单选按钮', expect: '显示涂鸦工具栏，包含画笔、高亮、文字批注工具' },
+        { title: '步骤3：使用画笔工具', op: '选择"画笔"工具，选择颜色，在文档上绘制', expect: '画笔工具可用，绘制内容显示在文档上' },
+        { title: '步骤4：使用高亮工具', op: '选择"高亮"工具，在文档上标记内容', expect: '标记内容显示半透明高亮效果' },
+        { title: '步骤5：使用文字批注工具', op: '选择"文字批注"工具，点击文档位置，输入"此处需要补充实践环节"', expect: '弹出批注输入框，输入后批注显示在文档上' },
+        { title: '步骤6：切换到编辑模式', op: '点击"编辑模式"单选按钮', expect: '显示编辑工具栏，包含高亮选中文字、下划线、删除线、文字批注' },
+        { title: '步骤7：使用编辑模式工具', op: '选中一段文字，依次测试"高亮选中文字""下划线""删除线""文字批注"', expect: '各工具正常工作，效果显示在文档上' },
+        { title: '步骤8：查看批注列表', op: '查看右侧批注列表面板', expect: '显示所有批注，包含类型、内容、作者、时间' },
+        { title: '步骤9：编辑批注', op: '点击批注项的"编辑"按钮，修改批注内容', expect: '批注内容可编辑，保存后更新显示' },
+        { title: '步骤10：删除批注', op: '点击批注项的"删除"按钮', expect: '批注被删除，从列表中移除' },
+        { title: '步骤11：撤销批注', op: '点击"撤销"按钮', expect: '撤销上一步批注操作' },
+        { title: '步骤12：清除全部批注', op: '点击"清除全部"按钮', expect: '所有批注被清除' },
+        { title: '步骤13：导出标注PDF', op: '点击"导出标注PDF"按钮', expect: '生成包含所有批注的PDF文档并下载' }
+      ]}
+    ]
+  }
+];
+
+// ── 状态存储 ──
+const tcResults = {}; // { 'TC-001': { steps: [{status:'',reason:''},...], overall:'', overallReason:'' } }
+
+// ── 初始化 ──
+document.getElementById('testerDate').value = new Date().toISOString().split('T')[0];
+
+testFlows.forEach(flow => {
+  flow.testCases.forEach(tc => {
+    tcResults[tc.id] = {
+      steps: tc.steps.map(() => ({ status: '', reason: '' })),
+      overall: '',
+      overallReason: ''
+    };
+  });
+});
+
+// ── 渲染 ──
+function renderFlows() {
+  const container = document.getElementById('flowsContainer');
+  container.innerHTML = '';
+
+  testFlows.forEach(flow => {
+    const flowEl = document.createElement('div');
+    flowEl.className = 'flow-card';
+    flowEl.innerHTML = `
+      <div class="flow-header">
+        <span class="flow-icon">${flow.icon}</span>
+        <span>${flow.name}</span>
+        <span class="flow-badge">${flow.testCases.length} 个用例</span>
+      </div>
+      <div class="flow-body">
+        <div class="flow-desc"><strong>流程描述：</strong>${flow.description}</div>
+        <div class="flow-status-bar" id="flowStatus_${flow.id}">
+          <span>流程状态：</span>
+          <span class="status-tag pending" id="flowTag_${flow.id}">待测试</span>
+          <span id="flowProgress_${flow.id}" style="margin-left:auto;font-weight:600">0 / ${flow.testCases.length} 已测</span>
+        </div>
+        <div id="tcContainer_${flow.id}"></div>
+      </div>
+    `;
+    container.appendChild(flowEl);
+
+    const tcContainer = flowEl.querySelector(`#tcContainer_${flow.id}`);
+    flow.testCases.forEach(tc => {
+      const tcEl = document.createElement('div');
+      tcEl.className = 'tc-card';
+      tcEl.id = `tcCard_${tc.id}`;
+
+      let stepsHtml = '';
+      tc.steps.forEach((step, si) => {
+        stepsHtml += `
+          <div class="step" id="step_${tc.id}_${si}">
+            <div class="step-top">
+              <div class="step-title">${step.title}</div>
+              <div class="step-radio">
+                <label class="pass-label"><input type="radio" name="step_${tc.id}_${si}" value="pass" onchange="onStepChange('${tc.id}',${si},'pass')"> ✅ 通过</label>
+                <label class="fail-label"><input type="radio" name="step_${tc.id}_${si}" value="fail" onchange="onStepChange('${tc.id}',${si},'fail')"> ❌ 不通过</label>
+              </div>
+            </div>
+            <div class="step-op">${step.op}</div>
+            <div class="step-expect">${step.expect}</div>
+            <div class="step-reason" id="stepReason_${tc.id}_${si}">
+              <textarea placeholder="请详细描述不通过的原因..." oninput="onStepReasonChange('${tc.id}',${si},this.value)"></textarea>
+            </div>
+          </div>
+        `;
+      });
+
+      tcEl.innerHTML = `
+        <div class="tc-header" onclick="toggleTc('${tc.id}')">
+          <span class="tc-tag">${tc.id}</span>
+          <span>${tc.title}</span>
+          <span class="tc-status pending" id="tcStatus_${tc.id}">待测试</span>
+          <span class="toggle-arrow" id="tcArrow_${tc.id}">▶</span>
+        </div>
+        <div class="tc-body" id="tcBody_${tc.id}">
+          ${stepsHtml}
+          <div class="case-overall">
+            <h5>📊 用例整体状态</h5>
+            <div class="overall-radio">
+              <label class="pass-label"><input type="radio" name="overall_${tc.id}" value="pass" onchange="onOverallChange('${tc.id}','pass')"> ✅ 整体通过</label>
+              <label class="fail-label"><input type="radio" name="overall_${tc.id}" value="fail" onchange="onOverallChange('${tc.id}','fail')"> ❌ 整体不通过</label>
+            </div>
+            <div class="overall-reason" id="overallReason_${tc.id}">
+              <textarea placeholder="请详细描述整体不通过的原因..." oninput="onOverallReasonChange('${tc.id}',this.value)"></textarea>
+            </div>
+          </div>
+        </div>
+      `;
+      tcContainer.appendChild(tcEl);
+    });
+  });
+}
+
+// ── 交互 ──
+function toggleTc(tcId) {
+  const body = document.getElementById(`tcBody_${tcId}`);
+  const arrow = document.getElementById(`tcArrow_${tcId}`);
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function onStepChange(tcId, stepIdx, value) {
+  tcResults[tcId].steps[stepIdx].status = value;
+  const reasonEl = document.getElementById(`stepReason_${tcId}_${stepIdx}`);
+  if (value === 'fail') {
+    reasonEl.classList.add('show');
+  } else {
+    reasonEl.classList.remove('show');
+    tcResults[tcId].steps[stepIdx].reason = '';
+  }
+  updateTcStatus(tcId);
+  updateFlowStatus(tcId);
+  updateStats();
+}
+
+function onStepReasonChange(tcId, stepIdx, value) {
+  tcResults[tcId].steps[stepIdx].reason = value;
+}
+
+function onOverallChange(tcId, value) {
+  tcResults[tcId].overall = value;
+  const reasonEl = document.getElementById(`overallReason_${tcId}`);
+  if (value === 'fail') {
+    reasonEl.classList.add('show');
+  } else {
+    reasonEl.classList.remove('show');
+    tcResults[tcId].overallReason = '';
+  }
+  updateTcStatus(tcId);
+  updateFlowStatus(tcId);
+  updateStats();
+}
+
+function onOverallReasonChange(tcId, value) {
+  tcResults[tcId].overallReason = value;
+}
+
+function updateTcStatus(tcId) {
+  const r = tcResults[tcId];
+  const statusEl = document.getElementById(`tcStatus_${tcId}`);
+  const cardEl = document.getElementById(`tcCard_${tcId}`);
+  const allPass = r.steps.every(s => s.status === 'pass');
+  const anyFail = r.steps.some(s => s.status === 'fail');
+  const allDone = r.steps.every(s => s.status !== '');
+
+  cardEl.classList.remove('tc-pass', 'tc-fail');
+
+  if (r.overall === 'pass' || (allDone && allPass && !r.overall)) {
+    statusEl.textContent = '通过';
+    statusEl.className = 'tc-status pass';
+    cardEl.classList.add('tc-pass');
+  } else if (r.overall === 'fail' || anyFail) {
+    statusEl.textContent = '不通过';
+    statusEl.className = 'tc-status fail';
+    cardEl.classList.add('tc-fail');
+  } else {
+    statusEl.textContent = '待测试';
+    statusEl.className = 'tc-status pending';
+  }
+}
+
+function updateFlowStatus(tcId) {
+  // find which flow this tc belongs to
+  for (const flow of testFlows) {
+    const tcIds = flow.testCases.map(t => t.id);
+    if (tcIds.includes(tcId)) {
+      const flowId = flow.id;
+      let passCount = 0, failCount = 0, testedCount = 0;
+      flow.testCases.forEach(tc => {
+        const r = tcResults[tc.id];
+        const allPass = r.steps.every(s => s.status === 'pass');
+        const anyFail = r.steps.some(s => s.status === 'fail');
+        const allDone = r.steps.every(s => s.status !== '');
+        if (r.overall === 'pass' || (allDone && allPass)) { passCount++; testedCount++; }
+        else if (r.overall === 'fail' || anyFail) { failCount++; testedCount++; }
+        else if (r.steps.some(s => s.status !== '')) { testedCount++; }
+      });
+
+      const tagEl = document.getElementById(`flowTag_${flowId}`);
+      const progressEl = document.getElementById(`flowProgress_${flowId}`);
+      const total = flow.testCases.length;
+      progressEl.textContent = `${testedCount} / ${total} 已测`;
+
+      tagEl.className = 'status-tag';
+      if (passCount === total) { tagEl.textContent = '全部通过'; tagEl.classList.add('pass'); }
+      else if (failCount > 0) { tagEl.textContent = `${failCount} 个不通过`; tagEl.classList.add('fail'); }
+      else if (passCount > 0) { tagEl.textContent = `${passCount}/${total} 通过`; tagEl.classList.add('partial'); }
+      else { tagEl.textContent = '待测试'; tagEl.classList.add('pending'); }
+      break;
+    }
+  }
+}
+
+function updateStats() {
+  let pass = 0, fail = 0, pending = 0;
+  const total = Object.keys(tcResults).length;
+
+  Object.entries(tcResults).forEach(([tcId, r]) => {
+    const allPass = r.steps.every(s => s.status === 'pass');
+    const anyFail = r.steps.some(s => s.status === 'fail');
+    const allDone = r.steps.every(s => s.status !== '');
+
+    if (r.overall === 'pass' || (allDone && allPass)) pass++;
+    else if (r.overall === 'fail' || anyFail) fail++;
+    else pending++;
+  });
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPass').textContent = pass;
+  document.getElementById('statFail').textContent = fail;
+  document.getElementById('statPending').textContent = pending;
+
+  const tested = pass + fail;
+  const pct = total > 0 ? Math.round((tested / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '%';
+
+  const topStatus = document.getElementById('topStatus');
+  if (pending === 0) topStatus.textContent = '测试状态：全部完成';
+  else if (tested > 0) topStatus.textContent = `测试状态：进行中 (${tested}/${total})`;
+  else topStatus.textContent = '测试状态：待执行';
+}
+
+// ── 提交 ──
+function submitResults() {
+  const name = document.getElementById('testerName').value.trim();
+  const date = document.getElementById('testerDate').value;
+  if (!name) { showToast('请填写测试人员姓名', 'warning'); return; }
+  if (!date) { showToast('请选择测试日期', 'warning'); return; }
+
+  const pending = Object.values(tcResults).filter(r => r.overall === '' && !r.steps.some(s => s.status !== '')).length;
+  if (pending > 0) {
+    if (!confirm(`还有 ${pending} 个用例未测试，确定要提交吗？`)) return;
+  }
+
+  const result = {
+    tester_name: name,
+    test_date: date,
+    test_env: document.getElementById('testerEnv').value,
+    browser: document.getElementById('testerBrowser').value,
+    test_cases: tcResults,
+    submit_time: new Date().toISOString()
+  };
+
+  // 保存到本地
+  const key = `testResults_${date}_${name}`;
+  localStorage.setItem(key, JSON.stringify(result));
+
+  // 导出JSON文件
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `测试结果_${name}_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('测试结果已导出！', 'success');
+}
+
+// ── Toast ──
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── 启动 ──
+renderFlows();
+</script>
+
+</body>
+</html>

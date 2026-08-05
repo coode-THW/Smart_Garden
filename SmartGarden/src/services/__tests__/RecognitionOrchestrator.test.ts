@@ -13,7 +13,7 @@ import {
   SATURATION_MIN,
 } from '../../constants';
 
-jest.mock('../constants', () => ({
+jest.mock('../../constants', () => ({
   HIGH_CONFIDENCE: 0.85,
   MID_CONFIDENCE: 0.3,
   LOW_CONFIDENCE: 0.3,

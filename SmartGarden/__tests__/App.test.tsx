@@ -5,6 +5,28 @@
  * onnxruntime-react-native 是原生模块，在 Jest 中需要 mock。
  */
 
+// Mock geolocation（原生模块）
+jest.mock('@react-native-community/geolocation', () => ({
+  // 测试环境无定位：调用 error 回调，避免 autoLocate 的 Promise 永不 settle
+  getCurrentPosition: jest.fn((_success, error) =>
+    error && error({code: 2, message: 'Mock: no location in test environment'}),
+  ),
+  watchPosition: jest.fn(),
+  clearWatch: jest.fn(),
+  requestAuthorization: jest.fn(),
+  setRNConfiguration: jest.fn(),
+}));
+
+// Mock netinfo（原生模块）
+jest.mock('@react-native-community/netinfo', () => ({
+  fetch: jest.fn().mockResolvedValue({
+    isConnected: true,
+    isInternetReachable: true,
+  }),
+  addEventListener: jest.fn(),
+  configure: jest.fn(),
+}));
+
 // Mock onnxruntime-react-native（原生模块）
 jest.mock('onnxruntime-react-native', () => ({
   InferenceSession: {
@@ -138,6 +160,18 @@ jest.mock('@react-navigation/native', () => ({
 // --- Mock asset files ---
 
 jest.mock('../assets/yolov11n-flower.onnx', () => 'mocked-onnx-path', {virtual: true});
+
+// Mock WelcomeScreen：其内部有 Animated.loop 无限动画，
+// 会让 async act() 的渲染稳定等待永不收敛，故替换为轻量组件
+jest.mock('../src/screens/WelcomeScreen', () => 'WelcomeScreen');
+
+// Mock fetch：测试环境无网络，统一返回 404，让启动期异步
+// （模型版本检查/天气/网络探测）在测试内正常结束，避免
+// 测试结束后才 settle 触发 "Cannot log after tests are done"
+(globalThis as any).fetch = jest.fn().mockResolvedValue({
+  ok: false,
+  status: 404,
+});
 
 // --- Import app ---
 

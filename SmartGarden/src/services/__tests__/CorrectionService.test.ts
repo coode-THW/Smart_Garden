@@ -37,11 +37,11 @@ describe('CorrectionService', () => {
       getUserId: jest.fn().mockReturnValue('test-user-id'),
     };
 
-    jest.doMock('../database/correctionRepository', () => ({
+    jest.doMock('../../database/correctionRepository', () => ({
       CorrectionRepository: jest.fn().mockReturnValue(mockCorrectionRepo),
     }));
 
-    jest.doMock('./UserService', () => ({
+    jest.doMock('../UserService', () => ({
       UserService: {
         getInstance: jest.fn().mockReturnValue(mockUserService),
       },
@@ -50,7 +50,7 @@ describe('CorrectionService', () => {
     jest.resetModules();
 
     const CorrectionServiceClass =
-      require('./CorrectionService').CorrectionService;
+      require('../CorrectionService').CorrectionService;
     (CorrectionServiceClass as any).instance = undefined;
     service = CorrectionServiceClass.getInstance();
   });

@@ -10,6 +10,8 @@ export const careGuides: Record<string, any> = {
   "月季": require("./月季.json"),
   "茉莉花": require("./茉莉花.json"),
   "百合": require("./百合.json"),
+  "非洲菊": require("./非洲菊.json"),
+  "荷花": require("./荷花.json"),
   "康乃馨": require("./康乃馨.json"),
   "兰花(春兰)": require("./兰花(春兰).json"),
   "牡丹": require("./牡丹.json"),

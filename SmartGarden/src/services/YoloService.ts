@@ -128,48 +128,72 @@ class YoloService {
     const loadPromise = (async () => {
       onProgress?.(10);
       const modelPath = await this.resolveModel();
+      logger.info('YoloService', '模型路径解析完成:', modelPath);
 
       onProgress?.(30);
-      const sess = await InferenceSession.create(modelPath, {
-        executionProviders: [
-          Platform.OS === 'ios' ? 'coreml' : 'xnnpack',
-          'cpu',
-        ],
-      });
+      const eps =
+        Platform.OS === 'ios' ? ['coreml', 'cpu'] : ['xnnpack', 'cpu'];
+
+      // 推理优化配置：图全开 + 内存 arena + 线程数受限（避免低端机过载）
+      const sessionOptions = {
+        executionProviders: eps,
+        graphOptimizationLevel: 'all' as const,
+        intraOpNumThreads: Platform.OS === 'ios' ? 4 : 3,
+        interOpNumThreads: 1,
+        enableCpuMemArena: true,
+        enableMemPattern: true,
+      };
+
+      let sess: InferenceSession;
+      let usedCpuFallback = false;
+      try {
+        logger.info('YoloService', '尝试 EP:', eps.join('+'));
+        sess = await Promise.race([
+          InferenceSession.create(modelPath, sessionOptions),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('XNNPACK 初始化超时')), 8000),
+          ),
+        ]);
+      } catch (e) {
+        logger.warn('YoloService', 'XNNPACK 加载失败，降级到 CPU:', e);
+        usedCpuFallback = true;
+        sess = await InferenceSession.create(modelPath, {
+          ...sessionOptions,
+          executionProviders: ['cpu'],
+        });
+      }
+      logger.info('YoloService', 'InferenceSession.create 完成');
 
       onProgress?.(80);
 
-      const inputMeta = sess.inputMetadata[0];
-      const outputMeta = sess.outputMetadata[0];
-
-      if (!inputMeta.isTensor || !outputMeta.isTensor) {
-        throw new Error('模型输入/输出不是 Tensor 类型');
+      // onnxruntime-react-native v1.20 只暴露 inputNames/outputNames，
+      // 不暴露 inputMetadata/outputMetadata，shape 用硬编码常量。
+      const inputName = sess.inputNames[0];
+      const outputName = sess.outputNames[0];
+      if (!inputName || !outputName) {
+        throw new Error('模型没有输入或输出节点');
       }
 
-      const ep = Platform.OS === 'ios' ? 'CoreML' : 'XNNPACK';
+      const ep = usedCpuFallback
+        ? 'CPU (降级)'
+        : Platform.OS === 'ios'
+        ? 'CoreML'
+        : 'XNNPACK';
 
       onProgress?.(95);
 
       const loadTime = Date.now() - startTime;
       logger.info('YoloService', `✅ 模型加载成功 (${loadTime}ms)`);
       logger.debug('YoloService', `引擎: ${ep}`);
-      logger.debug(
-        'YoloService',
-        `输入: ${sess.inputNames[0]}`,
-        inputMeta.shape,
-      );
-      logger.debug(
-        'YoloService',
-        `输出: ${sess.outputNames[0]}`,
-        outputMeta.shape,
-      );
+      logger.debug('YoloService', `输入: ${inputName}`, MODEL_INPUT_SHAPE);
+      logger.debug('YoloService', `输出: ${outputName}`);
 
       this.session = sess;
       this.modelInfo = {
-        inputName: sess.inputNames[0],
-        inputShape: inputMeta.shape as number[],
-        outputName: sess.outputNames[0],
-        outputShape: outputMeta.shape as number[],
+        inputName,
+        inputShape: MODEL_INPUT_SHAPE as number[],
+        outputName,
+        outputShape: [1, CLASS_NAMES.length],
         executionProvider: ep,
       };
 
@@ -322,7 +346,8 @@ class YoloService {
     // Android：模型在 APK assets 中，ONNX Runtime C++ 层无法直接读取
     // /android_asset/ 虚拟路径，需要先复制到文件系统
     if (Platform.OS === 'android') {
-      const RNFS = require('react-native-fs').default || require('react-native-fs');
+      const RNFS =
+        require('react-native-fs').default || require('react-native-fs');
       const modelFileName =
         (MODEL_QUANTIZATION as string) === 'int8'
           ? 'yolov11n-flower-int8.onnx'
@@ -342,7 +367,9 @@ class YoloService {
 
     // iOS：通过 Image.resolveAssetSource 获取路径（可直接从 bundle 读取）
     const asset =
-      (MODEL_QUANTIZATION as string) === 'int8' ? getModelAssetInt8() : MODEL_ASSET;
+      (MODEL_QUANTIZATION as string) === 'int8'
+        ? getModelAssetInt8()
+        : MODEL_ASSET;
     if (!asset && (MODEL_QUANTIZATION as string) === 'int8') {
       throw new Error('INT8 模型文件不存在，请检查 assets 目录');
     }
@@ -359,7 +386,8 @@ class YoloService {
 
     // Debug 模式（Metro http:// 地址）→ fetch 字节写入文件
     logger.debug('YoloService', 'Debug 模式，fetch 模型:', resolved.uri);
-    const RNFS = require('react-native-fs').default || require('react-native-fs');
+    const RNFS =
+      require('react-native-fs').default || require('react-native-fs');
     const modelFileName =
       (MODEL_QUANTIZATION as string) === 'int8'
         ? 'yolov11n-flower-int8.onnx'

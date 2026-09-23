@@ -105,33 +105,81 @@ const getApiConfig = (
   };
 };
 
-const IMAGE_MAX_WIDTH = 1024;
-const IMAGE_MAX_HEIGHT = 1024;
-const IMAGE_QUALITY = 80;
+/** LLM 发送图片的硬限：压缩后 ≤500KB（节省流量 + 兼容 API 限制） */
+const IMAGE_MAX_BYTES = 500 * 1024;
 
+/** 逐级降级的压缩参数：(maxWidth, maxHeight, quality) */
+const IMAGE_COMPRESS_PROFILES: Array<[number, number, number]> = [
+  [1024, 1024, 80], // 首选：画质优先
+  [1024, 1024, 60], // 降 quality
+  [800, 800, 70],   // 降尺寸
+  [640, 640, 70],   // 再降尺寸
+  [512, 512, 70],   // 保底
+];
+
+/**
+ * 压缩图片并读取为 base64，硬限 ≤500KB
+ *
+ * 逐级降级策略：先用 [1024,1024,80] 压缩 → 检查文件大小 → 超 500KB 则用下一档
+ * 最终兜底：即使保底压缩后仍超 500KB（极端情况），也返回图片但记录 warn
+ */
 async function readImageAsBase64(imagePath: string): Promise<string> {
-  try {
-    const resizedImage = await ImageResizer.createResizedImage(
-      imagePath,
-      IMAGE_MAX_WIDTH,
-      IMAGE_MAX_HEIGHT,
-      'JPEG',
-      IMAGE_QUALITY,
-    );
+  let lastError: unknown = null;
 
-    const filePath =
-      Platform.OS === 'android'
-        ? resizedImage.uri.replace('file://', '')
-        : resizedImage.uri;
-    const base64 = await RNFS.readFile(filePath, 'base64');
-    return `data:image/jpeg;base64,${base64}`;
-  } catch (e) {
-    logger.warn('LlmService', '图片压缩失败，使用原始图片:', e);
-    const filePath =
-      Platform.OS === 'android' ? imagePath.replace('file://', '') : imagePath;
-    const base64 = await RNFS.readFile(filePath, 'base64');
-    return `data:image/jpeg;base64,${base64}`;
+  for (const [w, h, q] of IMAGE_COMPRESS_PROFILES) {
+    try {
+      const resizedImage = await ImageResizer.createResizedImage(
+        imagePath,
+        w,
+        h,
+        'JPEG',
+        q,
+      );
+
+      const filePath =
+        Platform.OS === 'android'
+          ? resizedImage.uri.replace('file://', '')
+          : resizedImage.uri;
+
+      // 检查压缩后文件大小
+      const stats = await RNFS.stat(filePath);
+      if (stats.size > IMAGE_MAX_BYTES) {
+        logger.debug(
+          'LlmService',
+          `压缩后 ${(stats.size / 1024).toFixed(0)}KB 超限，` +
+            `尝试下一档 (${w}x${h} q${q}) → 继续降级`,
+        );
+        continue; // 跳到下一档
+      }
+
+      const base64 = await RNFS.readFile(filePath, 'base64');
+      logger.debug(
+        'LlmService',
+        `图片压缩: ${(stats.size / 1024).toFixed(0)}KB ` +
+          `(${w}x${h} q${q})`,
+      );
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (e) {
+      lastError = e;
+      logger.warn(
+        'LlmService',
+        `压缩档 (${w}x${h} q${q}) 失败:`,
+        e,
+      );
+      // 继续尝试下一档
+    }
   }
+
+  // 兜底：所有压缩都失败或仍超限 → 返回原始图片但记录 warn
+  logger.warn(
+    'LlmService',
+    '所有压缩档均不可用，使用原始图片（可能超限）:',
+    lastError,
+  );
+  const filePath =
+    Platform.OS === 'android' ? imagePath.replace('file://', '') : imagePath;
+  const base64 = await RNFS.readFile(filePath, 'base64');
+  return `data:image/jpeg;base64,${base64}`;
 }
 
 function buildPrompt(base64Image: string, localGuess?: string): string {

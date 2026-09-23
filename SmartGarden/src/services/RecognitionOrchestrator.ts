@@ -231,6 +231,30 @@ class RecognitionOrchestrator {
                   localResult.bloomPeriod = flower.bloomPeriod;
                   localResult.llmUsed = true;
                   localResult.llmLatencyMs = llmResponse.latencyMs;
+
+                  // 修正：当本地知识库无该花卉数据时，YOLO 可能识别错误（如把荷花识别为非洲菊）。
+                  // 如果 LLM 返回了有效花名且与 YOLO 结果不同、且 LLM 置信度足够高，
+                  // 则以 LLM 识别结果覆盖 YOLO 的花名/置信度/来源，保证显示一致性。
+                  const llmName = (flower.name || '').trim();
+                  const isLlmNameValid =
+                    llmName && llmName !== '未知' && llmName !== 'unknown';
+                  const isLlmDisagrees =
+                    isLlmNameValid && llmName !== yoloResult.topClass;
+
+                  if (isLlmDisagrees && flower.confidence >= 0.5) {
+                    logger.info(
+                      'Orchestrator',
+                      `LLM 纠正识别结果: YOLO="${
+                        yoloResult.topClass
+                      }" → LLM="${llmName}" (置信度 ${(
+                        flower.confidence * 100
+                      ).toFixed(1)}%)`,
+                    );
+                    localResult.flowerName = llmName;
+                    localResult.topClass = llmName;
+                    localResult.confidence = flower.confidence;
+                    localResult.source = 'llm';
+                  }
                 }
               }
             } catch (error) {

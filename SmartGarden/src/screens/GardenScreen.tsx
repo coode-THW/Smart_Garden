@@ -72,6 +72,9 @@ function GardenScreen(): React.JSX.Element {
         text: '移除',
         style: 'destructive',
         onPress: async () => {
+          // NOTE: 返回值里的 cancelledNotificationIds 是该花园已注册的系统通知 ID。
+          // 通知层（NotificationService / react-native-push-notification）落地后，
+          // 必须在这里逐一取消，否则已删掉的花仍会按时弹提醒。
           await gardenService.removeFromGarden(entry.garden.gardenId!);
           loadGarden();
         },

@@ -3,6 +3,9 @@ module.exports = {
   moduleNameMapper: {
     '\\.onnx$': '<rootDir>/__mocks__/fileMock.js',
   },
+  // __tests__/helpers/ 是共享测试工具，不是测试用例本身
+  // （否则默认 testMatch 会把它当测试文件跑，报「no tests」）
+  testPathIgnorePatterns: ['/node_modules/', '/__tests__/helpers/'],
   transformIgnorePatterns: [
     'node_modules/(?!(' +
       '@react-native|' +

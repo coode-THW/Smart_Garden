@@ -4,7 +4,7 @@
  * 职责：
  *   - 数据库连接管理（单例模式）
  *   - Phase 1 三张核心表的 DDL（user / garden / feedback）
- *   - Phase 2 预留表（reminder）DDL 注释
+ *   - Phase 2 提醒表（reminder）DDL
  *
  * 使用方式：
  *   const db = await getDatabase();         // 获取连接（首次自动建表）
@@ -146,6 +146,39 @@ CREATE INDEX IF NOT EXISTS idx_feedback_hash
     ON feedback(imageHash);
 `;
 
+// Phase 2 提醒表 DDL（Day41-42）
+// 单独抽出常量，使 getDatabase() 的逐条执行数组与文档字符串保持同源、避免漂移。
+const DDL_REMINDER_TABLE = `CREATE TABLE IF NOT EXISTS reminder (
+    reminderId      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    userId          TEXT    NOT NULL,
+    gardenId        INTEGER NOT NULL,
+    type            TEXT    NOT NULL,
+    frequency       TEXT    NOT NULL,
+    intervalValue   INTEGER NULL,
+    daysOfWeek      TEXT    NULL,
+    dayOfMonth      INTEGER NULL,
+    time            TEXT    NOT NULL,
+    nextRemindTime  TEXT    NOT NULL,
+    notificationId  TEXT    NULL,
+    lastTriggeredAt TEXT    NULL,
+    title           TEXT    NULL,
+    note            TEXT    NULL,
+    enabled         INTEGER NOT NULL DEFAULT 1,
+    createdAt       TEXT    NOT NULL,
+    updatedAt       TEXT    NOT NULL,
+    FOREIGN KEY (userId)   REFERENCES user(userId),
+    FOREIGN KEY (gardenId) REFERENCES garden(gardenId)
+)`;
+
+const DDL_REMINDER_INDEXES = [
+  `CREATE INDEX IF NOT EXISTS idx_reminder_userId
+     ON reminder(userId)`,
+  `CREATE INDEX IF NOT EXISTS idx_reminder_gardenId
+     ON reminder(userId, gardenId)`,
+  `CREATE INDEX IF NOT EXISTS idx_reminder_nextRemindTime
+     ON reminder(enabled, nextRemindTime)`,
+];
+
 // ━━━━━ 公开 API ━━━━━
 
 /**
@@ -198,6 +231,8 @@ export async function getDatabase(): Promise<SqliteDatabaseAdapter> {
         FOREIGN KEY (userId) REFERENCES user(userId)
       )`,
       `CREATE INDEX IF NOT EXISTS idx_feedback_hash ON feedback(imageHash)`,
+      DDL_REMINDER_TABLE,
+      ...DDL_REMINDER_INDEXES,
     ];
     for (const sql of cmds) {
       await db.executeSql(sql);
@@ -213,9 +248,16 @@ export async function getDatabase(): Promise<SqliteDatabaseAdapter> {
 
 /**
  * 获取内联 DDL 语句（用于单元测试或手动执行）。
+ *
+ * 各部分自带/不带结尾分号不一，这里统一去掉后再用 ';' 拼接，
+ * 避免出现 ';;' 空语句。
  */
 export function getDDL(): string {
-  return DDL_CREATE_TABLES;
+  return (
+    [DDL_CREATE_TABLES, DDL_REMINDER_TABLE, ...DDL_REMINDER_INDEXES]
+      .map(stmt => stmt.trim().replace(/;+$/, ''))
+      .join(';\n') + ';'
+  );
 }
 
 /**
@@ -227,11 +269,12 @@ export async function resetDatabase(): Promise<void> {
 
   try {
     await db.executeSql(
+      'DROP TABLE IF EXISTS reminder;\n' +
       'DROP TABLE IF EXISTS feedback;\n' +
       'DROP TABLE IF EXISTS garden;\n' +
       'DROP TABLE IF EXISTS user;',
     );
-    await db.executeSql(DDL_CREATE_TABLES);
+    await db.executeSql(getDDL());
     logger.info('DB', '数据库已重置');
   } catch (error) {
     logger.error('DB', '数据库重置失败:', error);

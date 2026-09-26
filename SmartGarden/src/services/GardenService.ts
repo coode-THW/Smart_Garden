@@ -22,6 +22,7 @@
 import {GardenRepository} from '../database/gardenRepository';
 import {KnowledgeService} from './KnowledgeService';
 import {UserService} from './UserService';
+import {ReminderService} from './ReminderService';
 import {GardenEntity, CareGuide, ApiResponse, ErrorCode} from '../types';
 import {getErrorMessage} from './ErrorHandler';
 
@@ -41,6 +42,19 @@ export interface GardenEntry {
   careGuide: CareGuide | null;
 }
 
+/** 移除花园记录的结果 */
+export interface GardenRemovalResult {
+  /** 花园行是否真的删掉了 */
+  removed: boolean;
+  /** 一并清理掉的提醒条数 */
+  remindersRemoved: number;
+  /**
+   * 调用方需要去系统里**逐一取消**的通知 ID。
+   * 不取消的话，这些已删除提醒的系统通知仍会按时弹出来。
+   */
+  cancelledNotificationIds: string[];
+}
+
 // ━━━━━ GardenService (单例) ━━━━━
 
 export class GardenService {
@@ -49,6 +63,7 @@ export class GardenService {
   private gardenRepo = new GardenRepository();
   private knowledgeService = KnowledgeService.getInstance();
   private userService = UserService.getInstance();
+  private reminderService = ReminderService.getInstance();
 
   static getInstance(): GardenService {
     if (!GardenService.instance) {
@@ -185,10 +200,33 @@ export class GardenService {
   // ─── 删除 ───
 
   /**
-   * 从花园中移除一盆花。
+   * 从花园中移除一盆花，**并级联清理它的养护提醒**。
+   *
+   * 级联必须在服务层显式做：reminder.gardenId 的外键没有被强制执行
+   * （SQLite 默认 foreign_keys = OFF），数据库不会自动带走这些提醒，
+   * 剩下的"孤儿提醒"会继续给一盆已不存在的花弹通知。
+   *
+   * 顺序说明：先清提醒再删花园行。若花园行删除失败，用户仍在花园里看到这盆花，
+   * 但提醒已被清空 —— 重新点一次「一键设置提醒」即可恢复；
+   * 反过来先删花园行则可能留下孤儿提醒，那是用户看不见也清不掉的。
+   *
+   * @returns 删除结果；调用方需拿 `cancelledNotificationIds` 去系统里取消通知
    */
-  async removeFromGarden(gardenId: number): Promise<boolean> {
-    return this.gardenRepo.delete(gardenId);
+  async removeFromGarden(gardenId: number): Promise<GardenRemovalResult> {
+    // 先确认这盆花存在，避免对不存在的花园产生任何副作用
+    const garden = await this.gardenRepo.findById(gardenId);
+    if (!garden) {
+      return {removed: false, remindersRemoved: 0, cancelledNotificationIds: []};
+    }
+
+    const cleanup = await this.reminderService.deleteByGarden(gardenId);
+    const removed = await this.gardenRepo.delete(gardenId);
+
+    return {
+      removed,
+      remindersRemoved: cleanup.removed,
+      cancelledNotificationIds: cleanup.cancelledNotificationIds,
+    };
   }
 
   // ─── 内部方法 ───

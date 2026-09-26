@@ -149,10 +149,25 @@ export interface FeedbackEntity {
   synced: number; // 0 | 1
 }
 
-// ━━━━━ 提醒类型（Phase 2 预留） ━━━━━
+// ━━━━━ 提醒类型（Phase 2） ━━━━━
 
 export type ReminderType = 'water' | 'fertilize' | 'pest' | 'check';
 export type ReminderFrequency = 'daily' | 'weekly' | 'monthly';
+
+/** 提醒类型的全部合法取值，供参数校验使用。 */
+export const REMINDER_TYPES: readonly ReminderType[] = [
+  'water',
+  'fertilize',
+  'pest',
+  'check',
+];
+
+/** 提醒频率的全部合法取值，供参数校验使用。 */
+export const REMINDER_FREQUENCIES: readonly ReminderFrequency[] = [
+  'daily',
+  'weekly',
+  'monthly',
+];
 
 export interface ReminderEntity {
   reminderId?: number;
@@ -161,12 +176,17 @@ export interface ReminderEntity {
   type: ReminderType;
   frequency: ReminderFrequency;
   intervalValue: number | null;
-  daysOfWeek: string | null; // e.g. "2,4,6"
+  daysOfWeek: string | null; // e.g. "2,4,6" — ISO 8601 星期，1=周一 … 7=周日
   dayOfMonth: number | null;
   time: string; // HH:mm
-  nextRemindTime: string;
+  nextRemindTime: string; // 本地时间 'YYYY-MM-DDTHH:mm:ss'，恒为未来时刻
+  /** 已注册的系统通知 ID，供取消/重排通知使用（Day45-46） */
+  notificationId: string | null;
+  /** 上次实际触发时间，用于去重触发（Day45-46） */
+  lastTriggeredAt: string | null;
   title: string | null;
   note: string | null;
   enabled: number; // 0 | 1
   createdAt: string;
+  updatedAt: string;
 }

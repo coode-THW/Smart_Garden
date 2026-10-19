@@ -20,6 +20,23 @@ import {
   inferErrorCode,
 } from './ErrorHandler';
 import { getKnowledge } from './KnowledgeService';
+import {
+  LatencyTracker,
+  LatencyStats,
+  type LatencySnapshot,
+} from './LatencyTracker';
+import {
+  INITIAL_STATE,
+  NO_ADVANCED_STAGES,
+  createContext,
+  isTerminal,
+  skipEventIfUnavailable,
+  transition,
+  type MachineContext,
+  type MachineEvent,
+  type RecognitionState,
+} from './RecognitionStateMachine';
+import type { LatencyBreakdown } from '../types';
 import logger from './LoggerService';
 
 export type RecognitionStatus = 'success' | 'rejected' | 'low_confidence';
@@ -44,12 +61,19 @@ export interface RecognitionResult {
   allClasses?: Array<{ name: string; probability: number }>;
   inferenceTimeMs: number;
   llmLatencyMs?: number;
+  /** 延迟分解（F1 度量）。inferenceTimeMs 是端到端单值，这里是它的分段归因 */
+  latency?: LatencyBreakdown;
   yoloResult?: YoloInferenceResult;
   errorMessage?: string;
   llmUsed?: boolean;
+  /**
+   * 本轮识别在状态机中的终态（诊断/测试用）。
+   * 缓存命中时不跑状态机，因此为空。
+   */
+  finalState?: RecognitionState;
 }
 
-interface RecognitionDecision {
+export interface RecognitionDecision {
   action: 'reject' | 'use_local' | 'call_llm';
   reason: string;
 }
@@ -92,7 +116,19 @@ function buildCareGuide(flower: LlmFlowerInfo): CareGuide {
   };
 }
 
-function analyzeYoloResult(result: YoloInferenceResult): RecognitionDecision {
+/**
+ * 本地模型结果 → 三分支决策（reject / use_local / call_llm）。
+ *
+ * 只使用 3 个信号：greenRatio、avgSaturation、confidence。
+ * margin / entropy / dropOff / bottomSum 会随结果返回，但**不参与门控**。
+ * 把它们接进来会改变拒识语义 —— 属于精度红线，需显式评审。
+ *
+ * 导出仅为便于直接测试生产实现（过去测试文件里有一份更严格的拷贝，
+ * 导致生产代码从未被覆盖）。
+ */
+export function analyzeYoloResult(
+  result: YoloInferenceResult,
+): RecognitionDecision {
   const { confidence, greenRatio, avgSaturation } = result;
 
   if (greenRatio > GREEN_RATIO_MAX) {
@@ -130,11 +166,32 @@ function analyzeYoloResult(result: YoloInferenceResult): RecognitionDecision {
   };
 }
 
+/**
+ * 发事件推进状态机。
+ *
+ * 非法转移**立即抛错**，而不是静默跳到默认状态 —— 隐藏非法转移会让流程 bug
+ * 极难发现。错误由 recognizeInternal 的外层 catch 统一降级为 low_confidence，
+ * 不会让 APP 崩溃。
+ */
+function advance(
+  state: RecognitionState,
+  event: MachineEvent,
+  context: MachineContext,
+): RecognitionState {
+  const next = transition(state, event, context);
+  if (next === null) {
+    throw new Error(`识别状态机非法转移: ${state} --${event}-->`);
+  }
+  return next;
+}
+
 class RecognitionOrchestrator {
   private static instance: RecognitionOrchestrator;
   private yoloService: YoloService;
   private llmService: LlmService;
   private cache: RecognitionCache;
+  /** 延迟采样（滚动窗口），供设备端度量取值 */
+  private latencyStats = new LatencyStats();
 
   private constructor() {
     this.yoloService = YoloService.getInstance();
@@ -163,7 +220,93 @@ class RecognitionOrchestrator {
     logger.info('Orchestrator', '✅ 模型加载完成');
   }
 
+  /**
+   * 识别入口。负责挂上延迟分解（F1），具体流程在 recognizeInternal。
+   *
+   * 为什么拆成两段：内部有 7 个返回点（缓存命中 / 本地成功 / LLM 三种结局 /
+   * 拒绝 / 异常）。若在每个返回点各自拼 breakdown，很容易漏一处。这里只在
+   * **唯一出口**统一取快照，内部只管打标记。
+   */
   async recognize(imagePath: string): Promise<RecognitionResult> {
+    const tracker = new LatencyTracker();
+    const result = await this.recognizeInternal(imagePath, tracker);
+
+    const latency = tracker.freeze();
+    this.latencyStats.record(latency);
+    this.logLatency(latency);
+
+    return {...result, latency};
+  }
+
+  /** 最近若干次识别的延迟分布（供设备端度量取值） */
+  getLatencyStats(): LatencySnapshot | null {
+    return this.latencyStats.snapshot();
+  }
+
+  /** 清空延迟统计 */
+  resetLatencyStats(): void {
+    this.latencyStats.reset();
+  }
+
+  private logLatency(b: LatencyBreakdown): void {
+    // 单行、键值固定 —— 在设备日志里可以直接 grep 'Latency' 汇总，
+    // 不必解析多行。
+    logger.info(
+      'Latency',
+      `total=${b.totalMs} pre=${b.preprocessMs} infer=${b.inferenceMs} ` +
+        `decision=${b.decisionMs} knowledge=${b.knowledgeMs} ` +
+        `llm=${b.llmMs} cache=${b.cacheHit ? 1 : 0}`,
+    );
+  }
+
+  /**
+   * 从 IDLE 推进到「需要真正执行本地分类」的状态。
+   *
+   * 当前四个高级阶段（质量检查 / 植物二分类 / 主体定位 / 主体裁剪）都还没有
+   * 模型，skipEventIfUnavailable 会把它们**显式降级**，最终落到
+   * ORIGINAL_CLASSIFY_FALLBACK（原图分类）。这条降级路径与接线前的实现完全
+   * 一致，由 RecognitionStateMachine.test.ts 的等价性测试锁定。
+   *
+   * ⚠️ 这些是**当前能力**下的路径。将来某个阶段有了模型，不能只把
+   * NO_ADVANCED_STAGES 里对应项改成 true —— 必须同时在本方法里补该阶段的
+   * 实际工作代码，否则会提前返回，随后因非法转移降级为 low_confidence。
+   */
+  private advanceToClassification(context: MachineContext): RecognitionState {
+    let state: RecognitionState = INITIAL_STATE;
+    state = advance(state, 'START', context);
+    state = advance(state, 'IMAGE_ACQUIRED', context);
+
+    for (;;) {
+      if (isTerminal(state)) {
+        // 分类还没开始就终止了 —— 说明转移表或能力配置写错了
+        throw new Error(`状态机在分类前意外终止: ${state}`);
+      }
+
+      const skip = skipEventIfUnavailable(state, NO_ADVANCED_STAGES);
+      if (skip) {
+        state = advance(state, skip, context);
+        continue;
+      }
+
+      switch (state) {
+        case 'PLANT_CONFIRMED':
+          state = advance(state, 'PLANT_OK', context);
+          continue;
+        // 定位失败是两跳：PLANT_LOCATE → LOCATION_FAILED → 原图备用
+        // （与文档第 4 节一致，不是可以合并的一步）
+        case 'LOCATION_FAILED':
+          state = advance(state, 'USE_ORIGINAL', context);
+          continue;
+        default:
+          return state;
+      }
+    }
+  }
+
+  private async recognizeInternal(
+    imagePath: string,
+    tracker: LatencyTracker,
+  ): Promise<RecognitionResult> {
     const startTime = Date.now();
 
     try {
@@ -174,14 +317,32 @@ class RecognitionOrchestrator {
       const cachedResult = this.cache.get(cacheKey);
       if (cachedResult) {
         logger.info('Orchestrator', '命中缓存，跳过推理');
+        // 命中意味着整条链路都没跑，各阶段必须归零
+        tracker.markCacheHit();
         return {
           ...cachedResult,
           inferenceTimeMs: Date.now() - startTime,
+          // 本轮没有跑状态机，不要沿用缓存对象里的旧终态
+          finalState: undefined,
         };
       }
 
+      // ━━━ 状态机推进（v1.0）━━━
+      // 目前走到 ORIGINAL_CLASSIFY_FALLBACK：原图 → 9 类分类。
+      // 其余高级阶段缺失时的降级路径全部由状态机显式定义。
+      const context = createContext();
+      let state = this.advanceToClassification(context);
+
       const yoloResult = await this.yoloService.detect(imagePath);
+      // 预处理与推理分别取自 YoloService 内部的实测值 —— 在那里测才不含调度噪声
+      tracker.markPreprocess(yoloResult.preprocessMs);
+      tracker.markInference(yoloResult.inferenceTimeMs);
+
+      state = advance(state, 'CLASSIFIED', context); // → RESULT_VALIDATE
+
+      const decisionStart = Date.now();
       const decision = analyzeYoloResult(yoloResult);
+      tracker.markDecision(Date.now() - decisionStart);
 
       logger.info(
         'Orchestrator',
@@ -191,6 +352,8 @@ class RecognitionOrchestrator {
 
       switch (decision.action) {
         case 'use_local': {
+          state = advance(state, 'VALIDATE_RELIABLE', context); // → LOCAL_SUCCESS
+
           const localResult: RecognitionResult = {
             status: 'success',
             source: 'yolov11',
@@ -207,9 +370,13 @@ class RecognitionOrchestrator {
             inferenceTimeMs: Date.now() - startTime,
             yoloResult,
             llmUsed: false,
+            finalState: state,
           };
 
-          // 检查本地知识库是否存在，不存在则调用LLM获取养护指南
+          // 检查本地知识库是否存在，不存在则调用LLM获取养护指南。
+          // 这段耗时记在 knowledgeMs（知识获取），跟 llmMs（识别兜底）区分开 ——
+          // 两者都是网络等待，但优化手段不同。
+          const knowledgeStart = Date.now();
           const localKnowledge = getKnowledge(yoloResult.topClass);
           if (!localKnowledge) {
             logger.info(
@@ -261,6 +428,7 @@ class RecognitionOrchestrator {
               logger.warn('Orchestrator', 'LLM补充养护指南失败:', error);
             }
           }
+          tracker.markKnowledge(Date.now() - knowledgeStart);
 
           this.cache.set(cacheKey, localResult);
           return localResult;
@@ -268,15 +436,25 @@ class RecognitionOrchestrator {
 
         case 'reject':
         case 'call_llm': {
+          // 注意：当前生产把 reject 也交给 LLM 复核，因此两者都映射到
+          // VALIDATE_UNCERTAIN。VALIDATE_REJECT → SESSION_REJECTED 这条边
+          // 留给未来引入强拒识信号时使用 —— 启用它会改变识别语义（精度红线），
+          // 需显式评审，不能顺手改。
+          state = advance(state, 'VALIDATE_UNCERTAIN', context); // → LLM_FALLBACK
+
+          const llmStart = Date.now();
           const llmResponse = await this.llmService.identify(
             imagePath,
             yoloResult.topClass,
           );
+          tracker.markLLM(Date.now() - llmStart);
 
           if (llmResponse.success && llmResponse.flowerInfo) {
             const flower = llmResponse.flowerInfo;
 
             if (flower.confidence >= 0.3) {
+              state = advance(state, 'LLM_OK', context); // → LLM_CONFIRMED
+
               const llmSuccessResult: RecognitionResult = {
                 status: 'success',
                 source: 'llm',
@@ -299,10 +477,15 @@ class RecognitionOrchestrator {
                 llmLatencyMs: llmResponse.latencyMs,
                 yoloResult,
                 llmUsed: true,
+                finalState: state,
               };
               this.cache.set(cacheKey, llmSuccessResult);
               return llmSuccessResult;
             } else {
+              // LLM 有响应，但认为置信度不足 / 不是花 → 最终拒绝
+              state = advance(state, 'LLM_REJECT', context); // → LLM_REJECTED
+              state = advance(state, 'LLM_REJECT_FINAL', context); // → SESSION_REJECTED
+
               const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
               const llmRejectResult: RecognitionResult = {
                 status: 'rejected',
@@ -323,11 +506,14 @@ class RecognitionOrchestrator {
                 errorMessage: noFlowerInfo.fullMessage,
 
                 llmUsed: true,
+                finalState: state,
               };
               this.cache.set(cacheKey, llmRejectResult);
               return llmRejectResult;
             }
           } else {
+            state = advance(state, 'LLM_ERROR', context); // → LLM_FAILED
+
             const errorCode = llmResponse.errorMessage
               ? inferErrorCode(llmResponse.errorMessage)
               : ErrorCode.LLM_CALL_FAILED;
@@ -338,6 +524,8 @@ class RecognitionOrchestrator {
               yoloResult.confidence < LOW_CONFIDENCE;
 
             if (isLikelyNotFlower) {
+              state = advance(state, 'LLM_FAILED_FINAL', context); // → SESSION_REJECTED
+
               const noFlowerInfo = getErrorInfo(ErrorCode.NO_FLOWER_DETECTED);
               const rejectResult: RecognitionResult = {
                 status: 'rejected',
@@ -357,10 +545,13 @@ class RecognitionOrchestrator {
                 yoloResult,
                 errorMessage: noFlowerInfo.fullMessage,
                 llmUsed: false,
+                finalState: state,
               };
               this.cache.set(cacheKey, rejectResult);
               return rejectResult;
             }
+
+            state = advance(state, 'LLM_FAILED_DEGRADE', context); // → LOW_CONFIDENCE
 
             const fallbackResult: RecognitionResult = {
               status: 'low_confidence',
@@ -380,6 +571,7 @@ class RecognitionOrchestrator {
               yoloResult,
               errorMessage: errorInfo.fullMessage,
               llmUsed: false,
+              finalState: state,
             };
             this.cache.set(cacheKey, fallbackResult);
             return fallbackResult;
@@ -409,6 +601,8 @@ class RecognitionOrchestrator {
         inferenceTimeMs: Date.now() - startTime,
         errorMessage: errorInfo.fullMessage,
         llmUsed: false,
+        // 异常属于状态机之外的兜底路径，统一视为低置信度终态
+        finalState: 'LOW_CONFIDENCE',
       };
       return errorResult;
     }

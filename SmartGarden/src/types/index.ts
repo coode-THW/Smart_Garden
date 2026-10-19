@@ -87,6 +87,29 @@ export enum ErrorCode {
 
 export type RecognitionSource = 'yolov11' | 'llm';
 
+/**
+ * 一次识别的延迟分解（F1 度量）。
+ *
+ * 各阶段之和通常 <= totalMs —— 差额是未归因的间隙（调度、JSON 解析、GC 等）。
+ * 缓存命中时各阶段一律归零：命中意味着链路没跑，残留的分段耗时会误导统计。
+ */
+export interface LatencyBreakdown {
+  /** 端到端墙钟时间（含未归因间隙） */
+  totalMs: number;
+  /** 图片预处理 → 张量 */
+  preprocessMs: number;
+  /** ONNX 推理 */
+  inferenceMs: number;
+  /** 本地决策校验 */
+  decisionMs: number;
+  /** 知识库补充 / 取养护指南 */
+  knowledgeMs: number;
+  /** LLM 兜底 */
+  llmMs: number;
+  /** 是否命中缓存（命中时上面各阶段为 0） */
+  cacheHit: boolean;
+}
+
 export type ConfidenceStatus = 'recognized' | 'uncertain' | 'unknown';
 
 export type RecognitionStatus =
@@ -111,6 +134,11 @@ export interface RecognitionResult {
   allClasses?: Array<{ name: string; probability: number }>;
   inferenceTimeMs?: number;
   llmLatencyMs?: number;
+  /**
+   * 延迟分解（F1 度量）。与 inferenceTimeMs 的区别：后者是端到端单一数字，
+   * 分不出慢在哪；这里把预处理 / 推理 / 决策 / 知识库 / LLM 拆开。
+   */
+  latency?: LatencyBreakdown;
   errorMessage?: string;
 }
 

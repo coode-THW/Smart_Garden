@@ -53,7 +53,14 @@ export interface InferenceResult {
   greenRatio: number;
   /** 中心区域平均饱和度 (0-255)，低 → 可能是墙壁/天空 */
   avgSaturation: number;
+  /** ONNX session.run 耗时 */
   inferenceTimeMs: number;
+  /**
+   * 预处理耗时：图片读取 → 缩放 → 解码 → 归一化 → 颜色分析。
+   * 与 inferenceTimeMs 分开，才能判断慢在「解码」还是「推理」——
+   * 这两者的优化手段完全不同。detect() 负责填充，predict() 不填（为 0）。
+   */
+  preprocessMs: number;
   allClasses: Array<{ name: string; probability: number }>;
 }
 
@@ -298,6 +305,8 @@ class YoloService {
       greenRatio: colorFeatures?.greenRatio ?? 0,
       avgSaturation: colorFeatures?.avgSaturation ?? 64,
       inferenceTimeMs: t1 - t0,
+      // predict() 只做推理，不碰预处理；由 detect() 负责填真实值
+      preprocessMs: 0,
       allClasses,
     };
   }
@@ -314,8 +323,10 @@ class YoloService {
     logger.info('YoloService', 'detect() 开始, 路径:', imagePath);
 
     // 1. 预处理：图片 → Float32Array + 颜色特征
+    const preprocessStart = Date.now();
     const { tensor, shape, greenRatio, avgSaturation } =
       await loadImageAsTensor(imagePath);
+    const preprocessMs = Date.now() - preprocessStart;
 
     // 2. 推理（传入颜色特征，用于非花卉判断）
     const result = await this.predict(tensor, shape, {
@@ -327,10 +338,10 @@ class YoloService {
       'YoloService',
       `detect() 完成 → ${result.topClass} ${(result.confidence * 100).toFixed(
         1,
-      )}% (${result.inferenceTimeMs.toFixed(1)}ms)`,
+      )}% (预处理 ${preprocessMs}ms + 推理 ${result.inferenceTimeMs.toFixed(1)}ms)`,
     );
 
-    return result;
+    return {...result, preprocessMs};
   }
 
   // ━━━ 资源释放 ━━━

@@ -187,4 +187,109 @@ describe('KnowledgeService', () => {
       expect(service.count).toBe(0);
     });
   });
+
+  // ─── 在线更新的覆盖层（Day55-56） ───
+
+  describe('applyOverride()', () => {
+    /** 「下载来的」月季：同名同 id，但浇花频率变了 */
+    const downloaded = {
+      ...mockGuides.月季,
+      watering: {...mockGuides.月季.watering, frequency: '夏季每天1次'},
+    };
+
+    test('覆盖后按名查询返回新数据', () => {
+      service.applyOverride({月季: downloaded});
+      service.initialize();
+
+      expect(service.getCareGuideByName('月季').data?.watering.frequency).toBe(
+        '夏季每天1次',
+      );
+    });
+
+    test('覆盖后按 id 查询也返回新数据', () => {
+      service.applyOverride({月季: downloaded});
+      service.initialize();
+
+      expect(service.getCareGuide(6).data?.watering.frequency).toBe('夏季每天1次');
+    });
+
+    test('未覆盖的花卉不受影响（是合并，不是替换）', () => {
+      service.applyOverride({月季: downloaded});
+      service.initialize();
+
+      expect(service.getCareGuideByName('玫瑰').code).toBe(0);
+      expect(service.count).toBe(2);
+    });
+
+    test('initialize 之前设置的覆盖，initialize 后生效', () => {
+      service.applyOverride({月季: downloaded});
+      expect(service.count).toBe(0); // 还没初始化
+
+      service.initialize();
+
+      expect(service.getCareGuide(6).data?.watering.frequency).toBe('夏季每天1次');
+    });
+
+    test('initialize 之后设置的覆盖立即生效（重建缓存）', () => {
+      service.initialize();
+      expect(service.getCareGuideByName('月季').data?.watering.frequency).toBe(
+        '每周2-3次',
+      );
+
+      service.applyOverride({月季: downloaded});
+
+      expect(service.getCareGuideByName('月季').data?.watering.frequency).toBe(
+        '夏季每天1次',
+      );
+    });
+
+    test('覆盖改变了 flowerId 时不残留旧 id 条目', () => {
+      service.applyOverride({月季: {...downloaded, flowerId: 99}});
+      service.initialize();
+
+      expect(service.getCareGuide(99).code).toBe(0);
+      // 旧的 id 6 不该还能查到 —— 否则会出现「同一份数据两个 id」的幽灵条目
+      expect(service.getCareGuide(6).code).not.toBe(0);
+      expect(service.count).toBe(2);
+    });
+
+    test('覆盖可以引入随包数据里没有的新品种', () => {
+      const newFlower = {...mockGuides.月季, flowerName: '新花', flowerId: 77};
+      service.applyOverride({新花: newFlower});
+      service.initialize();
+
+      expect(service.count).toBe(3);
+      expect(service.getCareGuide(77).code).toBe(0);
+    });
+
+    test('传空对象可清除覆盖，回到纯随包数据', () => {
+      service.applyOverride({月季: downloaded});
+      service.initialize();
+      expect(service.getCareGuide(6).data?.watering.frequency).toBe('夏季每天1次');
+
+      service.applyOverride({});
+
+      expect(service.getCareGuide(6).data?.watering.frequency).toBe('每周2-3次');
+    });
+
+    test('reset 后重新 initialize 仍应用覆盖', () => {
+      service.applyOverride({月季: downloaded});
+      service.initialize();
+      service.reset();
+      service.initialize();
+
+      expect(service.getCareGuide(6).data?.watering.frequency).toBe('夏季每天1次');
+    });
+
+    test('覆盖不改变 getKnowledge() 之外的查询接口行为', () => {
+      // getAllFlowerNames / getAllGuides 也应看到覆盖后的数据
+      service.applyOverride({新花: {...mockGuides.月季, flowerName: '新花', flowerId: 77}});
+      service.initialize();
+
+      expect(service.getAllFlowerNames()).toContain('新花');
+      expect(service.getAllGuides().map(g => g.flowerId).sort((a, b) => a - b)).toEqual([
+        3, 6, 77,
+      ]);
+    });
+  });
 });

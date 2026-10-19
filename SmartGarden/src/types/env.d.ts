@@ -11,4 +11,6 @@ declare module '@env' {
   export const LLM_MODEL_NAME: string | undefined;
   export const LLM_SECONDARY_MODEL: string | undefined;
   export const MODEL_VERSION_URL: string | undefined;
+  /** 知识库 version.json 地址；未配置时跳过知识库在线更新检查 */
+  export const KNOWLEDGE_VERSION_URL: string | undefined;
 }

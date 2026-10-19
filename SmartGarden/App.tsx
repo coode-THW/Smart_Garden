@@ -24,6 +24,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen';
 import YoloService from './src/services/YoloService';
 import { UserService } from './src/services/UserService';
 import ModelUpdateService from './src/services/ModelUpdateService';
+import knowledgeUpdateService from './src/services/KnowledgeUpdateService';
 import { COLORS } from './src/constants';
 import logger from './src/services/LoggerService';
 import { useWeatherStore } from './src/store/useWeatherStore';
@@ -49,6 +50,49 @@ async function checkModelUpdateInBackground(): Promise<void> {
     }
   } catch (e) {
     logger.debug('App', '后台检查模型更新失败（可能是测试环境）:', e);
+  }
+}
+
+/**
+ * 后台检查并应用知识库在线更新（Day51-56）。
+ *
+ * 静默、不阻塞启动：`checkForUpdate` 与 `downloadAndApply` 都保证
+ * **永不 reject**，所有失败（离线 / 未配置地址 / 超时 / 清单非法 /
+ * 单个文件下载失败）都转成带错误信息的返回值。这里只记日志，不打扰用户。
+ *
+ * 先检查再决定要不要下载 —— 大多数启动都没有新版，不该白下几十个文件。
+ */
+async function checkKnowledgeUpdateInBackground(): Promise<void> {
+  const check = await knowledgeUpdateService.checkForUpdate();
+
+  if (!check.updateAvailable) {
+    logger.debug(
+      'App',
+      `知识库检查: ${check.state}（本地 ${check.localVersion}）`,
+    );
+    return;
+  }
+
+  logger.info(
+    'App',
+    `知识库有新版 ${check.remoteVersion}（本地 ${check.localVersion}），` +
+      `${Object.keys(check.changedFiles).length} 个文件待下载`,
+  );
+
+  // downloadAndApply 内部会复用上面这次检查的结果，不会重复拉清单
+  const applied = await knowledgeUpdateService.downloadAndApply();
+
+  if (applied.ok) {
+    logger.info('App', `知识库已更新至 ${applied.version}（${applied.downloaded} 份）`);
+  } else {
+    // 失败不是异常情况：下次启动会自动重试（版本号没前进，不会被判定为已最新）
+    logger.warn(
+      'App',
+      `知识库更新未完成（成功 ${applied.downloaded} 份` +
+        `${applied.failed.length ? `，失败 ${applied.failed.length}` : ''}` +
+        `${applied.rejected.length ? `，内容非法 ${applied.rejected.length}` : ''}），` +
+        `下次启动重试`,
+    );
   }
 }
 
@@ -86,6 +130,10 @@ function App(): React.JSX.Element {
       setLoadingStatus('检查模型更新...');
       await ModelUpdateService.getInstance().initialize();
       checkModelUpdateInBackground();
+
+      // 知识库在线更新检查：后台跑，不 await —— 网络慢不能拖慢启动。
+      // 不设 loadingStatus：它是并行发生的，写进进度文案反而误导
+      checkKnowledgeUpdateInBackground();
 
       setLoadingStatus('加载AI模型...');
       await YoloService.getInstance().loadModel(

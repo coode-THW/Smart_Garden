@@ -1,8 +1,15 @@
 /**
  * KnowledgeService — 花卉养护知识查询
  *
- * 从 assets/care/ 的 barrel 导入 54 种养护 JSON 数据。
- * 提供单例类（兼容 GardenService）和简单函数（兼容识别结果页）两套接口。
+ * 数据来源有两层：
+ *   1. 随包数据 —— assets/care/ 的 barrel，随 APP 发版固定
+ *   2. 覆盖层   —— 在线更新下载下来的数据（Day55-56），运行时由
+ *                  KnowledgeUpdateService 通过 applyOverride() 注入
+ * 两层按花名合并，覆盖层优先。所以「不依赖 APP 发版即可更新养护数据」。
+ *
+ * 对外提供单例类（兼容 GardenService）和简单函数（兼容识别结果页）两套接口，
+ * 两者共用同一份缓存 —— 简单函数直接委托给单例，不再自己维护一份 Map
+ * （以前确实各存一份，会随覆盖层的引入而分叉）。
  */
 
 import {careGuides} from '../../assets/care';
@@ -14,17 +21,13 @@ import {getErrorMessage} from './ErrorHandler';
 
 // ━━━ 简单函数接口（识别结果页用） ━━━
 
-const nameMap = new Map<string, CareGuide>();
-for (const [name, guide] of Object.entries(careGuides)) {
-  nameMap.set(name, guide as CareGuide);
-}
-logger.info('KnowledgeService', `已加载 ${nameMap.size} 种花卉养护数据`);
-
 /**
  * 根据中文花名查询养护知识（同步）。
+ * 委托给单例，因此自动看到在线更新下来的覆盖层。
  */
 export function getKnowledge(flowerName: string): CareGuide | null {
-  return nameMap.get(flowerName) ?? null;
+  const resp = KnowledgeService.getInstance().getCareGuideByName(flowerName);
+  return resp.code === ErrorCode.SUCCESS ? resp.data : null;
 }
 
 // ━━━ 类接口（兼容 GardenService 和单元测试） ━━━
@@ -34,6 +37,9 @@ export class KnowledgeService {
   private nameCache: Map<string, CareGuide> = new Map();
   private idCache: Map<number, CareGuide> = new Map();
   private initialized = false;
+
+  /** 在线更新下来的覆盖层：花名 → 指南。 */
+  private override: Record<string, CareGuide> = {};
 
   constructor(private barrel?: Record<string, CareGuide>) {}
 
@@ -46,13 +52,38 @@ export class KnowledgeService {
 
   initialize(): void {
     if (this.initialized) return;
-    const source = this.barrel ?? (careGuides as Record<string, CareGuide>);
-    for (const [name, guide] of Object.entries(source)) {
-      this.nameCache.set(name, guide);
-      this.idCache.set(guide.flowerId, guide);
-    }
+    this.buildCaches();
     this.initialized = true;
-    logger.info('KnowledgeService', `已加载 ${this.nameCache.size} 份养护指南`);
+    logger.info(
+      'KnowledgeService',
+      `已加载 ${this.nameCache.size} 份养护指南` +
+        (Object.keys(this.override).length > 0
+          ? `（含 ${Object.keys(this.override).length} 份在线更新）`
+          : ''),
+    );
+  }
+
+  /**
+   * 注入在线更新下载下来的覆盖层（Day55-56）。
+   *
+   * 传的是**当前完整的覆盖集合**，不是增量 —— 每次都整体替换。
+   * 已初始化时会立即重建缓存，所以调用后新数据马上可查；
+   * 未初始化时先存着，等 initialize() 一并生效。
+   */
+  applyOverride(guides: Record<string, CareGuide>): void {
+    this.override = guides ?? {};
+    if (this.initialized) {
+      this.buildCaches();
+      logger.info(
+        'KnowledgeService',
+        `已应用 ${Object.keys(this.override).length} 份在线更新数据`,
+      );
+    }
+  }
+
+  /** 当前覆盖层（供调试/测试观察） */
+  getOverrideCount(): number {
+    return Object.keys(this.override).length;
   }
 
   reset(): void {
@@ -95,6 +126,26 @@ export class KnowledgeService {
 
   private ensureInit(): void {
     if (!this.initialized) this.initialize();
+  }
+
+  /**
+   * 从「随包数据 + 覆盖层」重建两个缓存。
+   *
+   * 先把两层合并成一个纯对象再建缓存 —— 若改成「先建随包、再逐条塞覆盖」，
+   * 覆盖里 flowerId 变了的话，旧 id 会遗留在 idCache 里变成幽灵条目。
+   */
+  private buildCaches(): void {
+    const merged: Record<string, CareGuide> = {
+      ...(this.barrel ?? (careGuides as Record<string, CareGuide>)),
+      ...this.override,
+    };
+
+    this.nameCache.clear();
+    this.idCache.clear();
+    for (const [name, guide] of Object.entries(merged)) {
+      this.nameCache.set(name, guide);
+      this.idCache.set(guide.flowerId, guide);
+    }
   }
 
   private ok<T>(data: T): ApiResponse<T> {

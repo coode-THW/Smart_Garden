@@ -1,0 +1,287 @@
+{
+  "version": "2026.09.01",
+  "releaseDate": "2026-10-09",
+  "changelog": "Day53-54 首次生成清单",
+  "files": {
+    "万年青.json": {
+      "url": "https://garden.example.com/care/%E4%B8%87%E5%B9%B4%E9%9D%92.json",
+      "checksum": "7a8ecd1668793f000f42f968ed023a9276f923253619812295eebf3848386b66",
+      "size": 2459
+    },
+    "三角梅.json": {
+      "url": "https://garden.example.com/care/%E4%B8%89%E8%A7%92%E6%A2%85.json",
+      "checksum": "0b964f7304be98994e063e1acff972615992445217781dd9364e6ac559e6e61e",
+      "size": 3283
+    },
+    "仙人掌.json": {
+      "url": "https://garden.example.com/care/%E4%BB%99%E4%BA%BA%E6%8E%8C.json",
+      "checksum": "0fcae484718cebb2332c42f588aab0d4e416d24e5842300f0c3872135bb7fad1",
+      "size": 2836
+    },
+    "兰花(春兰).json": {
+      "url": "https://garden.example.com/care/%E5%85%B0%E8%8A%B1%28%E6%98%A5%E5%85%B0%29.json",
+      "checksum": "635fdcaed7c0a68a89fee9bc30293f91bf3b257a66ff532907504d12db505d5c",
+      "size": 2865
+    },
+    "凌霄花.json": {
+      "url": "https://garden.example.com/care/%E5%87%8C%E9%9C%84%E8%8A%B1.json",
+      "checksum": "60b3d82e926f96458963b9853fa69a57a87518c40fd7ef4580b6925ff5939ec4",
+      "size": 2366
+    },
+    "发财树.json": {
+      "url": "https://garden.example.com/care/%E5%8F%91%E8%B4%A2%E6%A0%91.json",
+      "checksum": "c2a671ac393a052581ab9bc528decfca74c83d26efa5a15d958bad0873af3d52",
+      "size": 2750
+    },
+    "吊兰.json": {
+      "url": "https://garden.example.com/care/%E5%90%8A%E5%85%B0.json",
+      "checksum": "04d941e22cac3a5074a72a4c92479b6a1f94b084505cc85ca40d353fa592220b",
+      "size": 2638
+    },
+    "向日葵.json": {
+      "url": "https://garden.example.com/care/%E5%90%91%E6%97%A5%E8%91%B5.json",
+      "checksum": "38ea9a01595d200309d96d51244a175435f93c939a4d3441d544199d716f6543",
+      "size": 2943
+    },
+    "君子兰.json": {
+      "url": "https://garden.example.com/care/%E5%90%9B%E5%AD%90%E5%85%B0.json",
+      "checksum": "6ec733b619e2ca2a249db7173b48805dd476b0c09681b2a5e710e1caa2bfc9d3",
+      "size": 2858
+    },
+    "多肉(玉露).json": {
+      "url": "https://garden.example.com/care/%E5%A4%9A%E8%82%89%28%E7%8E%89%E9%9C%B2%29.json",
+      "checksum": "597aabe8e9836ffb16377226d66f0c705345bfebf7b02614ba3a8597257613e4",
+      "size": 2997
+    },
+    "太阳花.json": {
+      "url": "https://garden.example.com/care/%E5%A4%AA%E9%98%B3%E8%8A%B1.json",
+      "checksum": "102aef3d351bdfa571edf89acaacc7863da30a29cfa9d920b67f502ff98349e5",
+      "size": 2357
+    },
+    "夹竹桃.json": {
+      "url": "https://garden.example.com/care/%E5%A4%B9%E7%AB%B9%E6%A1%83.json",
+      "checksum": "2c45dd2168644e97513038ce84e0abda8db4f972bd408710f835e6a27be9a941",
+      "size": 2483
+    },
+    "富贵竹.json": {
+      "url": "https://garden.example.com/care/%E5%AF%8C%E8%B4%B5%E7%AB%B9.json",
+      "checksum": "a120e7030845af1a814d6992c45a088a411ab775881ccb1a3babfb3e2571ed9e",
+      "size": 2759
+    },
+    "山茶花.json": {
+      "url": "https://garden.example.com/care/%E5%B1%B1%E8%8C%B6%E8%8A%B1.json",
+      "checksum": "8ff7a536441124f029c9e863629c8dbeb79019feb330a2e017c1232acd6fa824",
+      "size": 2860
+    },
+    "常春藤.json": {
+      "url": "https://garden.example.com/care/%E5%B8%B8%E6%98%A5%E8%97%A4.json",
+      "checksum": "e3812979c884ad5d68cd79636f1bcdc715cdeae9efb6be5956ceb3d89914d0a7",
+      "size": 2931
+    },
+    "康乃馨.json": {
+      "url": "https://garden.example.com/care/%E5%BA%B7%E4%B9%83%E9%A6%A8.json",
+      "checksum": "d835112a7a3c5d326517e71953d0bdf43994b46a938216d0e704749418f5341a",
+      "size": 2850
+    },
+    "文竹.json": {
+      "url": "https://garden.example.com/care/%E6%96%87%E7%AB%B9.json",
+      "checksum": "efcf450003e10d488c76f077675f93c451c2609f4ae2bef20f67e00f9b5f496f",
+      "size": 2785
+    },
+    "月季.json": {
+      "url": "https://garden.example.com/care/%E6%9C%88%E5%AD%A3.json",
+      "checksum": "dfb284500b833047d6777dcf37ea7a6d06983d80031dede5f45344baa1ebdafa",
+      "size": 3006
+    },
+    "木槿.json": {
+      "url": "https://garden.example.com/care/%E6%9C%A8%E6%A7%BF.json",
+      "checksum": "39ecadb822d34038be8838b01dc36ee04928fc07fcb899c10914ca1972287991",
+      "size": 2438
+    },
+    "杜鹃.json": {
+      "url": "https://garden.example.com/care/%E6%9D%9C%E9%B9%83.json",
+      "checksum": "8275dc03199a18412ab630f184160b3ff6ba64b11ec47cb108790a21e71e04ce",
+      "size": 3037
+    },
+    "栀子花.json": {
+      "url": "https://garden.example.com/care/%E6%A0%80%E5%AD%90%E8%8A%B1.json",
+      "checksum": "db0f82025299fda9bd28cf85b014404a3f4f6b1cc10d6d6f1a73e7c637098199",
+      "size": 2937
+    },
+    "桂花.json": {
+      "url": "https://garden.example.com/care/%E6%A1%82%E8%8A%B1.json",
+      "checksum": "73c4824facf6e9dffe87588f4891c8499eeaaa685395099776646e5d8781c448",
+      "size": 2689
+    },
+    "梅花.json": {
+      "url": "https://garden.example.com/care/%E6%A2%85%E8%8A%B1.json",
+      "checksum": "4b5aea875c51e021b78c6b4702cf1dc3348f4cfe1bb5670b6611fbf6b81863da",
+      "size": 2491
+    },
+    "水仙.json": {
+      "url": "https://garden.example.com/care/%E6%B0%B4%E4%BB%99.json",
+      "checksum": "ca050ab96bb1f674ff2e6ce530aff1c4124c1521532ae2a373147c09c796df1a",
+      "size": 3318
+    },
+    "海棠.json": {
+      "url": "https://garden.example.com/care/%E6%B5%B7%E6%A3%A0.json",
+      "checksum": "49bdb77f9b20711e7038f832ed0a9f8aeccf1cbc44a82679e8c1106679c7a30d",
+      "size": 2424
+    },
+    "滴水观音.json": {
+      "url": "https://garden.example.com/care/%E6%BB%B4%E6%B0%B4%E8%A7%82%E9%9F%B3.json",
+      "checksum": "1fd4baa333fdb92c510ed75d5773ade6f15b920837c312fd543176900c89c1f6",
+      "size": 1996
+    },
+    "牡丹.json": {
+      "url": "https://garden.example.com/care/%E7%89%A1%E4%B8%B9.json",
+      "checksum": "cb9cd8f739b3ce7979ea241bfb8e271fc226c360ba50d99f8798c99cd1a691a6",
+      "size": 3169
+    },
+    "牵牛花.json": {
+      "url": "https://garden.example.com/care/%E7%89%B5%E7%89%9B%E8%8A%B1.json",
+      "checksum": "ad5d984d439a9317fc3bd33377fe1340cb61a602cb22552387ce16e9f1742789",
+      "size": 2210
+    },
+    "玫瑰.json": {
+      "url": "https://garden.example.com/care/%E7%8E%AB%E7%91%B0.json",
+      "checksum": "63fa3c29127b7cd03c94f4125eaa257be809fc62f27c42883e585a03d5f500ee",
+      "size": 3711
+    },
+    "白掌.json": {
+      "url": "https://garden.example.com/care/%E7%99%BD%E6%8E%8C.json",
+      "checksum": "06c4abe6d387dcc235c1ca9fdb96fa6b1602f43ec42c21521ca30cd926383675",
+      "size": 2621
+    },
+    "百合.json": {
+      "url": "https://garden.example.com/care/%E7%99%BE%E5%90%88.json",
+      "checksum": "6cddb1de9f08d589ba595c7313281d1ba5217901da479eb830f0e1ae608bc123",
+      "size": 3615
+    },
+    "米兰.json": {
+      "url": "https://garden.example.com/care/%E7%B1%B3%E5%85%B0.json",
+      "checksum": "f695817a859e205aaa7a62924de8122654aee62f66e958f553ea935c065b767b",
+      "size": 2702
+    },
+    "紫藤.json": {
+      "url": "https://garden.example.com/care/%E7%B4%AB%E8%97%A4.json",
+      "checksum": "1635f858da498298165cc387c1d02a10c410cb06f66c8be739b0d7cc82bd26e2",
+      "size": 2470
+    },
+    "红掌.json": {
+      "url": "https://garden.example.com/care/%E7%BA%A2%E6%8E%8C.json",
+      "checksum": "b17bdd1b493aa09376803869a0a4a42d3681d7956541cbaef242cc1074e0fb89",
+      "size": 2217
+    },
+    "绣球花.json": {
+      "url": "https://garden.example.com/care/%E7%BB%A3%E7%90%83%E8%8A%B1.json",
+      "checksum": "5cb5fa7c9dc9a0c714c8156ab83fdf1e4d358b0a30675f89ee5b15dc763e2808",
+      "size": 3515
+    },
+    "绿萝.json": {
+      "url": "https://garden.example.com/care/%E7%BB%BF%E8%90%9D.json",
+      "checksum": "acc25fa903ea19be1146f13ff0da90c598b626c8724db361af60ac60ed57e3cc",
+      "size": 3340
+    },
+    "美人蕉.json": {
+      "url": "https://garden.example.com/care/%E7%BE%8E%E4%BA%BA%E8%95%89.json",
+      "checksum": "043b55dd7b5c8c762abdc4c39aed59fa144135722b47340d6030c875bf31ab0c",
+      "size": 2559
+    },
+    "芍药.json": {
+      "url": "https://garden.example.com/care/%E8%8A%8D%E8%8D%AF.json",
+      "checksum": "2ab734675aabc4344de210b4ddfa25b33b438c93d1bd4be93ec6c5e013eee521",
+      "size": 2646
+    },
+    "芙蓉.json": {
+      "url": "https://garden.example.com/care/%E8%8A%99%E8%93%89.json",
+      "checksum": "9e330eccc43b236612144b7d51d1904511caa540e46f60df0f8f924f77a76929",
+      "size": 2428
+    },
+    "茉莉花.json": {
+      "url": "https://garden.example.com/care/%E8%8C%89%E8%8E%89%E8%8A%B1.json",
+      "checksum": "3e5d9e52fa8565f599161fadb248fd6e045978e6a7e5e93ae93ec9b168195697",
+      "size": 3202
+    },
+    "荷花.json": {
+      "url": "https://garden.example.com/care/%E8%8D%B7%E8%8A%B1.json",
+      "checksum": "0f32a65eddc5f681a4dd34def727c953084ab807fbf534e030c250c10446ead1",
+      "size": 3867
+    },
+    "菊花.json": {
+      "url": "https://garden.example.com/care/%E8%8F%8A%E8%8A%B1.json",
+      "checksum": "07cc8ba5955354ae653db95052909221b91a07412e447bee7435a906077c283a",
+      "size": 3282
+    },
+    "蒲公英.json": {
+      "url": "https://garden.example.com/care/%E8%92%B2%E5%85%AC%E8%8B%B1.json",
+      "checksum": "1524c94a477270f7b10c71b0b46178cda67471413afc634ce2a05dac0590fcf3",
+      "size": 2569
+    },
+    "薄荷.json": {
+      "url": "https://garden.example.com/care/%E8%96%84%E8%8D%B7.json",
+      "checksum": "c244fbd7a59b22a9c7262a8f0bfad507861ce7b5abbc889038e09362b109e497",
+      "size": 2686
+    },
+    "薰衣草.json": {
+      "url": "https://garden.example.com/care/%E8%96%B0%E8%A1%A3%E8%8D%89.json",
+      "checksum": "273a7e7cadbe11865c56e68d5e1298adce3675f6940bc1a9ffd8a60710c664fc",
+      "size": 2713
+    },
+    "虎皮兰.json": {
+      "url": "https://garden.example.com/care/%E8%99%8E%E7%9A%AE%E5%85%B0.json",
+      "checksum": "8823cafea55cea30c2afcacc3d6062d789622b4a2af2222eed2e07ccd8c6ce03",
+      "size": 2884
+    },
+    "蝴蝶兰.json": {
+      "url": "https://garden.example.com/care/%E8%9D%B4%E8%9D%B6%E5%85%B0.json",
+      "checksum": "967c17d8f51926d1b5882acf89f19668d59e96f57bd5a172fb0b117ec4659f5a",
+      "size": 3073
+    },
+    "迷迭香.json": {
+      "url": "https://garden.example.com/care/%E8%BF%B7%E8%BF%AD%E9%A6%99.json",
+      "checksum": "d36c2f5eaa4fac1ff39ca593f7a08308ae113b0fd286f55e4f84384f8c770b57",
+      "size": 2414
+    },
+    "郁金香.json": {
+      "url": "https://garden.example.com/care/%E9%83%81%E9%87%91%E9%A6%99.json",
+      "checksum": "9aac1d95f54d7ac3ce1a159795cd360ba1b0e754fc033165e986a16b974802fb",
+      "size": 3657
+    },
+    "铜钱草.json": {
+      "url": "https://garden.example.com/care/%E9%93%9C%E9%92%B1%E8%8D%89.json",
+      "checksum": "26f96eb2c4f07b684e96069b2fce666ab60f1dc8b17585b1699492535a3fbd60",
+      "size": 2624
+    },
+    "长寿花.json": {
+      "url": "https://garden.example.com/care/%E9%95%BF%E5%AF%BF%E8%8A%B1.json",
+      "checksum": "9bb9b27c5cd622f550e5fbb65b5f75d9d968b773a2b1bd102cf12f487a383578",
+      "size": 3292
+    },
+    "雏菊.json": {
+      "url": "https://garden.example.com/care/%E9%9B%8F%E8%8F%8A.json",
+      "checksum": "eb4bb07509e9c0c3284547a03ca3846940ab0dd980b43618b58df12dd3bd6ea1",
+      "size": 2768
+    },
+    "非洲菊.json": {
+      "url": "https://garden.example.com/care/%E9%9D%9E%E6%B4%B2%E8%8F%8A.json",
+      "checksum": "aace79aa2785ad67c0ec047d7272b3d14633f1e7a7b306af0b1ec48d8b01676e",
+      "size": 3792
+    },
+    "风信子.json": {
+      "url": "https://garden.example.com/care/%E9%A3%8E%E4%BF%A1%E5%AD%90.json",
+      "checksum": "db8fe1516a45eae6d1614f06c31ab62382764efeb403980480ac8b85836b5d94",
+      "size": 3530
+    },
+    "鸢尾.json": {
+      "url": "https://garden.example.com/care/%E9%B8%A2%E5%B0%BE.json",
+      "checksum": "80045698060df54330630edc163b8f89da4d4c7038b1ecddd7ba5c6b504ff2ab",
+      "size": 2392
+    },
+    "龟背竹.json": {
+      "url": "https://garden.example.com/care/%E9%BE%9F%E8%83%8C%E7%AB%B9.json",
+      "checksum": "556231ef198ab28aade90b47b4ed81616e7de3e07b17e62ac3e966bc52440b54",
+      "size": 2460
+    }
+  }
+}
